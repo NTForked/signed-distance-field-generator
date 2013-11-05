@@ -1,0 +1,86 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="OgreMath">
+      <UniqueIdentifier>{4a7421c3-87ac-474d-a7a6-059769e3165b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Prerequisites.h" />
+    <ClInclude Include="Ray.h" />
+    <ClInclude Include="PPMWriter.h" />
+    <ClInclude Include="OBJReader.h" />
+    <ClInclude Include="Profiler.h" />
+    <ClInclude Include="Mesh.h" />
+    <ClInclude Include="AABB.h" />
+    <ClInclude Include="Surfaces.h" />
+    <ClInclude Include="OgreMath\OgreMatrix3.h">
+      <Filter>OgreMath</Filter>
+    </ClInclude>
+    <ClInclude Include="OgreMath\OgreMatrix4.h">
+      <Filter>OgreMath</Filter>
+    </ClInclude>
+    <ClInclude Include="OgreMath\OgreQuaternion.h">
+      <Filter>OgreMath</Filter>
+    </ClInclude>
+    <ClInclude Include="OgreMath\OgreVector2.h">
+      <Filter>OgreMath</Filter>
+    </ClInclude>
+    <ClInclude Include="OgreMath\OgreVector3.h">
+      <Filter>OgreMath</Filter>
+    </ClInclude>
+    <ClInclude Include="OgreMath\OgreVector4.h">
+      <Filter>OgreMath</Filter>
+    </ClInclude>
+    <ClInclude Include="OgreMath\asm_math.h">
+      <Filter>OgreMath</Filter>
+    </ClInclude>
+    <ClInclude Include="OgreMath\OgreColourValue.h">
+      <Filter>OgreMath</Filter>
+    </ClInclude>
+    <ClInclude Include="OgreMath\OgreMath.h">
+      <Filter>OgreMath</Filter>
+    </ClInclude>
+    <ClInclude Include="BVH.h" />
+    <ClInclude Include="SphereBV.h" />
+    <ClInclude Include="MarchingCubes.h" />
+    <ClInclude Include="Triangle.h" />
+    <ClInclude Include="TriangleLookupTable.h" />
+    <ClInclude Include="VoxelGrid3DArray.h" />
+    <ClInclude Include="SignedDistanceField.h" />
+    <ClInclude Include="Vector2i.h" />
+    <ClInclude Include="Vector3i.h" />
+    <ClInclude Include="Vector1i.h" />
+    <ClInclude Include="ExportPLY.h" />
+    <ClInclude Include="ExportSTL.h" />
+    <ClInclude Include="ExportOBJ.h" />
+    <ClInclude Include="MathMisc.h" />
+    <ClInclude Include="MeshSimplify.h" />
+    <ClInclude Include="VertexMerger.h" />
+    <ClInclude Include="OctreeSDF.h" />
+    <ClInclude Include="ImplicitTriangleSDF.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="OgreMath\OgreMatrix4.cpp">
+      <Filter>OgreMath</Filter>
+    </ClCompile>
+    <ClCompile Include="OgreMath\OgreQuaternion.cpp">
+      <Filter>OgreMath</Filter>
+    </ClCompile>
+    <ClCompile Include="OgreMath\OgreColourValue.cpp">
+      <Filter>OgreMath</Filter>
+    </ClCompile>
+    <ClCompile Include="OgreMath\OgreMath.cpp">
+      <Filter>OgreMath</Filter>
+    </ClCompile>
+    <ClCompile Include="OgreMath\OgreMatrix3.cpp">
+      <Filter>OgreMath</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
