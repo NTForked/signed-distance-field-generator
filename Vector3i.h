@@ -21,7 +21,6 @@
 #include <algorithm>
 #include "Prerequisites.h"
 #include <unordered_set>
-#include "Vector2i.h"
 
 class Vector3i
 {
@@ -322,7 +321,6 @@ public:
 	}
 
 	typedef int scalarType;
-	typedef Vector2i lowerDim;
 
 	friend std::ostream& operator<< (std::ostream &out, Vector3i &pos) {
 		out << pos.x << " " << pos.y << " " << pos.z;

@@ -183,8 +183,6 @@
     <ClInclude Include="Triangle.h" />
     <ClInclude Include="TriangleLookupTable.h" />
     <ClInclude Include="MathMisc.h" />
-    <ClInclude Include="Vector1i.h" />
-    <ClInclude Include="Vector2i.h" />
     <ClInclude Include="Vector3i.h" />
     <ClInclude Include="VertexMerger.h" />
     <ClInclude Include="VoxelGrid3DArray.h" />

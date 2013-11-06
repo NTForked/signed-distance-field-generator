@@ -52,9 +52,7 @@
     <ClInclude Include="TriangleLookupTable.h" />
     <ClInclude Include="VoxelGrid3DArray.h" />
     <ClInclude Include="SignedDistanceField.h" />
-    <ClInclude Include="Vector2i.h" />
     <ClInclude Include="Vector3i.h" />
-    <ClInclude Include="Vector1i.h" />
     <ClInclude Include="ExportPLY.h" />
     <ClInclude Include="ExportSTL.h" />
     <ClInclude Include="ExportOBJ.h" />
