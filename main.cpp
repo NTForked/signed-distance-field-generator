@@ -66,9 +66,9 @@ void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 
 int main()
 {
-	buildSDFAndMarch<ImplicitTriangleMeshSDF_RC>("buddha2", 8);
+	// buildSDFAndMarch<ImplicitTriangleMeshSDF_RC>("buddha2", 8);
 	// buildSDFAndMarch<ImplicitTriangleMeshSDF_RC>("main_gear_01", 0.02f);
-	// buildSDFAndMarch<ImplicitTriangleMeshSDF_AWP>("Armadillo", 8);
+	buildSDFAndMarch<ImplicitTriangleMeshSDF_AWP>("Armadillo", 8);
 	// buildSDFAndMarch<ImplicitTriangleMeshSDF_AWP>("bunny_highres", 0.005f);
 	// buildSDFAndMarch<ImplicitTriangleMeshSDF_RC>("buddha2", 0.01f);
 	// buildSDFAndMarch<ImplicitTriangleMeshSDF_RC>("sponza2", 0.3f);
