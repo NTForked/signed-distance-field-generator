@@ -4,6 +4,7 @@
 #include <functional>
 #include "Vector3i.h"
 #include "Triangle.h"
+#include <unordered_map>
 
 /*
 	   d------------h
@@ -93,7 +94,7 @@ public:
 	std::vector<Triangle<Vector3i>> table[256];
 
 	// maps vertices at edge mids to the two neighbor nodes
-	boost::unordered_map<Vector3i, std::pair<unsigned char, unsigned char>, boost::Vector3iHasher> edgeMidsToNodes;
+	std::unordered_map<Vector3i, std::pair<unsigned char, unsigned char> > edgeMidsToNodes;
 
 	TLT()
 	{

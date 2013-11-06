@@ -3,9 +3,12 @@
 
 #include <vector>
 #include <algorithm>
-#include "boost/thread.hpp"
 #include "Ray.h"
 #include "AABB.h"
+
+#ifdef USE_BOOST_THREADING
+#include "boost/thread.hpp"
+#endif
 
 template<class LeafType>
 class BVH
@@ -428,6 +431,8 @@ public:
 	}
 };
 
+#ifdef USE_BOOST_THREADING
+
 template<class BoundingVolume, class LeafType>
 class BVHNodeThreaded : public BVHNode<BoundingVolume, LeafType>
 {
@@ -510,3 +515,5 @@ public:
 		
 	}
 };
+
+#endif

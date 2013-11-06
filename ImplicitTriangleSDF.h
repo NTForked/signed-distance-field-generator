@@ -16,12 +16,12 @@ using Ogre::Vector3;
 class ImplicitTriangleMeshSDF
 {
 protected:
-	BVHNodeThreaded<SphereBV, Surface>* m_RootNode;
+	BVHNode<SphereBV, Surface>* m_RootNode;
 	AABB m_AABB;
 	std::shared_ptr<TransformedMesh> m_TransformedMesh;
 
 	// Use aabbs for raycasting and AABB collision queries, it's faster.
-	BVHNodeThreaded<AABB, Surface>* m_RootNodeAABB;
+	BVHNode<AABB, Surface>* m_RootNodeAABB;
 public:
 	virtual ~ImplicitTriangleMeshSDF()
 	{
@@ -38,15 +38,23 @@ public:
 
 		Profiler::Timestamp timeStamp = Profiler::timestamp();
 
+#ifdef USE_BOOST_THREADING
 		const int numThreads = 8;
 		m_RootNode = new BVHNodeThreaded<SphereBV, Surface>(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
+#else
+		m_RootNode = new BVHNode<SphereBV, Surface>(surfaces, 0, (int)surfaces.size(), 0);
+#endif
 		// BVHNodeThreaded<AABB, Surface> rootNodeAABB(surfaces, 0, surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
 		Profiler::printJobDuration("BVH creation", timeStamp);
 		std::cout << "Tree height max: " << m_RootNode->getHeight() << std::endl;
 		std::cout << "Tree height avg: " << m_RootNode->getHeightAvg() << std::endl;
 
 		timeStamp = Profiler::timestamp();
+#ifdef USE_BOOST_THREADING
 		m_RootNodeAABB = new BVHNodeThreaded<AABB, Surface>(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
+#else
+		m_RootNodeAABB = new BVHNode<AABB, Surface>(surfaces, 0, (int)surfaces.size(), 0);
+#endif
 		// BVHNodeThreaded<AABB, Surface> rootNodeAABB(surfaces, 0, surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
 		Profiler::printJobDuration("AABB BVH creation", timeStamp);
 		std::cout << "Tree height max: " << m_RootNodeAABB->getHeight() << std::endl;

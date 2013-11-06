@@ -21,8 +21,6 @@
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
 #include <list>
 #include "Prerequisites.h"
 #include "MeshSimplify.h"

@@ -17,7 +17,6 @@ public:
 		std::ofstream ply(fileName + ".ply", std::ios_base::out|std::ios_base::trunc);
 		ply << "ply\n\
 format ascii 1.0\n\
-comment Created by v-baum\n\
 element vertex " << vertexBuffer.size() << "\n\
 property float x\n\
 property float y\n\
