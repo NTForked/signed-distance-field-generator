@@ -57,11 +57,11 @@ void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 	Profiler::printJobDuration("SDF Octree construction", timeStamp);
 	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + fileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
 
-	float cellSize = 1.0f / octreeSDF->getInverseCellSize();
+	/*float cellSize = 1.0f / octreeSDF->getInverseCellSize();
 	timeStamp = Profiler::timestamp();
 	auto gridSDF = SignedDistanceField3DArray::sampleSDF(meshSDF, cellSize);
 	Profiler::printJobDuration("SDF Grid construction", timeStamp);
-	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestGrid_" + fileName, *gridSDF, gridSDF->getInverseCellSize(), 0, false);
+	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestGrid_" + fileName, *gridSDF, gridSDF->getInverseCellSize(), 0, false);*/
 }
 
 int main()

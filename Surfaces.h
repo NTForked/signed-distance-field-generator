@@ -143,10 +143,8 @@ public:
 
 	bool intersectsAABB(const AABB& aabb) const override
 	{
-		return m_AABB.intersectsAABB(aabb);
-		/*return (aabb.containsPoint(mMesh->vertexBufferVS[mIndex1].position)
-			|| aabb.containsPoint(mMesh->vertexBufferVS[mIndex2].position)
-			|| aabb.containsPoint(mMesh->vertexBufferVS[mIndex3].position));*/
+		return aabb.intersectsTriangle(mMesh->vertexBufferVS[mIndex1].position, mMesh->vertexBufferVS[mIndex2].position, mMesh->vertexBufferVS[mIndex3].position, mMesh->triangleDataVS[mTriangleIndex].normal);
+		// return m_AABB.intersectsAABB(aabb);
 	}
 };
 

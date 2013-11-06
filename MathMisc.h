@@ -118,4 +118,35 @@ struct MathMisc
 		t = rayPlaneIntersection(line1, rayDir, rayDir, p);
 		return line1 + rayDir * t;
 	}
+
+	/// Projects a triangle on an axis, retrieves interval (tMin, tMax).
+	__forceinline static void projectTriangleOnAxis(const Ogre::Vector3& axis, const Ogre::Vector3& p1, const Ogre::Vector3& p2, const Ogre::Vector3& p3, float& tMin, float& tMax)
+	{
+		tMin = axis.dotProduct(p1);
+		tMax = tMin;
+		float t = axis.dotProduct(p2);
+		if (t < tMin) tMin = t;
+		else if (t > tMax) tMax = t;
+		t = axis.dotProduct(p3);
+		if (t < tMin) tMin = t;
+		else if (t > tMax) tMax = t;
+	}
+
+	/// Projects an AABB on an axis, retrieves interval (tMin, tMax).
+	__forceinline static void projectAABBOnAxis(const Ogre::Vector3& axis, const Ogre::Vector3* aabbPoints, float& tMin, float& tMax)
+	{
+		tMin = axis.dotProduct(aabbPoints[0]);
+		tMax = tMin;
+		for (int i = 1; i < 8; i++)
+		{
+			float t = axis.dotProduct(aabbPoints[i]);
+			if (t < tMin) tMin = t;
+			else if (t > tMax) tMax = t;
+		}
+	}
+
+	__forceinline static bool intervalDoesNotOverlap(float i1Min, float i1Max, float i2Min, float i2Max)
+	{
+		return (i1Min > i2Max) || (i2Min > i1Max);
+	}
 };

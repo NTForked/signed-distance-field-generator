@@ -63,6 +63,7 @@ public:
 
 	__forceinline Type getType() const { return mType; }
 
+	/// Retrieves the squares distance for this BVH node to the given point.
 	virtual float squaredDistance(const Ogre::Vector3& point) const = 0;
 
 	struct ClosestLeafResult

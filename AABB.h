@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "OgreMath/OgreVector3.h"
 #include "Ray.h"
+#include "MathMisc.h"
 
 struct AABB
 {
@@ -50,9 +51,9 @@ struct AABB
 	__forceinline bool intersectsAABB(const AABB& otherAABB) const
 	{
 		// perform separating axis test
-		if (max.x < otherAABB.min.x || otherAABB.max.x < min.x) return false;
-		if (max.y < otherAABB.min.y || otherAABB.max.y < min.y) return false;
-		if (max.z < otherAABB.min.z || otherAABB.max.z < min.z) return false;
+		if (MathMisc::intervalDoesNotOverlap(min.x, max.x, otherAABB.min.x, otherAABB.max.x)) return false;
+		if (MathMisc::intervalDoesNotOverlap(min.y, max.y, otherAABB.min.y, otherAABB.max.y)) return false;
+		if (MathMisc::intervalDoesNotOverlap(min.z, max.z, otherAABB.min.z, otherAABB.max.z)) return false;
 		return true;
 	}
 
@@ -75,24 +76,55 @@ struct AABB
 		return 0;
 	}
 
-	__forceinline bool isBehindPlane(const Ogre::Vector3& point, const Ogre::Vector3& normal)
+	__forceinline bool intersectsTriangle(const Ogre::Vector3& p1, const Ogre::Vector3& p2, const Ogre::Vector3& p3, const Ogre::Vector3& normal) const
 	{
-		float dist = (min - point).dotProduct(normal);
-		if (dist > 0) return false;
-		dist = (Ogre::Vector3(min[0], min[1], max[2]) - point).dotProduct(normal);
-		if (dist > 0) return false;
-		dist = (Ogre::Vector3(min[0], max[1], min[2]) - point).dotProduct(normal);
-		if (dist > 0) return false;
-		dist = (Ogre::Vector3(min[0], max[1], max[2]) - point).dotProduct(normal);
-		if (dist > 0) return false;
-		dist = (Ogre::Vector3(max[0], min[1], min[2]) - point).dotProduct(normal);
-		if (dist > 0) return false;
-		dist = (Ogre::Vector3(max[0], min[1], max[2]) - point).dotProduct(normal);
-		if (dist > 0) return false;
-		dist = (Ogre::Vector3(max[0], max[1], min[2]) - point).dotProduct(normal);
-		if (dist > 0) return false;
-		dist = (max - point).dotProduct(normal);
-		if (dist > 0) return false;
+		// perform separating axis test
+		// first check AABB face normals
+		float tMin, tMax;
+		MathMisc::projectTriangleOnAxis(Ogre::Vector3(1, 0, 0), p1, p2, p3, tMin, tMax);
+		if (MathMisc::intervalDoesNotOverlap(min.x, max.x, tMin, tMax)) return false;
+		MathMisc::projectTriangleOnAxis(Ogre::Vector3(0, 1, 0), p1, p2, p3, tMin, tMax);
+		if (MathMisc::intervalDoesNotOverlap(min.y, max.y, tMin, tMax)) return false;
+		MathMisc::projectTriangleOnAxis(Ogre::Vector3(0, 0, 1), p1, p2, p3, tMin, tMax);
+		if (MathMisc::intervalDoesNotOverlap(min.z, max.z, tMin, tMax)) return false;
+
+		float aabbMin, aabbMax;
+		Ogre::Vector3 aabbPoints[8];
+		for (int i = 0; i < 8; i++)
+		{
+			aabbPoints[i] = min;
+			if ( i & 4) aabbPoints[i].x = max.x;
+			if ( i & 2) aabbPoints[i].y = max.y;
+			if ( i & 1) aabbPoints[i].z = max.z;
+		}
+
+		MathMisc::projectTriangleOnAxis(normal, p1, p2, p3, tMin, tMax);
+		MathMisc::projectAABBOnAxis(normal, aabbPoints, aabbMin, aabbMax);
+		if (MathMisc::intervalDoesNotOverlap(aabbMin, aabbMax, tMin, tMax)) return false;
+
+		Ogre::Vector3 edges[3] = {(p2-p1), (p3-p1), (p3-p2)};
+		for (int i = 0; i < 3; i++)
+		{
+			Ogre::Vector3 axis = edges[i];
+			MathMisc::projectTriangleOnAxis(axis, p1, p2, p3, tMin, tMax);
+			MathMisc::projectAABBOnAxis(axis, aabbPoints, aabbMin, aabbMax);
+			if (MathMisc::intervalDoesNotOverlap(aabbMin, aabbMax, tMin, tMax)) return false;
+
+			axis = edges[i].crossProduct(Ogre::Vector3(1, 0, 0));
+			MathMisc::projectTriangleOnAxis(axis, p1, p2, p3, tMin, tMax);
+			MathMisc::projectAABBOnAxis(axis, aabbPoints, aabbMin, aabbMax);
+			if (MathMisc::intervalDoesNotOverlap(aabbMin, aabbMax, tMin, tMax)) return false;
+
+			axis = edges[i].crossProduct(Ogre::Vector3(0, 1, 0));
+			MathMisc::projectTriangleOnAxis(axis, p1, p2, p3, tMin, tMax);
+			MathMisc::projectAABBOnAxis(axis, aabbPoints, aabbMin, aabbMax);
+			if (MathMisc::intervalDoesNotOverlap(aabbMin, aabbMax, tMin, tMax)) return false;
+
+			axis = edges[i].crossProduct(Ogre::Vector3(0, 0, 1));
+			MathMisc::projectTriangleOnAxis(axis, p1, p2, p3, tMin, tMax);
+			MathMisc::projectAABBOnAxis(axis, aabbPoints, aabbMin, aabbMax);
+			if (MathMisc::intervalDoesNotOverlap(aabbMin, aabbMax, tMin, tMax)) return false;
+		}
 		return true;
 	}
 
