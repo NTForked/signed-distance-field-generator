@@ -148,7 +148,7 @@ public:
 	}
 };
 
-class SignedDistanceField3DArray : public Generic3DArray<float>, public SignedDistanceField3D<MaterialID>
+class SignedDistanceField3DArray : public Generic3DArray<float>, public SampledSignedDistanceField3D<MaterialID>
 {
 public:
 	vector<Cube> getCubesToMarch()
@@ -186,9 +186,9 @@ public:
 	}
 
 	template<class SDFConstructor>
-	static std::shared_ptr<SignedDistanceField3DArray> sampleSDF(const SDFConstructor& constructor, float cellSize)
+	static std::shared_ptr<SampledSignedDistanceField3D> sampleSDF(const SDFConstructor& constructor, float cellSize)
 	{
-		std::shared_ptr<SignedDistanceField3DArray> sdf = std::make_shared<SignedDistanceField3DArray>();
+		std::shared_ptr<SampledSignedDistanceField3D> sdf = std::make_shared<SampledSignedDistanceField3D>();
 		sdf->initialize(constructor.getAABB(), cellSize);
 		std::cout << "Num cells: " << sdf->totalNrOfCells() << std::endl;
 		for (unsigned int x = 0; x < sdf->getNumCellsX(); x++)

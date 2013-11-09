@@ -28,6 +28,7 @@ THE SOFTWARE.
 
 #include "OgreColourValue.h"
 #include "OgreMath.h"
+#include <algorithm>
 
 namespace Ogre {
 

@@ -64,7 +64,7 @@ struct AABB
 			&& point.z >= min.z && point.x < max.z);
 	}
 
-	__forceinline bool intersectsSphere(const Ogre::Vector3& center, float radius)
+	__forceinline bool intersectsSphere(const Ogre::Vector3& center, float radius) const
 	{
 		// NIY
 		return false;

@@ -63,7 +63,7 @@ public:
 		return mMesh->triangleDataVS[mTriangleIndex];
 	}
 
-	const Surface* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) override
+	const Surface* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) const override
 	{
 		// first check vertices
 		Ogre::Vector3 trianglePoints[3];
@@ -71,7 +71,7 @@ public:
 		trianglePoints[1] = mMesh->vertexBufferVS[mIndex2].position;
 		trianglePoints[2] = mMesh->vertexBufferVS[mIndex3].position;
 		float bestSquaredDist = result.closestDistance * result.closestDistance;
-		Surface* ret = nullptr;
+		const Surface* ret = nullptr;
 		for (int i = 0; i < 3; i++)
 		{
 			float squaredDist = trianglePoints[i].squaredDistance(point);
@@ -178,7 +178,7 @@ public:
 		m_SphereBV = SphereBV(position, radius);
 	}
 
-	const Surface* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result)
+	const Surface* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) const override
 	{
 		float dist = position.squaredDistance(point);
 		if (dist < result.closestDistance*result.closestDistance)

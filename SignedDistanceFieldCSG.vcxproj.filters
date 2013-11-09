@@ -60,7 +60,8 @@
     <ClInclude Include="MeshSimplify.h" />
     <ClInclude Include="VertexMerger.h" />
     <ClInclude Include="OctreeSDF.h" />
-    <ClInclude Include="ImplicitTriangleSDF.h" />
+    <ClInclude Include="TriangleSDF.h" />
+    <ClInclude Include="OpUnionSDF.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

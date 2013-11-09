@@ -102,12 +102,12 @@ struct SphereBV
 		}
 	}
 
-	__forceinline bool intersectsBV(const SphereBV& otherSphere)
+	__forceinline bool intersectsBV(const SphereBV& otherSphere) const
 	{
 		return intersectsSphere(otherSphere.center, otherSphere.radius);
 	}
 
-	__forceinline bool intersectsSphere(const Ogre::Vector3& otherCenter, float otherRadius)
+	__forceinline bool intersectsSphere(const Ogre::Vector3& otherCenter, float otherRadius) const
 	{
 		float radiusSum = radius + otherRadius;
 		return center.squaredDistance(otherCenter) <= radiusSum*radiusSum;

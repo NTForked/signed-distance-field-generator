@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <queue>
 #include "Ray.h"
 #include "AABB.h"
 
@@ -77,12 +78,13 @@ public:
 		Ogre::Vector3 normal;
 	};
 	/// Retrieves the closest surface to point.
-	virtual const LeafType* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) = 0;
+	virtual const LeafType* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) const = 0;
 
 	/// Retrieves whether the AABB intersects any surfaces.
 	virtual bool intersectsAABB(const AABB& aabb) const = 0;
 };
 
+/// Bucket that just stores a list of leaves.
 template<class LeafType>
 class BVHContainer : public BVH<LeafType>
 {
@@ -148,7 +150,7 @@ public:
 		return minDist;
 	}
 
-	const LeafType* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) override
+	const LeafType* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) const override
 	{
 		const LeafType* ret = nullptr;
 		for (auto i = mChildren.begin(); i != mChildren.end(); ++i)
@@ -390,7 +392,7 @@ public:
 	}
 
 	//! Finds leaf that is closest to a given point.
-	const LeafType* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) override
+	const LeafType* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) const override
 	{
 		if (!mBoundingVolume.intersectsSphere(point, result.closestDistance)) return nullptr;
 		if (mChildren[0]->squaredDistance(point) < mChildren[1]->squaredDistance(point))
@@ -408,6 +410,44 @@ public:
 			return leftHit;
 		}
 	}
+
+	// heap traversal is twice as slow than the simple recursive method!
+	/*struct CompareBVHsFunctor
+	{
+		Ogre::Vector3 m_Point;
+		CompareBVHsFunctor(const Ogre::Vector3& point) : m_Point(point) {}
+		bool operator()(const BVH* bvh1, const BVH* bvh2)
+		{
+			return bvh1->squaredDistance(m_Point) > bvh2->squaredDistance(m_Point);
+		}
+	};
+	const LeafType* getClosestLeafHeap(const Ogre::Vector3& point, ClosestLeafResult& result)
+	{
+		CompareBVHsFunctor functor(point);
+		std::priority_queue<const BVH<typename LeafType>*, std::vector<const BVH<typename LeafType>* >, CompareBVHsFunctor> heap(functor);
+		heap.push(this);
+		const LeafType* ret = nullptr;
+		while (!heap.empty())
+		{
+			const BVH<LeafType>* bvh = heap.top();
+			heap.pop();
+			if (bvh->getType() == NODE)
+			{
+				BVHNode<BoundingVolume, LeafType>* bvhNode = (BVHNode<BoundingVolume, LeafType>*)bvh;
+				if (bvhNode->mBoundingVolume.intersectsSphere(point, result.closestDistance))
+				{
+					heap.push(bvhNode->mChildren[0]);
+					heap.push(bvhNode->mChildren[1]);
+				}
+			}
+			else
+			{
+				const LeafType* closest = bvh->getClosestLeaf(point, result);
+				if (closest) ret = closest;
+			}
+		}
+		return ret;
+	}*/
 
 	float squaredDistance(const Ogre::Vector3& point) const override
 	{

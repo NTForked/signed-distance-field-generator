@@ -7,7 +7,7 @@
 #include "AABB.h"
 #include "Prerequisites.h"
 
-class OctreeSDF : public SignedDistanceField3D<MaterialID>
+class OctreeSDF : public SampledSignedDistanceField3D<MaterialID>
 {
 protected:
 	struct Area
@@ -96,8 +96,8 @@ protected:
 		
 	}
 
-	template<class ImplicitSDF>
-	Node* createNode(const Area& area, const ImplicitSDF& implicitSDF)
+	//template<class ImplicitSDF>
+	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF)
 	{
 		for (int i = 0; i < 8; i++)
 		{
@@ -137,7 +137,7 @@ protected:
 				getCubesToMarch(node->m_Children[i], subAreas[i], cubes);
 		}
 	}
-	float getSignedDistance(Node* node, const Area& area, const Ogre::Vector3& point)
+	float getSignedDistance(Node* node, const Area& area, const Ogre::Vector3& point) const
 	{
 		if (!node)
 		{
@@ -163,15 +163,16 @@ protected:
 			{
 				if (subAreas[i].containsPoint(point))
 				{
-					getSignedDistance(node->m_Children[i], subAreas[i], point);
+					return getSignedDistance(node->m_Children[i], subAreas[i], point);
 					break;
 				}
 			}
 		}
+		return 0.0f;		// should never occur
 	}
 public:
-	template<class ImplicitSDF>
-	static std::shared_ptr<OctreeSDF> sampleSDF(const ImplicitSDF& implicitSDF, int maxDepth)
+	//template<class ImplicitSDF>
+	static std::shared_ptr<OctreeSDF> sampleSDF(const SignedDistanceField3D& implicitSDF, int maxDepth)
 	{
 		std::shared_ptr<OctreeSDF> octreeSDF = std::make_shared<OctreeSDF>();
 		AABB aabb = implicitSDF.getAABB();
@@ -188,6 +189,8 @@ public:
 		return (float)(1 << m_MaxDepth) / m_RootArea.m_RealSize;
 	}
 
+	AABB getAABB() const override { return m_RootArea.toAABB(); }
+
 	vector<Cube> getCubesToMarch()
 	{
 		vector<Cube> cubes;
@@ -196,8 +199,14 @@ public:
 		return cubes;
 	}
 
-	float getSignedDistance(const Ogre::Vector3& point)
+	float getSignedDistance(const Ogre::Vector3& point) const override
 	{
 		return getSignedDistance(m_RootNode, m_RootArea, point);
+	}
+
+	// TODO!
+	bool SignedDistanceField3D::intersectsSurface(const AABB &) const override
+	{
+		return true;
 	}
 };

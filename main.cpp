@@ -13,8 +13,9 @@
 #include "BVH.h"
 #include "Surfaces.h"
 #include "AABB.h"
-#include "ImplicitTriangleSDF.h"
+#include "TriangleSDF.h"
 #include "OctreeSDF.h"
+#include "OpUnionSDF.h"
 
 using std::vector;
 using Ogre::Vector3;
@@ -64,14 +65,30 @@ void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestGrid_" + fileName, *gridSDF, gridSDF->getInverseCellSize(), 0, false);*/
 }
 
+void testOpUnion(const std::string& outFileName, const SignedDistanceField3D& sdf1, const SignedDistanceField3D& sdf2, int maxDepth)
+{
+	std::vector<const SignedDistanceField3D*> sdfs;
+	sdfs.push_back(&sdf1);
+	sdfs.push_back(&sdf2);
+	OpUnionSDF unionSDF(sdfs);
+	Profiler::Timestamp timeStamp = Profiler::timestamp();
+	auto octreeSDF = OctreeSDF::sampleSDF(unionSDF, maxDepth);
+	Profiler::printJobDuration("SDF Octree construction", timeStamp);
+	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
+}
+
 int main()
 {
-	// buildSDFAndMarch<ImplicitTriangleMeshSDF_RC>("buddha2", 8);
-	// buildSDFAndMarch<ImplicitTriangleMeshSDF_RC>("main_gear_01", 0.02f);
-	buildSDFAndMarch<ImplicitTriangleMeshSDF_AWP>("Armadillo", 8);
-	// buildSDFAndMarch<ImplicitTriangleMeshSDF_AWP>("bunny_highres", 0.005f);
-	// buildSDFAndMarch<ImplicitTriangleMeshSDF_RC>("buddha2", 0.01f);
-	// buildSDFAndMarch<ImplicitTriangleMeshSDF_RC>("sponza2", 0.3f);
+	// buildSDFAndMarch<TriangleMeshSDF_RC>("buddha2", 8);
+	// buildSDFAndMarch<TriangleMeshSDF_RC>("main_gear_01", 0.02f);
+	// buildSDFAndMarch<TriangleMeshSDF_AWP>("Armadillo", 8);
+	/*testOpUnion("Buddha_Bunny_Union",
+		TriangleMeshSDF_RC(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
+		TriangleMeshSDF_RC(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
+		8);*/
+	buildSDFAndMarch<TriangleMeshSDF_AWP>("bunny_highres", 8);
+	// buildSDFAndMarch<TriangleMeshSDF_RC>("buddha2", 0.01f);
+	// buildSDFAndMarch<TriangleMeshSDF_RC>("sponza2", 0.3f);
 	while (true) {}
 	return 0;
 }

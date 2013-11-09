@@ -60,7 +60,7 @@ class MarchingCubes {
 	};
 
 	static inline void marchCube(
-		const typename SignedDistanceField3D<typename VoxelData>::Cube& cube,
+		const typename SampledSignedDistanceField3D<typename VoxelData>::Cube& cube,
 		std::unordered_map<Vector3i, VertexIndexed> &vertexMap,
 		std::vector<unsigned int> &indexBuffer)
 	{
@@ -181,11 +181,11 @@ public:
 	}
 
 	template<class MeshWriter>
-	static void marchSDF(const std::string &fileName, SignedDistanceField3D<VoxelData>& sdf,
+	static void marchSDF(const std::string &fileName, SampledSignedDistanceField3D<VoxelData>& sdf,
 			float voxelsPerUnit, int numSmoothIterations = 1, bool bSimplify=false)
 	{
 		std::cout << "[Marching cubes] Fetching cubes..." << std::endl;
-		vector<typename SignedDistanceField3D<typename VoxelData>::Cube > cubes = sdf.getCubesToMarch();
+		vector<typename SampledSignedDistanceField3D<typename VoxelData>::Cube > cubes = sdf.getCubesToMarch();
 		std::cout << "Fetched " << cubes.size() << " cubes!" << std::endl;
 
 		std::unordered_map<Vector3i, VertexIndexed> vertexMap;
