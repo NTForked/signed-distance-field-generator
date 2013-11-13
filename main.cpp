@@ -47,16 +47,16 @@ std::shared_ptr<Mesh> loadMesh(const std::string &filename)
 	return mesh;
 }
 
-template<class ImplicitSDF>
 void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 {
+	float cellSize = 1.0f / (1 << (maxDepth));
 	std::shared_ptr<Mesh> mesh = loadMesh(fileName + ".obj");
-	ImplicitSDF meshSDF(std::make_shared<TransformedMesh>(mesh));
+	TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
 
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
-	auto octreeSDF = OctreeSDF::sampleSDF(meshSDF, maxDepth);
+	auto sampledSDF = OctreeSDF::sampleSDF(meshSDF, maxDepth);
 	Profiler::printJobDuration("SDF Octree construction", timeStamp);
-	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + fileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
+	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + fileName, *sampledSDF, sampledSDF->getInverseCellSize(), 0, false);
 
 	/*float cellSize = 1.0f / octreeSDF->getInverseCellSize();
 	timeStamp = Profiler::timestamp();
@@ -86,7 +86,7 @@ int main()
 		TriangleMeshSDF_RC(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
 		TriangleMeshSDF_RC(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
 		8);*/
-	buildSDFAndMarch<TriangleMeshSDF_AWP>("bunny_highres", 8);
+	buildSDFAndMarch("bunny_highres", 7);
 	// buildSDFAndMarch<TriangleMeshSDF_RC>("buddha2", 0.01f);
 	// buildSDFAndMarch<TriangleMeshSDF_RC>("sponza2", 0.3f);
 	while (true) {}

@@ -16,7 +16,7 @@ protected:
 	T* m_Buffer;
 	T m_Zero;
 
-	AABB aabb;
+	AABB m_AABB;
 	Ogre::Vector3 translation;
 	unsigned int xNumCells, yNumCells, zNumCells, xyNumCells, totalNumCells;
 	float cellSize, inverseCellSize;
@@ -37,7 +37,7 @@ public:
 
 	AABB getAABB()
 	{
-		return aabb;
+		return m_AABB;
 	}
 
 	bool isNull() { return (m_Buffer == nullptr); }
@@ -84,7 +84,7 @@ public:
 	{
 		int nrOfCellsOld = totalNrOfCells();
 
-		this->aabb = aabb;
+		m_AABB = aabb;
 		translation = aabb.getCenter();
 		const float offset = 0.5;		
 		xNumCells = (unsigned int)std::floor(((aabb.max.x - aabb.min.x) / cellSize) + offset)+1;
@@ -185,11 +185,29 @@ public:
 		return cubes;
 	}
 
-	template<class SDFConstructor>
-	static std::shared_ptr<SampledSignedDistanceField3D> sampleSDF(const SDFConstructor& constructor, float cellSize)
+	float getSignedDistance(const Ogre::Vector3& point) const override
 	{
-		std::shared_ptr<SampledSignedDistanceField3D> sdf = std::make_shared<SampledSignedDistanceField3D>();
+		// NIY
+		return 0.0f;
+	}
+
+	bool intersectsSurface(const AABB& aabb) const override
+	{
+		// NIY
+		return true;
+	}
+
+	AABB getAABB() const override
+	{
+		return m_AABB;
+	}
+
+	template<class SDFConstructor>
+	static std::shared_ptr<SignedDistanceField3DArray> sampleSDF(SDFConstructor& constructor, float cellSize)
+	{
+		std::shared_ptr<SignedDistanceField3DArray> sdf = std::make_shared<SignedDistanceField3DArray>();
 		sdf->initialize(constructor.getAABB(), cellSize);
+		constructor.prepareSampling(cellSize);
 		std::cout << "Num cells: " << sdf->totalNrOfCells() << std::endl;
 		for (unsigned int x = 0; x < sdf->getNumCellsX(); x++)
 		{
@@ -197,7 +215,7 @@ public:
 			{
 				for (unsigned int z = 0; z < sdf->getNumCellsZ(); z++)
 				{
-					Vector3 point = Vector3((float)x, (float)y, (float)z) * sdf->getCellSize() + sdf->aabb.getMin();
+					Vector3 point = Vector3((float)x, (float)y, (float)z) * sdf->getCellSize() + sdf->m_AABB.getMin();
 					sdf->lookupOrCreate(x, y, z) = constructor.getSignedDistance(point);
 				}
 			}

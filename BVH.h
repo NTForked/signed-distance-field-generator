@@ -57,7 +57,7 @@ public:
 	}
 
 	/// Returns all surfaces that are hit by the ray.
-	virtual void rayIntersectAll(const Ray &ray, std::vector<std::pair<const LeafType*, Ray::Intersection>> &intersections)
+	virtual void rayIntersectAll(const Ray &ray, std::vector<std::pair<const LeafType*, Ray::Intersection>> &intersections) const
 	{
 		// default implementation
 		Ray::Intersection intersection;
@@ -132,7 +132,7 @@ public:
 		return nullptr;
 	}
 
-	void rayIntersectAll(const Ray &ray, std::vector<std::pair<const LeafType*, Ray::Intersection>> &intersections) override
+	void rayIntersectAll(const Ray &ray, std::vector<std::pair<const LeafType*, Ray::Intersection>> &intersections) const override
 	{
 		for (auto i = mChildren.begin(); i != mChildren.end(); ++i)
 			(*i)->rayIntersectAll(ray, intersections);
@@ -383,7 +383,7 @@ public:
 		return rightHit;
 	}
 
-	void rayIntersectAll(const Ray &ray, std::vector<std::pair<const LeafType*, Ray::Intersection>> &intersections) override
+	void rayIntersectAll(const Ray &ray, std::vector<std::pair<const LeafType*, Ray::Intersection>> &intersections) const override
 	{
 		if (!mBoundingVolume.rayIntersect(ray))
 			return;
