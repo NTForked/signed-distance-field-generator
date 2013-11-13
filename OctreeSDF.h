@@ -258,7 +258,7 @@ public:
 		Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();
 		float cubeSize = std::max(std::max(aabbSize.x, aabbSize.y), aabbSize.z);
 		octreeSDF->m_CellSize = cubeSize / (1 << maxDepth);
-		implicitSDF.prepareSampling(octreeSDF->m_CellSize);
+		implicitSDF.prepareSampling(aabb, octreeSDF->m_CellSize);
 		octreeSDF->m_RootArea = Area(Vector3i(0, 0, 0), 0, aabb.getMin(), cubeSize);
 		octreeSDF->m_MaxDepth = maxDepth;
 		octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, implicitSDF);

@@ -15,7 +15,7 @@ public:
 	virtual AABB getAABB() const = 0;
 
 	/// Usually not required, only used TriangleMeshSDF_Robust so far which builds a grid.
-	virtual void prepareSampling(float cellSize) {}
+	virtual void prepareSampling(const AABB& aabb, float cellSize) {}
 };
 
 template<class UserData>

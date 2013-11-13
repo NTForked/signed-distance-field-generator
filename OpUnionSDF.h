@@ -9,11 +9,11 @@
 class OpUnionSDF : public SignedDistanceField3D
 {
 protected:
-	std::vector<const SignedDistanceField3D*> m_SDFs;
+	std::vector<SignedDistanceField3D*> m_SDFs;
 	AABB m_AABB;
 
 public:
-	OpUnionSDF(std::vector<const SignedDistanceField3D*> sdfs) : m_SDFs(sdfs)
+	OpUnionSDF(std::vector<SignedDistanceField3D*> sdfs) : m_SDFs(sdfs)
 	{
 		if (!m_SDFs.empty())
 		{
@@ -47,5 +47,11 @@ public:
 	AABB getAABB() const override
 	{
 		return m_AABB;
+	}
+
+	void prepareSampling(const AABB& aabb, float cellSize) override
+	{
+		for (auto i = m_SDFs.begin(); i != m_SDFs.end(); ++i)
+			(*i)->prepareSampling(aabb, cellSize);
 	}
 };

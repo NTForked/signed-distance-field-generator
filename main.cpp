@@ -65,9 +65,9 @@ void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestGrid_" + fileName, *gridSDF, gridSDF->getInverseCellSize(), 0, false);*/
 }
 
-void testOpUnion(const std::string& outFileName, const SignedDistanceField3D& sdf1, const SignedDistanceField3D& sdf2, int maxDepth)
+void testOpUnion(const std::string& outFileName, SignedDistanceField3D& sdf1, SignedDistanceField3D& sdf2, int maxDepth)
 {
-	std::vector<const SignedDistanceField3D*> sdfs;
+	std::vector<SignedDistanceField3D*> sdfs;
 	sdfs.push_back(&sdf1);
 	sdfs.push_back(&sdf2);
 	OpUnionSDF unionSDF(sdfs);
@@ -79,15 +79,15 @@ void testOpUnion(const std::string& outFileName, const SignedDistanceField3D& sd
 
 int main()
 {
-	// buildSDFAndMarch<TriangleMeshSDF_RC>("buddha2", 8);
-	// buildSDFAndMarch<TriangleMeshSDF_RC>("main_gear_01", 0.02f);
+	// buildSDFAndMarch("sponza2", 8);
+	// buildSDFAndMarch("main_gear_01", 8);
 	// buildSDFAndMarch<TriangleMeshSDF_AWP>("Armadillo", 8);
-	/*testOpUnion("Buddha_Bunny_Union",
-		TriangleMeshSDF_RC(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
-		TriangleMeshSDF_RC(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
-		8);*/
-	buildSDFAndMarch("bunny_highres", 7);
-	// buildSDFAndMarch<TriangleMeshSDF_RC>("buddha2", 0.01f);
+	testOpUnion("Buddha_Bunny_Union",
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
+		8);
+	// buildSDFAndMarch("bunny_highres", 7);
+	// buildSDFAndMarch("buddha2", 8);
 	// buildSDFAndMarch<TriangleMeshSDF_RC>("sponza2", 0.3f);
 	while (true) {}
 	return 0;
