@@ -171,6 +171,8 @@
     <ClInclude Include="OgreMath\OgreVector2.h" />
     <ClInclude Include="OgreMath\OgreVector3.h" />
     <ClInclude Include="OgreMath\OgreVector4.h" />
+    <ClInclude Include="OpDifferenceSDF.h" />
+    <ClInclude Include="OpIntersectionSDF.h" />
     <ClInclude Include="OpUnionSDF.h" />
     <ClInclude Include="PPMWriter.h" />
     <ClInclude Include="Prerequisites.h" />

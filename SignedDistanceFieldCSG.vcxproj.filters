@@ -62,6 +62,8 @@
     <ClInclude Include="OctreeSDF.h" />
     <ClInclude Include="TriangleSDF.h" />
     <ClInclude Include="OpUnionSDF.h" />
+    <ClInclude Include="OpIntersectionSDF.h" />
+    <ClInclude Include="OpDifferenceSDF.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

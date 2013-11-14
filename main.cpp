@@ -16,6 +16,8 @@
 #include "TriangleSDF.h"
 #include "OctreeSDF.h"
 #include "OpUnionSDF.h"
+#include "OpIntersectionSDF.h"
+#include "OpDifferenceSDF.h"
 
 using std::vector;
 using Ogre::Vector3;
@@ -77,11 +79,40 @@ void testOpUnion(const std::string& outFileName, SignedDistanceField3D& sdf1, Si
 	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
 }
 
+void testOpDifference(const std::string& outFileName, SignedDistanceField3D& sdf1, SignedDistanceField3D& sdf2, int maxDepth)
+{
+	OpDifferenceSDF differenceSDF(&sdf1, &sdf2);
+	Profiler::Timestamp timeStamp = Profiler::timestamp();
+	auto octreeSDF = OctreeSDF::sampleSDF(differenceSDF, maxDepth);
+	Profiler::printJobDuration("SDF Octree construction", timeStamp);
+	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
+}
+
+void testOpIntersection(const std::string& outFileName, SignedDistanceField3D& sdf1, SignedDistanceField3D& sdf2, int maxDepth)
+{
+	std::vector<SignedDistanceField3D*> sdfs;
+	sdfs.push_back(&sdf1);
+	sdfs.push_back(&sdf2);
+	OpIntersectionSDF unionSDF(sdfs);
+	Profiler::Timestamp timeStamp = Profiler::timestamp();
+	auto octreeSDF = OctreeSDF::sampleSDF(unionSDF, maxDepth);
+	Profiler::printJobDuration("SDF Octree construction", timeStamp);
+	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
+}
+
 int main()
 {
 	// buildSDFAndMarch("sponza2", 8);
 	// buildSDFAndMarch("main_gear_01", 8);
 	// buildSDFAndMarch<TriangleMeshSDF_AWP>("Armadillo", 8);
+	testOpDifference("Buddha_Bunny_Difference",
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
+		8);
+	testOpIntersection("Buddha_Bunny_Intersection",
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
+		8);
 	testOpUnion("Buddha_Bunny_Union",
 		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
 		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
