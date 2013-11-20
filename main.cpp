@@ -80,16 +80,16 @@ int main()
 {
 	// buildSDFAndMarch("cube", 7);
 	// buildSDFAndMarch("sphere", 7);
-	TriangleMeshSDF_Robust cubeSDF(std::make_shared<TransformedMesh>(SDFManager::loadMesh("cube.obj")));
+	TriangleMeshSDF_Robust cubeSDF(std::make_shared<TransformedMesh>(SDFManager::loadMesh("buddha2.obj")));
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
-	auto buddhaSampled = OctreeSDF::sampleSDF(cubeSDF, 7);
+	auto buddhaSampled = OctreeSDF::sampleSDF(cubeSDF, 8);
 	Profiler::printJobDuration("Cube SDF construction", timeStamp);
-	testOpDifference2("Cube_Sphere_Difference",
+	testOpDifference2("Bunny_Buddha_Difference",
 		buddhaSampled,
-		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("sphere.obj"))));
-	/*testOpDifference("Cube_Sphere_Difference",
-		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("cube.obj"))),
-		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("sphere.obj"))), 7);*/
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("bunny_highres.obj"))));
+	/*testOpDifference("Bunny_Buddha_Difference2",
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("buddha2.obj"))),
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("bunny_highres.obj"))), 8);*/
 	/*testOpIntersection("Buddha_Bunny_Intersection",
 		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("buddha2.obj"))),
 		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("bunny_highres.obj"))),

@@ -254,10 +254,13 @@ public:
 	}
 	float getSignedDistance(const Ogre::Vector3& point) const override
 	{
-		if (!m_AABB.containsPoint(point)) return -99999.0f;
-		int numVotes = 0;
-		int insideVotes = m_RaycastCache1->queryPointIsInside(point, numVotes) + m_RaycastCache2->queryPointIsInside(point, numVotes) + m_RaycastCache3->queryPointIsInside(point, numVotes);
-		bool inside = (insideVotes >= ((numVotes / 2)));
+		bool inside = false;
+		if (m_AABB.containsPoint(point))
+		{
+			int numVotes = 0;
+			int insideVotes = m_RaycastCache1->queryPointIsInside(point, numVotes) + m_RaycastCache2->queryPointIsInside(point, numVotes) + m_RaycastCache3->queryPointIsInside(point, numVotes);
+			inside = (insideVotes >= ((numVotes / 2)));
+		}
 
 		BVH<Surface>::ClosestLeafResult result;
 		const Surface* tri = m_RootNode->getClosestLeaf(point, result);

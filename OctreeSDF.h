@@ -6,7 +6,7 @@
 #include "Vector3i.h"
 #include "AABB.h"
 #include "Prerequisites.h"
-
+#include "OpInvert.h"
 
 /*
 Samples a signed distance field in an adaptive way.
@@ -32,6 +32,20 @@ protected:
 			return (point.x >= m_MinRealPos.x && point.x < (m_MinRealPos.x + m_RealSize)
 				&& point.y >= m_MinRealPos.y && point.y < (m_MinRealPos.y + m_RealSize)
 				&& point.z >= m_MinRealPos.z && point.z < (m_MinRealPos.z + m_RealSize));
+		}
+
+		// Computes a lower and upper bound inside the area given the 8 corner signed distances.
+		void getLowerAndUpperBound(float* signedDistances, float& lowerBound, float& upperBound) const
+		{
+			float minDist = std::numeric_limits<float>::max();
+			float maxDist = std::numeric_limits<float>::min();
+			for (int i = 0; i < 8; i++)
+			{
+				minDist = std::min(minDist, signedDistances[i]);
+				maxDist = std::max(maxDist, signedDistances[i]);
+			}
+			lowerBound = minDist - m_RealSize * 0.5f;
+			upperBound = maxDist + m_RealSize * 0.5f;
 		}
 
 		Vector3i getCorner(int corner) const
@@ -102,10 +116,10 @@ protected:
 		 return true;
 	 }
 
-	float lookupOrComputeSignedDistance(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, std::unordered_map<Vector3i, float>& sdfCache)
+	float lookupOrComputeSignedDistance(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, std::unordered_map<Vector3i, float>& sdfValues)
 	{
 		auto vecs = area.getCornerVecs(corner);
-		auto tryInsert = sdfCache.insert(std::make_pair(getGlobalPos(vecs.first, area.m_Depth), 0.0f));
+		auto tryInsert = sdfValues.insert(std::make_pair(getGlobalPos(vecs.first, area.m_Depth), 0.0f));
 		if (tryInsert.second)
 		{
 			tryInsert.first->second = implicitSDF.getSignedDistance(vecs.second);
@@ -126,7 +140,7 @@ protected:
 	}
 
 	/// Top down octree constructor given a SDF.
-	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF)
+	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, std::unordered_map<Vector3i, float>& sdfValues)
 	{
 		if (area.m_Depth >= m_MaxDepth ||
 			!implicitSDF.intersectsSurface(area.toAABB()))
@@ -134,7 +148,7 @@ protected:
 			float signedDistances[8];
 			for (int i = 0; i < 8; i++)
 			{
-				signedDistances[i] = lookupOrComputeSignedDistance(i, area, implicitSDF, m_SDFValues);
+				signedDistances[i] = lookupOrComputeSignedDistance(i, area, implicitSDF, sdfValues);
 			}
 			if (area.m_Depth >= m_MaxDepth || allSignsAreEqual(signedDistances))
 				return nullptr;	// leaf
@@ -145,8 +159,24 @@ protected:
 		area.getSubAreas(subAreas);
 		Node* node = new Node();
 		for (int i = 0; i < 8; i++)
-			node->m_Children[i] = createNode(subAreas[i], implicitSDF);
+			node->m_Children[i] = createNode(subAreas[i], implicitSDF, sdfValues);
 		return node;
+	}
+
+	// Computes a lower and upper bound inside the area given the 8 corner signed distances.
+	void getLowerAndUpperBound(Node* node, const Area& area, float* signedDistances, float& lowerBound, float& upperBound) const
+	{
+		if (node) area.getLowerAndUpperBound(signedDistances, lowerBound, upperBound);
+		else
+		{	// if it's a leaf we can do even better and just return min and max of the corner values.
+			float thisMin = std::numeric_limits<float>::max();
+			float thisMax = std::numeric_limits<float>::min();
+			for (int i = 0; i < 8; i++)
+			{
+				thisMin = std::min(thisMin, signedDistances[i]);
+				thisMax = std::max(thisMax, signedDistances[i]);
+			}
+		}
 	}
 
 	void getCubesToMarch(Node* node, const Area& area, vector<Cube>& cubes)
@@ -210,9 +240,14 @@ protected:
 		return 0.0f;		// should never occur
 	}
 
-	/// Subtracts an sdf from the node and returns the new node.
+	/// Subtracts an sdf from the node and returns the new node. The new sdf values are written to newSDF.
 	Node* subtract(Node* node, const Area& area, SignedDistanceField3D& otherSDF, std::unordered_map<Vector3i, float>& newSDF, std::unordered_map<Vector3i, float>& otherSDFCache)
 	{
+		// if otherSDF does not overlap with the node AABB we can stop here
+		if (!area.toAABB().intersectsAABB(otherSDF.getAABB())) return node;
+
+		float otherSignedDistances[8];
+		float thisSignedDistances[8];
 		for (int i = 0; i < 8; i++)
 		{
 			auto vecs = area.getCornerVecs(i);
@@ -220,10 +255,28 @@ protected:
 			Vector3i globalPos = getGlobalPos(vecs.first, area.m_Depth);
 			auto find = m_SDFValues.find(globalPos);
 			vAssert(find != m_SDFValues.end())
+			otherSignedDistances[i] = -otherDist;
+			thisSignedDistances[i] = find->second;
 			newSDF[globalPos] = std::min(find->second, -otherDist);
 		}
-		// if otherSDF does not overlap with the node AABB we can stop here
-		if (!area.toAABB().intersectsAABB(otherSDF.getAABB())) return node;
+
+		// compute a lower and upper bound for this node for this and the other sdf
+		float otherLowerBound, otherUpperBound;
+		area.getLowerAndUpperBound(otherSignedDistances, otherLowerBound, otherUpperBound);
+
+		float thisLowerBound, thisUpperBound;
+		getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
+
+		if (otherUpperBound < thisLowerBound)
+		{
+			if (node) delete node;
+			node = createNode(area, OpInvertSDF(&otherSDF), newSDF);
+		}
+		else if (otherLowerBound > thisUpperBound)
+		{
+			return node;
+		}
+
 		if (node)
 		{
 			vAssert(area.m_Depth < m_MaxDepth)
@@ -232,15 +285,18 @@ protected:
 			for (int i = 0; i < 8; i++)
 				node->m_Children[i] = subtract(node->m_Children[i], subAreas[i], otherSDF, newSDF, otherSDFCache);
 		}
-		else if (area.m_Depth < m_MaxDepth && otherSDF.intersectsSurface(area.toAABB()))
-		{
-			// need to subdivide this node
-			node = new Node();
-			interpolateLeaf(area);
-			Area subAreas[8];
-			area.getSubAreas(subAreas);
-			for (int i = 0; i < 8; i++)
-				node->m_Children[i] = subtract(nullptr, subAreas[i], otherSDF, newSDF, otherSDFCache);
+		else
+		{	// it's a leaf in the octree
+			if (area.m_Depth < m_MaxDepth && otherSDF.intersectsSurface(area.toAABB()))
+			{
+				// need to subdivide this node
+				node = new Node();
+				interpolateLeaf(area);
+				Area subAreas[8];
+				area.getSubAreas(subAreas);
+				for (int i = 0; i < 8; i++)
+					node->m_Children[i] = subtract(nullptr, subAreas[i], otherSDF, newSDF, otherSDFCache);
+			}
 		}
 		return node;
 	}
@@ -285,7 +341,7 @@ public:
 		otherSDF.prepareSampling(aabb, octreeSDF->m_CellSize);
 		octreeSDF->m_RootArea = Area(Vector3i(0, 0, 0), 0, aabb.getMin(), cubeSize);
 		octreeSDF->m_MaxDepth = maxDepth;
-		octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, otherSDF);
+		octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, otherSDF, octreeSDF->m_SDFValues);
 		return octreeSDF;
 	}
 
@@ -318,10 +374,9 @@ public:
 	void subtract(SignedDistanceField3D& otherSDF)
 	{
 		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
-		std::unordered_map<Vector3i, float> sdfCopy;
-		sdfCopy.insert(m_SDFValues.begin(), m_SDFValues.end());
-		m_RootNode = subtract(m_RootNode, m_RootArea, otherSDF, sdfCopy, std::unordered_map<Vector3i, float>());
-		m_SDFValues.clear();
-		m_SDFValues.insert(sdfCopy.begin(), sdfCopy.end());
+		std::unordered_map<Vector3i, float> newSDF;
+		m_RootNode = subtract(m_RootNode, m_RootArea, otherSDF, newSDF, std::unordered_map<Vector3i, float>());
+		for (auto i = newSDF.begin(); i != newSDF.end(); i++)
+			m_SDFValues[i->first] = i->second;
 	}
 };

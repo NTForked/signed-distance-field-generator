@@ -64,6 +64,7 @@
     <ClInclude Include="OpDifferenceSDF.h" />
     <ClInclude Include="UniformGridSDF.h" />
     <ClInclude Include="SDFManager.h" />
+    <ClInclude Include="OpInvert.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

@@ -173,6 +173,7 @@
     <ClInclude Include="OgreMath\OgreVector4.h" />
     <ClInclude Include="OpDifferenceSDF.h" />
     <ClInclude Include="OpIntersectionSDF.h" />
+    <ClInclude Include="OpInvert.h" />
     <ClInclude Include="OpUnionSDF.h" />
     <ClInclude Include="Prerequisites.h" />
     <ClInclude Include="Profiler.h" />
