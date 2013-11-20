@@ -28,6 +28,7 @@ public:
 	{
 		// It's important that the root node is destroyed before the TransformedMesh, because the TransformedMesh manages the leaves of the BVH.
 		delete m_RootNode;
+		delete m_RootNodeAABB;
 	}
 	TriangleMeshSDF(std::shared_ptr<TransformedMesh> mesh)
 	{
@@ -89,7 +90,7 @@ public:
 		const Surface* tri = m_RootNode->getClosestLeaf(point, result);
 		// test sign
 		Vector3 rayDir = result.closestPoint - point;
-		if (rayDir.dotProduct(result.normal) >= 0.0f) result.closestDistance *= -1;
+		if (rayDir.dotProduct(result.normal) < 0.0f) result.closestDistance *= -1;
 		// std::cout << result.closestDistance << std::endl;
 		return result.closestDistance;
 	};
@@ -135,8 +136,8 @@ public:
 	{
 		m_CellSize = cellSize;
 		m_InverseCellSize = 1.0f / cellSize;
-		m_Width = std::ceil(width * m_InverseCellSize);
-		m_Height = std::ceil(height * m_InverseCellSize);
+		m_Width = (int)std::ceil(width * m_InverseCellSize);
+		m_Height = (int)std::ceil(height * m_InverseCellSize);
 
 		m_ImagePlaneMin = imagePlaneMin;
 		m_ImagePlaneNormalAxis = imagePlaneNormalAxis;
@@ -150,6 +151,9 @@ public:
 		m_PlaneStepVec1[m_ImagePlaneAxis1] = m_CellSize;
 		m_PlaneStepVec2[m_ImagePlaneAxis2] = m_CellSize;
 
+		// Add a constant offset to the ray origins to avoid rays passing exactly through vertices.
+		Ogre::Vector3 constantOffset(Ogre::Math::PI * 0.00001f, Ogre::Math::PI * 0.00001f, Ogre::Math::PI * 0.00001f);
+
 		m_RayResults = new std::vector<RayHit>*[m_Width];
 		for (int x = 0; x < m_Width; x++)
 		{
@@ -157,7 +161,7 @@ public:
 			for (int y = 0; y < m_Height; y++)
 			{
 				Ogre::Vector3 rayOrigin = m_ImagePlaneMin + (float)x * m_PlaneStepVec1 + (float)y * m_PlaneStepVec2;
-				Ray ray(rayOrigin, m_PlaneNormal);
+				Ray ray(rayOrigin + constantOffset, m_PlaneNormal);
 				std::vector<std::pair<const Surface*, Ray::Intersection>> intersections;
 				bvh->rayIntersectAll(ray, intersections);
 				std::sort(intersections.begin(), intersections.end(), compareIntersections);
@@ -224,15 +228,23 @@ private:
 public:
 	~TriangleMeshSDF_Robust()
 	{
-		delete m_RootNodeAABB;
-		delete m_RaycastCache1;
-		delete m_RaycastCache2;
-		delete m_RaycastCache3;
+		if (m_RaycastCache1)
+		{
+			delete m_RaycastCache1;
+			delete m_RaycastCache2;
+			delete m_RaycastCache3;
+		}
 	}
 	TriangleMeshSDF_Robust(std::shared_ptr<TransformedMesh> mesh) :
-		TriangleMeshSDF(mesh) {}
+		TriangleMeshSDF(mesh), m_RaycastCache1(nullptr) {}
 	void prepareSampling(const AABB& aabb, float cellSize) override
 	{
+		if (m_RaycastCache1)
+		{
+			delete m_RaycastCache1;
+			delete m_RaycastCache2;
+			delete m_RaycastCache3;
+		}
 		Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();
 		Profiler::Timestamp timeStamp = Profiler::timestamp();
 		m_RaycastCache1 = new RaycastCache(m_RootNodeAABB, cellSize, aabbSize.x, aabbSize.y, aabb.getMin(), 2);

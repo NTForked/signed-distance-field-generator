@@ -3,10 +3,9 @@
 #include <fstream>
 #include <ctime>
 #include <limits>
-#include "PPMWriter.h"
 #include "Profiler.h"
 #include "OBJReader.h"
-#include "VoxelGrid3DArray.h"
+#include "UniformGridSDF.h"
 #include "MarchingCubes.h"
 #include "ExportOBJ.h"
 #include "Mesh.h"
@@ -18,48 +17,17 @@
 #include "OpUnionSDF.h"
 #include "OpIntersectionSDF.h"
 #include "OpDifferenceSDF.h"
+#include "SDFManager.h"
 
 using std::vector;
 using Ogre::Vector3;
 
-std::shared_ptr<Mesh> loadMesh(const std::string &filename) 
-{
-	std::cout << "Loading mesh " + filename + "..." << std::endl;
-	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
-	std::ifstream file(filename, std::ifstream::in);
-	std::vector<Ogre::Vector3> vertexPositions, vertexNormals;
-	OBJReader::readObjFile(file, vertexPositions, vertexNormals, mesh->indexBuffer);
-	std::cout << filename << " has " << vertexPositions.size() << " vertices and " << mesh->indexBuffer.size() / 3 << " triangles." << std::endl;
-	if (vertexPositions.size() == vertexNormals.size())
-	{
-		for (unsigned int i = 0; i < vertexPositions.size(); i++)
-			mesh->vertexBuffer.push_back(Vertex(vertexPositions[i], vertexNormals[i]));
-		mesh->computeTriangleNormals();
-		mesh->computeVertexNormals();
-	}
-	else
-	{
-		for (unsigned int i = 0; i < vertexPositions.size(); i++)
-			mesh->vertexBuffer.push_back(Vertex(vertexPositions[i], Ogre::Vector3(0,0,1)));
-		// mesh->mergeVertices(0);
-		mesh->removeDegeneratedTriangles();
-		mesh->computeTriangleNormals();
-		mesh->computeVertexNormals();
-	}
-	return mesh;
-}
-
 void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 {
-	float cellSize = 1.0f / (1 << (maxDepth));
-	std::shared_ptr<Mesh> mesh = loadMesh(fileName + ".obj");
-	TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
-
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
-	auto sampledSDF = OctreeSDF::sampleSDF(meshSDF, maxDepth);
+	auto sdf = SDFManager::sampleSignedDistanceFieldFromMesh(fileName + ".obj", maxDepth);
 	Profiler::printJobDuration("SDF Octree construction", timeStamp);
-	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + fileName, *sampledSDF, sampledSDF->getInverseCellSize(), 0, false);
-
+	SDFManager::exportSignedDistanceFieldAsMesh(fileName + "_sdf", sdf);
 	/*float cellSize = 1.0f / octreeSDF->getInverseCellSize();
 	timeStamp = Profiler::timestamp();
 	auto gridSDF = SignedDistanceField3DArray::sampleSDF(meshSDF, cellSize);
@@ -88,6 +56,14 @@ void testOpDifference(const std::string& outFileName, SignedDistanceField3D& sdf
 	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
 }
 
+void testOpDifference2(const std::string& outFileName, std::shared_ptr<OctreeSDF> octreeSDF, SignedDistanceField3D& sdf2)
+{
+	Profiler::Timestamp timeStamp = Profiler::timestamp();
+	octreeSDF->subtract(sdf2);
+	Profiler::printJobDuration("SDF Octree subtract", timeStamp);
+	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
+}
+
 void testOpIntersection(const std::string& outFileName, SignedDistanceField3D& sdf1, SignedDistanceField3D& sdf2, int maxDepth)
 {
 	std::vector<SignedDistanceField3D*> sdfs;
@@ -102,21 +78,26 @@ void testOpIntersection(const std::string& outFileName, SignedDistanceField3D& s
 
 int main()
 {
-	// buildSDFAndMarch("sponza2", 8);
-	// buildSDFAndMarch("main_gear_01", 8);
-	// buildSDFAndMarch<TriangleMeshSDF_AWP>("Armadillo", 8);
-	testOpDifference("Buddha_Bunny_Difference",
-		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
-		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
-		8);
-	testOpIntersection("Buddha_Bunny_Intersection",
-		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
-		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
+	// buildSDFAndMarch("cube", 7);
+	// buildSDFAndMarch("sphere", 7);
+	TriangleMeshSDF_Robust cubeSDF(std::make_shared<TransformedMesh>(SDFManager::loadMesh("cube.obj")));
+	Profiler::Timestamp timeStamp = Profiler::timestamp();
+	auto buddhaSampled = OctreeSDF::sampleSDF(cubeSDF, 7);
+	Profiler::printJobDuration("Cube SDF construction", timeStamp);
+	testOpDifference2("Cube_Sphere_Difference",
+		buddhaSampled,
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("sphere.obj"))));
+	/*testOpDifference("Cube_Sphere_Difference",
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("cube.obj"))),
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("sphere.obj"))), 7);*/
+	/*testOpIntersection("Buddha_Bunny_Intersection",
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("buddha2.obj"))),
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("bunny_highres.obj"))),
 		8);
 	testOpUnion("Buddha_Bunny_Union",
-		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("buddha2.obj"))),
-		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(loadMesh("bunny_highres.obj"))),
-		8);
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("buddha2.obj"))),
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("bunny_highres.obj"))),
+		8);*/
 	// buildSDFAndMarch("bunny_highres", 7);
 	// buildSDFAndMarch("buddha2", 8);
 	// buildSDFAndMarch<TriangleMeshSDF_RC>("sponza2", 0.3f);

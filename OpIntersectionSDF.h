@@ -26,13 +26,13 @@ public:
 	}
 	float getSignedDistance(const Ogre::Vector3& point) const override
 	{
-		float maxDist = 9999999.0f;
+		float minDist = 9999999.0f;
 		for (auto i = m_SDFs.begin(); i != m_SDFs.end(); ++i)
 		{
 			float dist = (*i)->getSignedDistance(point);
-			if (dist < maxDist) maxDist = dist;
+			if (dist < minDist) minDist = dist;
 		}
-		return maxDist;
+		return minDist;
 	}
 
 	bool intersectsSurface(const AABB& aabb) const override

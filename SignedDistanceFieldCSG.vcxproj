@@ -174,11 +174,11 @@
     <ClInclude Include="OpDifferenceSDF.h" />
     <ClInclude Include="OpIntersectionSDF.h" />
     <ClInclude Include="OpUnionSDF.h" />
-    <ClInclude Include="PPMWriter.h" />
     <ClInclude Include="Prerequisites.h" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="OBJReader.h" />
     <ClInclude Include="Ray.h" />
+    <ClInclude Include="SDFManager.h" />
     <ClInclude Include="TriangleSDF.h" />
     <ClInclude Include="SignedDistanceField.h" />
     <ClInclude Include="SphereBV.h" />
@@ -188,7 +188,7 @@
     <ClInclude Include="MathMisc.h" />
     <ClInclude Include="Vector3i.h" />
     <ClInclude Include="VertexMerger.h" />
-    <ClInclude Include="VoxelGrid3DArray.h" />
+    <ClInclude Include="UniformGridSDF.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

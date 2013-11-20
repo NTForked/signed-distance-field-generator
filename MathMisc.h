@@ -149,4 +149,29 @@ struct MathMisc
 	{
 		return (i1Min > i2Max) || (i2Min > i1Max);
 	}
+
+	/// Performs trilinear interpolation.
+	static inline float trilinearInterpolation(const float* cornerValues, float* weights)
+	{
+		return cornerValues[0] * (1 - weights[0]) * (1 - weights[1]) * (1 - weights[2])
+			+ cornerValues[1] * (1 - weights[0]) * (1 - weights[1]) * weights[2]
+			+ cornerValues[2] * (1 - weights[0]) * weights[1] * (1 - weights[2])
+			+ cornerValues[3] * (1 - weights[0]) * weights[1] * weights[2]
+			+ cornerValues[4] * weights[0] * (1 - weights[1]) * (1 - weights[2])
+			+ cornerValues[5] * weights[0] * (1 - weights[1]) * weights[2]
+			+ cornerValues[6] * weights[0] * weights[1] * (1 - weights[2])
+			+ cornerValues[7] * weights[0] * weights[1] * weights[2];
+	}
+
+	static inline float trilinearInterpolation(const float* cornerValues, const Ogre::Vector3& weights)
+	{
+		return cornerValues[0] * (1 - weights[0]) * (1 - weights[1]) * (1 - weights[2])
+			+ cornerValues[1] * (1 - weights[0]) * (1 - weights[1]) * weights[2]
+			+ cornerValues[2] * (1 - weights[0]) * weights[1] * (1 - weights[2])
+			+ cornerValues[3] * (1 - weights[0]) * weights[1] * weights[2]
+			+ cornerValues[4] * weights[0] * (1 - weights[1]) * (1 - weights[2])
+			+ cornerValues[5] * weights[0] * (1 - weights[1]) * weights[2]
+			+ cornerValues[6] * weights[0] * weights[1] * (1 - weights[2])
+			+ cornerValues[7] * weights[0] * weights[1] * weights[2];
+	}
 };

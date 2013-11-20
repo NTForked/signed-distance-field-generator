@@ -250,6 +250,11 @@ public:
 		return arr;
 	}
 
+	int grid3Index() const
+	{
+		return 9 * x + 3 * y + z;
+	}
+
 	Vector3i* directNeighbors(Vector3i* arr) const
 	{
 		arr[0] = *this + Vector3i(-1, 0, 0);
@@ -259,11 +264,6 @@ public:
 		arr[4] = *this + Vector3i(0, 0, -1);
 		arr[5] = *this + Vector3i(0, 0, 1);
 		return arr;
-	}
-
-	int grid3Index() const
-	{
-		return 9 * x + 3 * y + z;
 	}
 
 	static inline float spatialInterpolation(const float* cornerValues, float* weights)
