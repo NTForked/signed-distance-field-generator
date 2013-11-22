@@ -154,6 +154,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AABB.h" />
+    <ClInclude Include="Vertex.h" />
     <ClInclude Include="OctreeSDF.h" />
     <ClInclude Include="BVH.h" />
     <ClInclude Include="ExportOBJ.h" />
@@ -161,7 +162,6 @@
     <ClInclude Include="ExportSTL.h" />
     <ClInclude Include="MarchingCubes.h" />
     <ClInclude Include="Mesh.h" />
-    <ClInclude Include="MeshSimplify.h" />
     <ClInclude Include="OgreMath\asm_math.h" />
     <ClInclude Include="OgreMath\OgreColourValue.h" />
     <ClInclude Include="OgreMath\OgreMath.h" />
@@ -171,9 +171,8 @@
     <ClInclude Include="OgreMath\OgreVector2.h" />
     <ClInclude Include="OgreMath\OgreVector3.h" />
     <ClInclude Include="OgreMath\OgreVector4.h" />
-    <ClInclude Include="OpDifferenceSDF.h" />
     <ClInclude Include="OpIntersectionSDF.h" />
-    <ClInclude Include="OpInvert.h" />
+    <ClInclude Include="OpInvertSDF.h" />
     <ClInclude Include="OpUnionSDF.h" />
     <ClInclude Include="Prerequisites.h" />
     <ClInclude Include="Profiler.h" />

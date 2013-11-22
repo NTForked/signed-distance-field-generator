@@ -151,7 +151,8 @@ struct MathMisc
 	}
 
 	/// Performs trilinear interpolation.
-	static inline float trilinearInterpolation(const float* cornerValues, float* weights)
+	template<class T>
+	static inline T  trilinearInterpolation(const T* cornerValues, float* weights)
 	{
 		return cornerValues[0] * (1 - weights[0]) * (1 - weights[1]) * (1 - weights[2])
 			+ cornerValues[1] * (1 - weights[0]) * (1 - weights[1]) * weights[2]
@@ -163,7 +164,8 @@ struct MathMisc
 			+ cornerValues[7] * weights[0] * weights[1] * weights[2];
 	}
 
-	static inline float trilinearInterpolation(const float* cornerValues, const Ogre::Vector3& weights)
+	template<class T>
+	static inline T trilinearInterpolation(const T* cornerValues, const Ogre::Vector3& weights)
 	{
 		return cornerValues[0] * (1 - weights[0]) * (1 - weights[1]) * (1 - weights[2])
 			+ cornerValues[1] * (1 - weights[0]) * (1 - weights[1]) * weights[2]

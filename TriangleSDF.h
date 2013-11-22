@@ -84,7 +84,7 @@ class TriangleMeshSDF_AWP : public TriangleMeshSDF
 public:
 	TriangleMeshSDF_AWP(std::shared_ptr<TransformedMesh> mesh) :
 		TriangleMeshSDF(mesh) {}
-	float getSignedDistance(const Ogre::Vector3& point) const override
+	Sample getSample(const Ogre::Vector3& point) const override
 	{
 		BVH<Surface>::ClosestLeafResult result;
 		const Surface* tri = m_RootNode->getClosestLeaf(point, result);
@@ -92,7 +92,7 @@ public:
 		Vector3 rayDir = result.closestPoint - point;
 		if (rayDir.dotProduct(result.normal) < 0.0f) result.closestDistance *= -1;
 		// std::cout << result.closestDistance << std::endl;
-		return result.closestDistance;
+		return Sample(result.closestDistance);
 	};
 };
 
@@ -252,7 +252,7 @@ public:
 		m_RaycastCache3 = new RaycastCache(m_RootNodeAABB, cellSize, aabbSize.y, aabbSize.z, aabb.getMin(), 0);
 		Profiler::printJobDuration("Sign cache computation", timeStamp);
 	}
-	float getSignedDistance(const Ogre::Vector3& point) const override
+	Sample getSample(const Ogre::Vector3& point) const override
 	{
 		bool inside = false;
 		if (m_AABB.containsPoint(point))
@@ -265,6 +265,6 @@ public:
 		BVH<Surface>::ClosestLeafResult result;
 		const Surface* tri = m_RootNode->getClosestLeaf(point, result);
 		if (!inside) result.closestDistance *= -1;
-		return result.closestDistance;
+		return Sample(result.closestDistance);
 	};
 };

@@ -8,12 +8,12 @@
 #include <sstream>
 #include <iostream>
 #include "OgreMath/OgreVector3.h"
-#include "GenericVertex.h"
+#include "Vertex.h"
 
 class ExportPLY
 {
 public:
-	static void writeMesh(const std::string &fileName, std::vector<GenericVertex<MaterialID> > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer) {
+	static void writeMesh(const std::string &fileName, std::vector<Vertex > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer) {
 		std::ofstream ply(fileName + ".ply", std::ios_base::out|std::ios_base::trunc);
 		ply << "ply\n\
 format ascii 1.0\n\

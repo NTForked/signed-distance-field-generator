@@ -55,16 +55,15 @@
     <ClInclude Include="ExportSTL.h" />
     <ClInclude Include="ExportOBJ.h" />
     <ClInclude Include="MathMisc.h" />
-    <ClInclude Include="MeshSimplify.h" />
     <ClInclude Include="VertexMerger.h" />
     <ClInclude Include="OctreeSDF.h" />
     <ClInclude Include="TriangleSDF.h" />
     <ClInclude Include="OpUnionSDF.h" />
     <ClInclude Include="OpIntersectionSDF.h" />
-    <ClInclude Include="OpDifferenceSDF.h" />
     <ClInclude Include="UniformGridSDF.h" />
     <ClInclude Include="SDFManager.h" />
-    <ClInclude Include="OpInvert.h" />
+    <ClInclude Include="Vertex.h" />
+    <ClInclude Include="OpInvertSDF.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

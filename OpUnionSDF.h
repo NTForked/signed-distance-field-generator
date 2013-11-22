@@ -24,15 +24,16 @@ public:
 			}
 		}
 	}
-	float getSignedDistance(const Ogre::Vector3& point) const override
+	Sample getSample(const Ogre::Vector3& point) const override
 	{
-		float maxDist = -9999999.0f;
+		Sample maxSample(std::numeric_limits<float>::min());
 		for (auto i = m_SDFs.begin(); i != m_SDFs.end(); ++i)
 		{
-			float dist = (*i)->getSignedDistance(point);
-			if (dist > maxDist) maxDist = dist;
+			Sample sample = (*i)->getSample(point);
+			if (sample.signedDistance > maxSample.signedDistance)
+				maxSample = sample;
 		}
-		return maxDist;
+		return maxSample;
 	}
 
 	bool intersectsSurface(const AABB& aabb) const override

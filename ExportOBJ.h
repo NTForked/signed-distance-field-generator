@@ -22,12 +22,12 @@
 #include <iostream>
 #include "OgreMath/OgreVector3.h"
 #include "Prerequisites.h"
-#include "GenericVertex.h"
+#include "Vertex.h"
 
 class ExportOBJ
 {
 public:
-	static void writeMesh(const std::string &fileName, const std::vector<GenericVertex<MaterialID> > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer)
+	static void writeMesh(const std::string &fileName, const std::vector<Vertex > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer)
 	{
 		std::ofstream objFile(fileName + ".obj", std::ios_base::out|std::ios_base::trunc);
 
@@ -48,7 +48,7 @@ public:
 class ExportOBJWithNormals
 {
 public:
-	static void writeMesh(const std::string &fileName, const std::vector<GenericVertex<MaterialID> > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer)
+	static void writeMesh(const std::string &fileName, const std::vector<Vertex > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer)
 	{
 		std::ofstream objFile(fileName + ".obj", std::ios_base::out|std::ios_base::trunc);
 		std::ostringstream stringStream;

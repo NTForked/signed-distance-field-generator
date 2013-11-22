@@ -19,12 +19,12 @@
 #include "OgreMath/OgreVector3.h"
 #include <vector>
 #include "Triangle.h"
-#include "GenericVertex.h"
+#include "Vertex.h"
 
 class ExportSTL
 {
 public:
-	static void writeMesh(const std::string &fileName, std::vector<GenericVertex<MaterialID> > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer)
+	static void writeMesh(const std::string &fileName, std::vector<Vertex > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer)
 	{
 		std::vector<Triangle<Ogre::Vector3>> faces;
 		size_t numTris = indexBuffer.size() / 3;

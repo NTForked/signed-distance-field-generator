@@ -16,7 +16,7 @@
 #include "OctreeSDF.h"
 #include "OpUnionSDF.h"
 #include "OpIntersectionSDF.h"
-#include "OpDifferenceSDF.h"
+#include "OpInvertSDF.h"
 #include "SDFManager.h"
 
 using std::vector;
@@ -44,16 +44,20 @@ void testOpUnion(const std::string& outFileName, SignedDistanceField3D& sdf1, Si
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
 	auto octreeSDF = OctreeSDF::sampleSDF(unionSDF, maxDepth);
 	Profiler::printJobDuration("SDF Octree construction", timeStamp);
-	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
+	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0);
 }
 
 void testOpDifference(const std::string& outFileName, SignedDistanceField3D& sdf1, SignedDistanceField3D& sdf2, int maxDepth)
 {
-	OpDifferenceSDF differenceSDF(&sdf1, &sdf2);
+	OpInvertSDF invertedSDF2(&sdf2);
+	std::vector<SignedDistanceField3D*> sdfs;
+	sdfs.push_back(&sdf1);
+	sdfs.push_back(&invertedSDF2);
+	OpIntersectionSDF differenceSDF(sdfs);
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
 	auto octreeSDF = OctreeSDF::sampleSDF(differenceSDF, maxDepth);
 	Profiler::printJobDuration("SDF Octree construction", timeStamp);
-	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
+	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0);
 }
 
 void testOpDifference2(const std::string& outFileName, std::shared_ptr<OctreeSDF> octreeSDF, SignedDistanceField3D& sdf2)
@@ -61,7 +65,7 @@ void testOpDifference2(const std::string& outFileName, std::shared_ptr<OctreeSDF
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
 	octreeSDF->subtract(sdf2);
 	Profiler::printJobDuration("SDF Octree subtract", timeStamp);
-	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
+	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0);
 }
 
 void testOpIntersection(const std::string& outFileName, SignedDistanceField3D& sdf1, SignedDistanceField3D& sdf2, int maxDepth)
@@ -73,7 +77,7 @@ void testOpIntersection(const std::string& outFileName, SignedDistanceField3D& s
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
 	auto octreeSDF = OctreeSDF::sampleSDF(unionSDF, maxDepth);
 	Profiler::printJobDuration("SDF Octree construction", timeStamp);
-	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0, false);
+	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0);
 }
 
 int main()

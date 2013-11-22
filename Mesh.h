@@ -9,14 +9,7 @@
 #include "AABB.h"
 #include "Triangle.h"
 #include "VertexMerger.h"
-
-struct Vertex
-{
-	Ogre::Vector3 position;
-	Ogre::Vector3 normal;
-	Vertex() {}
-	Vertex(const Ogre::Vector3 &_position, const Ogre::Vector3 &_normal) : position(_position), normal(_normal) {}
-};
+#include "Vertex.h"
 
 struct Mesh
 {

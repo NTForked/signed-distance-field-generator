@@ -6,14 +6,14 @@
 #include "Vector3i.h"
 #include "AABB.h"
 #include "Prerequisites.h"
-#include "OpInvert.h"
+#include "OpInvertSDF.h"
 
 /*
 Samples a signed distance field in an adaptive way.
 For each node (includes inner nodes and leaves) signed distances are stores for the 8 corners. This allows to interpolate signed distances in the node cell using trilinear interpolation.
 The actual signed distances are stored in a spatial hashmap because octree nodes share corners with other nodes.
 */
-class OctreeSDF : public SampledSignedDistanceField3D<MaterialID>
+class OctreeSDF : public SampledSignedDistanceField3D
 {
 protected:
 	struct Area
@@ -90,7 +90,9 @@ protected:
 		}
 	};
 
-	std::unordered_map<Vector3i, float> m_SDFValues;
+	typedef std::unordered_map<Vector3i, Sample> SignedDistanceGrid;
+
+	SignedDistanceGrid m_SDFValues;
 	Node* m_RootNode;
 
 	float m_CellSize;
@@ -105,34 +107,23 @@ protected:
 		 return pos * (1<<(m_MaxDepth - depth));
 	 }
 
-	 bool allSignsAreEqual(float* signedDistances)
-	 {
-		 bool positive = (signedDistances[0] >= 0.0f);
-		 for (int i = 1; i < 8; i++)
-		 {
-			 if ((signedDistances[i] >= 0.0f) != positive)
-				 return false;
-		 }
-		 return true;
-	 }
-
-	float lookupOrComputeSignedDistance(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, std::unordered_map<Vector3i, float>& sdfValues)
+	Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
 	{
 		auto vecs = area.getCornerVecs(corner);
-		auto tryInsert = sdfValues.insert(std::make_pair(getGlobalPos(vecs.first, area.m_Depth), 0.0f));
+		auto tryInsert = sdfValues.insert(std::make_pair(getGlobalPos(vecs.first, area.m_Depth), Sample(0.0f)));
 		if (tryInsert.second)
 		{
-			tryInsert.first->second = implicitSDF.getSignedDistance(vecs.second);
+			tryInsert.first->second = implicitSDF.getSample(vecs.second);
 		}
 		return tryInsert.first->second;
 	}
 
-	void setSignedDistance(int corner, const Area& area, float value)
+	void setSample(int corner, const Area& area, const Sample& sample)
 	{
-		m_SDFValues[getGlobalPos(area.getCorner(corner), area.m_Depth)] = value;
+		m_SDFValues[getGlobalPos(area.getCorner(corner), area.m_Depth)] = sample;
 	}
 
-	float lookupSignedDistance(int corner, const Area& area) const
+	Sample lookupSample(int corner, const Area& area) const
 	{
 		auto find = m_SDFValues.find(getGlobalPos(area.getCorner(corner), area.m_Depth));
 		vAssert(find != m_SDFValues.end())
@@ -140,7 +131,7 @@ protected:
 	}
 
 	/// Top down octree constructor given a SDF.
-	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, std::unordered_map<Vector3i, float>& sdfValues)
+	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
 	{
 		if (area.m_Depth >= m_MaxDepth ||
 			!implicitSDF.intersectsSurface(area.toAABB()))
@@ -148,7 +139,7 @@ protected:
 			float signedDistances[8];
 			for (int i = 0; i < 8; i++)
 			{
-				signedDistances[i] = lookupOrComputeSignedDistance(i, area, implicitSDF, sdfValues);
+				signedDistances[i] = lookupOrComputeSample(i, area, implicitSDF, sdfValues).signedDistance;
 			}
 			if (area.m_Depth >= m_MaxDepth || allSignsAreEqual(signedDistances))
 				return nullptr;	// leaf
@@ -195,9 +186,9 @@ protected:
 			cube.posMin = area.m_MinPos;
 			for (int i = 0; i < 8; i++)
 			{
-				cube.signedDistances[i] = lookupSignedDistance(i, area);
+				cube.cornerSamples[i] = lookupSample(i, area);
 			}
-			if (allSignsAreEqual(cube.signedDistances)) return;
+			if (allSignsAreEqual(cube.cornerSamples)) return;
 			if (area.m_Depth == m_MaxDepth)
 				cubes.push_back(cube);
 			else 
@@ -210,7 +201,7 @@ protected:
 			}
 		}
 	}
-	float getSignedDistance(Node* node, const Area& area, const Ogre::Vector3& point) const
+	Sample getSample(Node* node, const Area& area, const Ogre::Vector3& point) const
 	{
 		if (!node)
 		{
@@ -219,10 +210,10 @@ protected:
 			weights[0] = (point.x - area.m_MinPos.x) * invNodeSize;
 			weights[1] = (point.y - area.m_MinPos.y) * invNodeSize;
 			weights[2] = (point.z - area.m_MinPos.z) * invNodeSize;
-			float cornerValues[8];
+			Sample cornerSamples[8];
 			for (int i = 0; i < 8; i++)
-				cornerValues[i] = lookupSignedDistance(i, area);
-			return MathMisc::trilinearInterpolation(cornerValues, weights);
+				cornerSamples[i] = lookupSample(i, area);
+			return MathMisc::trilinearInterpolation(cornerSamples, weights);
 		}
 		else
 		{
@@ -232,7 +223,7 @@ protected:
 			{
 				if (subAreas[i].containsPoint(point))
 				{
-					return getSignedDistance(node->m_Children[i], subAreas[i], point);
+					return getSample(node->m_Children[i], subAreas[i], point);
 					break;
 				}
 			}
@@ -241,23 +232,28 @@ protected:
 	}
 
 	/// Subtracts an sdf from the node and returns the new node. The new sdf values are written to newSDF.
-	Node* subtract(Node* node, const Area& area, SignedDistanceField3D& otherSDF, std::unordered_map<Vector3i, float>& newSDF, std::unordered_map<Vector3i, float>& otherSDFCache)
+	Node* subtract(Node* node, const Area& area, SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
 	{
 		// if otherSDF does not overlap with the node AABB we can stop here
 		if (!area.toAABB().intersectsAABB(otherSDF.getAABB())) return node;
 
+		// compute signed distances for this node and the area of the other sdf
 		float otherSignedDistances[8];
 		float thisSignedDistances[8];
 		for (int i = 0; i < 8; i++)
 		{
 			auto vecs = area.getCornerVecs(i);
-			float otherDist = lookupOrComputeSignedDistance(i, area, otherSDF, otherSDFCache);
+			Sample otherSample = lookupOrComputeSample(i, area, otherSDF, otherSDFCache);
+			otherSample.signedDistance *= -1.0f;
 			Vector3i globalPos = getGlobalPos(vecs.first, area.m_Depth);
 			auto find = m_SDFValues.find(globalPos);
 			vAssert(find != m_SDFValues.end())
-			otherSignedDistances[i] = -otherDist;
-			thisSignedDistances[i] = find->second;
-			newSDF[globalPos] = std::min(find->second, -otherDist);
+			otherSignedDistances[i] = otherSample.signedDistance;
+			thisSignedDistances[i] = find->second.signedDistance;
+
+			if (otherSignedDistances[i] < thisSignedDistances[i])
+				newSDF[globalPos] = otherSample;
+			else newSDF[globalPos] = find->second;
 		}
 
 		// compute a lower and upper bound for this node for this and the other sdf
@@ -268,17 +264,17 @@ protected:
 		getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
 
 		if (otherUpperBound < thisLowerBound)
-		{
+		{	// this node is replaced with the inverse of the other sdf
 			if (node) delete node;
 			node = createNode(area, OpInvertSDF(&otherSDF), newSDF);
 		}
 		else if (otherLowerBound > thisUpperBound)
-		{
+		{	// no change for this node
 			return node;
 		}
 
 		if (node)
-		{
+		{	// need to recurse to node children
 			vAssert(area.m_Depth < m_MaxDepth)
 			Area subAreas[8];
 			area.getSubAreas(subAreas);
@@ -307,10 +303,10 @@ protected:
 		Area subAreas[8];
 		area.getSubAreas(subAreas);
 
-		float signedDistances[8];
+		Sample cornerSamples[8];
 		for (int i = 0; i < 8; i++)
 		{
-			signedDistances[i] = lookupSignedDistance(i, area);
+			cornerSamples[i] = lookupSample(i, area);
 		}
 
 		// interpolate 3x3x3 signed distance subgrid
@@ -323,12 +319,8 @@ protected:
 				weights[d] = subGridVecs[i][d] * 0.5f;
 			Area subArea = subAreas[0];
 			subArea.m_MinPos = subArea.m_MinPos + subGridVecs[i];
-			setSignedDistance(0, subArea, MathMisc::trilinearInterpolation(signedDistances, weights));
+			setSample(0, subArea, MathMisc::trilinearInterpolation(cornerSamples, weights));
 		}
-		/*for (int i = 0; i < 8; i++)
-		{
-			vAssert(std::abs(lookupSignedDistance(i, area) - signedDistances[i]) < 0.000001f)
-		}*/
 	}
 public:
 	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D& otherSDF, int maxDepth)
@@ -360,9 +352,9 @@ public:
 		return cubes;
 	}
 
-	float getSignedDistance(const Ogre::Vector3& point) const override
+	Sample getSample(const Ogre::Vector3& point) const override
 	{
-		return getSignedDistance(m_RootNode, m_RootArea, point);
+		return getSample(m_RootNode, m_RootArea, point);
 	}
 
 	// TODO!
@@ -374,8 +366,8 @@ public:
 	void subtract(SignedDistanceField3D& otherSDF)
 	{
 		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
-		std::unordered_map<Vector3i, float> newSDF;
-		m_RootNode = subtract(m_RootNode, m_RootArea, otherSDF, newSDF, std::unordered_map<Vector3i, float>());
+		SignedDistanceGrid newSDF;
+		m_RootNode = subtract(m_RootNode, m_RootArea, otherSDF, newSDF, SignedDistanceGrid());
 		for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 			m_SDFValues[i->first] = i->second;
 	}

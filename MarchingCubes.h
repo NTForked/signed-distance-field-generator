@@ -23,14 +23,12 @@
 #include <unordered_set>
 #include <list>
 #include "Prerequisites.h"
-#include "MeshSimplify.h"
 #include "TriangleLookupTable.h"
-#include "GenericVertex.h"
+#include "Vertex.h"
 #include "SignedDistanceField.h"
 
 using std::vector;
 
-template<class VoxelData>
 class MarchingCubes {
 	static inline void getCubeVecs(Ogre::Vector3 *vecs, const Vector3i &min)
 	{
@@ -55,12 +53,11 @@ class MarchingCubes {
 	struct VertexIndexed
 	{
 		size_t index;
-		Ogre::Vector3 position;
-		VoxelData data;
+		Vertex vertex;
 	};
 
 	static inline void marchCube(
-		const typename SampledSignedDistanceField3D<typename VoxelData>::Cube& cube,
+		const SampledSignedDistanceField3D::Cube& cube,
 		std::unordered_map<Vector3i, VertexIndexed> &vertexMap,
 		std::vector<unsigned int> &indexBuffer)
 	{
@@ -69,7 +66,7 @@ class MarchingCubes {
 		unsigned char word = 0;
 		for (int i = 0; i < 8; i++)
 		{
-			if (cube.signedDistances[i] >= 0)
+			if (cube.cornerSamples[i].signedDistance >= 0)
 				word |= (1<<i);
 		}
 		Vector3i offset = cube.posMin.doubleVec()+Vector3i(1,1,1);
@@ -79,16 +76,18 @@ class MarchingCubes {
 			// c1 * (1-w) + c2 * w = 0
 			// w = c1 / (c1 - c2)
 			VertexIndexed indexed;
-			indexed.data = cube.userData;
+			indexed.vertex.normal = cube.cornerSamples[0].normal;
+			indexed.vertex.uv = cube.cornerSamples[0].uv;
 			indexed.index = vertexMap.size();
 			Vector3i vertex1(triangles[i].p1+offset);
 			auto tryInsert = vertexMap.insert(std::make_pair(vertex1, indexed));
 			if (tryInsert.second)
 			{
 				auto nodes = TLT::getSingleton().edgeMidsToNodes[triangles[i].p1];
-				float w = cube.signedDistances[nodes.first] / (cube.signedDistances[nodes.first] - cube.signedDistances[nodes.second]);
+				float w = cube.cornerSamples[nodes.first].signedDistance
+					/ (cube.cornerSamples[nodes.first].signedDistance - cube.cornerSamples[nodes.second].signedDistance);
 				vAssert(w >= 0 && w <= 1);
-				tryInsert.first->second.position = cubeVecs[nodes.first] * (1-w) + cubeVecs[nodes.second] * w;
+				tryInsert.first->second.vertex.position = cubeVecs[nodes.first] * (1-w) + cubeVecs[nodes.second] * w;
 			}
 			indexBuffer.push_back((unsigned int)tryInsert.first->second.index);
 
@@ -99,9 +98,10 @@ class MarchingCubes {
 			if (tryInsert.second)
 			{
 				auto nodes = TLT::getSingleton().edgeMidsToNodes[triangles[i].p2];
-				float w = cube.signedDistances[nodes.first] / (cube.signedDistances[nodes.first] - cube.signedDistances[nodes.second]);
+				float w = cube.cornerSamples[nodes.first].signedDistance
+					/ (cube.cornerSamples[nodes.first].signedDistance - cube.cornerSamples[nodes.second].signedDistance);
 				vAssert(w >= 0 && w <= 1);
-				tryInsert.first->second.position = cubeVecs[nodes.first] * (1-w) + cubeVecs[nodes.second] * w;
+				tryInsert.first->second.vertex.position = cubeVecs[nodes.first] * (1 - w) + cubeVecs[nodes.second] * w;
 			}
 			indexBuffer.push_back((unsigned int)tryInsert.first->second.index);
 
@@ -112,18 +112,17 @@ class MarchingCubes {
 			if (tryInsert.second)
 			{
 				auto nodes = TLT::getSingleton().edgeMidsToNodes[triangles[i].p3];
-				float w = cube.signedDistances[nodes.first] / (cube.signedDistances[nodes.first] - cube.signedDistances[nodes.second]);
+				float w = cube.cornerSamples[nodes.first].signedDistance
+					/ (cube.cornerSamples[nodes.first].signedDistance - cube.cornerSamples[nodes.second].signedDistance);
 				vAssert(w >= 0 && w <= 1);
-				tryInsert.first->second.position = cubeVecs[nodes.first] * (1-w) + cubeVecs[nodes.second] * w;
+				tryInsert.first->second.vertex.position = cubeVecs[nodes.first] * (1 - w) + cubeVecs[nodes.second] * w;
 			}
 			indexBuffer.push_back((unsigned int)tryInsert.first->second.index);
 		}
 	}
 
 public:
-
-	template<class T>
-	static void computeVertexNormals(std::vector<Ogre::Vector3> &normalBuffer, const std::vector<GenericVertex<T> > &vertexBuffer, const std::vector<unsigned int> &indexBuffer)
+	static void computeVertexNormals(std::vector<Ogre::Vector3> &normalBuffer, const std::vector<Vertex > &vertexBuffer, const std::vector<unsigned int> &indexBuffer)
 	{
 		normalBuffer.resize(vertexBuffer.size());
 		std::vector<std::vector<Ogre::Vector3>> vertexNormalNeighbors;
@@ -146,8 +145,7 @@ public:
 		}
 	}
 
-	template<class T>
-	static void smoothMesh(std::vector<GenericVertex<T> > &vertexBuffer, const std::vector<unsigned int> &indexBuffer, unsigned int numIterations)
+	static void smoothMesh(std::vector<Vertex > &vertexBuffer, const std::vector<unsigned int> &indexBuffer, unsigned int numIterations)
 	{
 		std::vector<std::unordered_set<unsigned int>> vertexNeighbors;		
 		vertexNeighbors.resize(vertexBuffer.size());
@@ -163,9 +161,9 @@ public:
 			vertexNeighbors[indexBuffer[i+2]].insert(indexBuffer[i+1]);
 		}
 
-		std::vector<GenericVertex<T> > swapBuffer = vertexBuffer;
-		std::vector<GenericVertex<T> > *oldBufferPtr = &vertexBuffer;
-		std::vector<GenericVertex<T> > *newBufferPtr = &swapBuffer;
+		std::vector<Vertex > swapBuffer = vertexBuffer;
+		std::vector<Vertex > *oldBufferPtr = &vertexBuffer;
+		std::vector<Vertex > *newBufferPtr = &swapBuffer;
 		for (unsigned int i = 0; i < numIterations; i++)
 		{
 			for (unsigned int v = 0; v < oldBufferPtr->size(); v++)
@@ -181,11 +179,11 @@ public:
 	}
 
 	template<class MeshWriter>
-	static void marchSDF(const std::string &fileName, SampledSignedDistanceField3D<VoxelData>& sdf,
-			float voxelsPerUnit, int numSmoothIterations = 1, bool bSimplify=false)
+	static void marchSDF(const std::string &fileName, SampledSignedDistanceField3D& sdf,
+			float voxelsPerUnit, int numSmoothIterations = 1)
 	{
 		std::cout << "[Marching cubes] Fetching cubes..." << std::endl;
-		vector<typename SampledSignedDistanceField3D<typename VoxelData>::Cube > cubes = sdf.getCubesToMarch();
+		vector<SampledSignedDistanceField3D::Cube > cubes = sdf.getCubesToMarch();
 		std::cout << "Fetched " << cubes.size() << " cubes!" << std::endl;
 
 		std::unordered_map<Vector3i, VertexIndexed> vertexMap;
@@ -198,16 +196,12 @@ public:
 		std::cout << "[Marching cubes] " << vertexMap.size() << " vertices created." << std::endl;
 
 		// build vertex buffer
-		std::vector<GenericVertex<VoxelData> > vertexBuffer;
+		std::vector<Vertex> vertexBuffer;
 		vertexBuffer.resize(vertexMap.size());
 		for (auto it = vertexMap.begin(); it != vertexMap.end(); it++)
 		{
-			vertexBuffer[it->second.index].position = it->second.position;
-			vertexBuffer[it->second.index].data = it->second.data;
+			vertexBuffer[it->second.index] = it->second.vertex;
 		}
-
-		if(bSimplify)
-			MeshSimplify::simplify(vertexBuffer, indexBuffer);
 
 		if (numSmoothIterations > 0)
 		{
