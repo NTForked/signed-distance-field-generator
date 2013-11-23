@@ -231,8 +231,8 @@ protected:
 		return 0.0f;		// should never occur
 	}
 
-	/// Subtracts an sdf from the node and returns the new node. The new sdf values are written to newSDF.
-	Node* subtract(Node* node, const Area& area, SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
+	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
+	Node* intersect(Node* node, const Area& area, SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
 	{
 		// if otherSDF does not overlap with the node AABB we can stop here
 		if (!area.toAABB().intersectsAABB(otherSDF.getAABB())) return node;
@@ -244,7 +244,6 @@ protected:
 		{
 			auto vecs = area.getCornerVecs(i);
 			Sample otherSample = lookupOrComputeSample(i, area, otherSDF, otherSDFCache);
-			otherSample.signedDistance *= -1.0f;
 			Vector3i globalPos = getGlobalPos(vecs.first, area.m_Depth);
 			auto find = m_SDFValues.find(globalPos);
 			vAssert(find != m_SDFValues.end())
@@ -266,7 +265,7 @@ protected:
 		if (otherUpperBound < thisLowerBound)
 		{	// this node is replaced with the inverse of the other sdf
 			if (node) delete node;
-			node = createNode(area, OpInvertSDF(&otherSDF), newSDF);
+			node = createNode(area, otherSDF, newSDF);
 		}
 		else if (otherLowerBound > thisUpperBound)
 		{	// no change for this node
@@ -279,7 +278,7 @@ protected:
 			Area subAreas[8];
 			area.getSubAreas(subAreas);
 			for (int i = 0; i < 8; i++)
-				node->m_Children[i] = subtract(node->m_Children[i], subAreas[i], otherSDF, newSDF, otherSDFCache);
+				node->m_Children[i] = intersect(node->m_Children[i], subAreas[i], otherSDF, newSDF, otherSDFCache);
 		}
 		else
 		{	// it's a leaf in the octree
@@ -291,7 +290,7 @@ protected:
 				Area subAreas[8];
 				area.getSubAreas(subAreas);
 				for (int i = 0; i < 8; i++)
-					node->m_Children[i] = subtract(nullptr, subAreas[i], otherSDF, newSDF, otherSDFCache);
+					node->m_Children[i] = intersect(nullptr, subAreas[i], otherSDF, newSDF, otherSDFCache);
 			}
 		}
 		return node;
@@ -367,7 +366,16 @@ public:
 	{
 		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
 		SignedDistanceGrid newSDF;
-		m_RootNode = subtract(m_RootNode, m_RootArea, otherSDF, newSDF, SignedDistanceGrid());
+		m_RootNode = intersect(m_RootNode, m_RootArea, OpInvertSDF(&otherSDF), newSDF, SignedDistanceGrid());
+		for (auto i = newSDF.begin(); i != newSDF.end(); i++)
+			m_SDFValues[i->first] = i->second;
+	}
+
+	void intersect(SignedDistanceField3D& otherSDF)
+	{
+		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
+		SignedDistanceGrid newSDF;
+		m_RootNode = intersect(m_RootNode, m_RootArea, otherSDF, newSDF, SignedDistanceGrid());
 		for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 			m_SDFValues[i->first] = i->second;
 	}
