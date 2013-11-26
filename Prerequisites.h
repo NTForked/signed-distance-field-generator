@@ -36,5 +36,3 @@ namespace Ogre
 	typedef unsigned int uint32;
 	typedef float Real;
 }
-
-typedef unsigned int MaterialID;

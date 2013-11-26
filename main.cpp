@@ -32,7 +32,7 @@ void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 	timeStamp = Profiler::timestamp();
 	auto gridSDF = SignedDistanceField3DArray::sampleSDF(meshSDF, cellSize);
 	Profiler::printJobDuration("SDF Grid construction", timeStamp);
-	MarchingCubes<MaterialID>::marchSDF<ExportOBJWithNormals>("signedDistanceTestGrid_" + fileName, *gridSDF, gridSDF->getInverseCellSize(), 0, false);*/
+	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestGrid_" + fileName, *gridSDF, gridSDF->getInverseCellSize(), 0, false);*/
 }
 
 void testOpUnion(const std::string& outFileName, SignedDistanceField3D& sdf1, SignedDistanceField3D& sdf2, int maxDepth)
@@ -57,6 +57,14 @@ void testOpDifference(const std::string& outFileName, SignedDistanceField3D& sdf
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
 	auto octreeSDF = OctreeSDF::sampleSDF(differenceSDF, maxDepth);
 	Profiler::printJobDuration("SDF Octree construction", timeStamp);
+	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0);
+}
+
+void testOpUnion2(const std::string& outFileName, std::shared_ptr<OctreeSDF> octreeSDF, SignedDistanceField3D& sdf2)
+{
+	Profiler::Timestamp timeStamp = Profiler::timestamp();
+	octreeSDF->merge(sdf2);
+	Profiler::printJobDuration("SDF Octree union", timeStamp);
 	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0);
 }
 
@@ -88,7 +96,10 @@ int main()
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
 	auto buddhaSampled = OctreeSDF::sampleSDF(cubeSDF, 8);
 	Profiler::printJobDuration("Cube SDF construction", timeStamp);
-	testOpDifference2("Bunny_Buddha_Difference",
+	/*testOpDifference2("Bunny_Buddha_Difference",
+		buddhaSampled,
+		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("bunny_highres.obj"))));*/
+	testOpUnion2("Bunny_Buddha_Union",
 		buddhaSampled,
 		TriangleMeshSDF_Robust(std::make_shared<TransformedMesh>(SDFManager::loadMesh("bunny_highres.obj"))));
 	/*testOpDifference("Bunny_Buddha_Difference2",

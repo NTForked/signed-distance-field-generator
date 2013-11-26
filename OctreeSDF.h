@@ -255,7 +255,7 @@ protected:
 			else newSDF[globalPos] = find->second;
 		}
 
-		// compute a lower and upper bound for this node for this and the other sdf
+		// compute a lower and upper bound for this node and the other sdf
 		float otherLowerBound, otherUpperBound;
 		area.getLowerAndUpperBound(otherSignedDistances, otherLowerBound, otherUpperBound);
 
@@ -263,7 +263,7 @@ protected:
 		getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
 
 		if (otherUpperBound < thisLowerBound)
-		{	// this node is replaced with the inverse of the other sdf
+		{	// this node is replaced with the other sdf
 			if (node) delete node;
 			node = createNode(area, otherSDF, newSDF);
 		}
@@ -292,6 +292,53 @@ protected:
 				for (int i = 0; i < 8; i++)
 					node->m_Children[i] = intersect(nullptr, subAreas[i], otherSDF, newSDF, otherSDFCache);
 			}
+		}
+		return node;
+	}
+
+	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
+	Node* merge(Node* node, const Area& area, SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
+	{
+		// if otherSDF does not overlap with the node AABB we can stop here
+		if (!area.toAABB().intersectsAABB(otherSDF.getAABB())) return node;
+
+		// compute signed distances for this node and the area of the other sdf
+		float otherSignedDistances[8];
+		float thisSignedDistances[8];
+		for (int i = 0; i < 8; i++)
+		{
+			auto vecs = area.getCornerVecs(i);
+			Sample otherSample = lookupOrComputeSample(i, area, otherSDF, otherSDFCache);
+			Vector3i globalPos = getGlobalPos(vecs.first, area.m_Depth);
+			auto find = m_SDFValues.find(globalPos);
+			vAssert(find != m_SDFValues.end())
+			otherSignedDistances[i] = otherSample.signedDistance;
+			thisSignedDistances[i] = find->second.signedDistance;
+
+			if (otherSignedDistances[i] > thisSignedDistances[i])
+				newSDF[globalPos] = otherSample;
+			else newSDF[globalPos] = find->second;
+		}
+
+		// compute a lower and upper bound for this node and the other sdf
+		float otherLowerBound, otherUpperBound;
+		area.getLowerAndUpperBound(otherSignedDistances, otherLowerBound, otherUpperBound);
+
+		float thisLowerBound, thisUpperBound;
+		getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
+
+		if (!node || otherLowerBound > thisUpperBound)
+		{	// this node is replaced with the other sdf
+			if (node) delete node;
+			node = createNode(area, otherSDF, newSDF);
+		}
+		else if (node)
+		{	// need to recurse to node children
+			vAssert(area.m_Depth < m_MaxDepth)
+			Area subAreas[8];
+			area.getSubAreas(subAreas);
+			for (int i = 0; i < 8; i++)
+				node->m_Children[i] = merge(node->m_Children[i], subAreas[i], otherSDF, newSDF, otherSDFCache);
 		}
 		return node;
 	}
@@ -376,6 +423,23 @@ public:
 		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
 		SignedDistanceGrid newSDF;
 		m_RootNode = intersect(m_RootNode, m_RootArea, otherSDF, newSDF, SignedDistanceGrid());
+		for (auto i = newSDF.begin(); i != newSDF.end(); i++)
+			m_SDFValues[i->first] = i->second;
+	}
+
+	void merge(SignedDistanceField3D& otherSDF)
+	{
+		/*AABB aabb = m_RootArea.toAABB();
+		while (!m_RootArea.toAABB().containsPoint(otherSDF.getAABB().min) || !m_RootArea.toAABB().containsPoint(otherSDF.getAABB().max))
+		{	// need to resize octree
+			m_MaxDepth++;
+			m_RootArea.m_MinRealPos -= Ogre::Vector3(m_RootArea.m_RealSize, m_RootArea.m_RealSize, m_RootArea.m_RealSize);
+			m_RootArea.m_RealSize *= 2.0f;
+			std::cout << "Enlarging Octree!" << std::endl;
+		}*/
+		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
+		SignedDistanceGrid newSDF;
+		m_RootNode = merge(m_RootNode, m_RootArea, otherSDF, newSDF, SignedDistanceGrid());
 		for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 			m_SDFValues[i->first] = i->second;
 	}
