@@ -19,10 +19,10 @@ protected:
 	struct Area
 	{
 		Area() {}
-		Area(const Vector3i& minPos, int depth, const Ogre::Vector3& minRealPos, float realSize)
-			: m_MinPos(minPos), m_Depth(depth), m_MinRealPos(minRealPos), m_RealSize(realSize) {}
+		Area(const Vector3i& minPos, int sizeExpo, const Ogre::Vector3& minRealPos, float realSize)
+			: m_MinPos(minPos), m_SizeExpo(sizeExpo), m_MinRealPos(minRealPos), m_RealSize(realSize) {}
 		Vector3i m_MinPos;
-		int m_Depth;
+		int m_SizeExpo;
 
 		Ogre::Vector3 m_MinRealPos;
 		float m_RealSize;
@@ -50,7 +50,7 @@ protected:
 
 		Vector3i getCorner(int corner) const
 		{
-			return m_MinPos + Vector3i((corner & 4) != 0, (corner & 2) != 0, corner & 1);
+			return m_MinPos + Vector3i((corner & 4) != 0, (corner & 2) != 0, corner & 1) * (1 << m_SizeExpo);
 		}
 
 		/// Retrieves the i-th corner of the cube with 0 = min and 7 = max
@@ -62,7 +62,7 @@ protected:
 			{
 				realPos[i] += m_RealSize * (float)offset[i];
 			}
-			return std::make_pair(m_MinPos + offset, realPos);
+			return std::make_pair(m_MinPos + offset * (1 << m_SizeExpo), realPos);
 		}
 		AABB toAABB() const
 		{
@@ -75,8 +75,9 @@ protected:
 			for (int i = 0; i < 8; i++)
 			{
 				Vector3i offset((i & 4) != 0, (i & 2) != 0, i & 1);
-				areas[i] = Area(m_MinPos * 2 + offset, m_Depth + 1,
-				m_MinRealPos + Ogre::Vector3(offset.x * halfSize, offset.y * halfSize, offset.z * halfSize), halfSize);
+				areas[i] = Area(m_MinPos + offset * (1 << (m_SizeExpo - 1)),
+					m_SizeExpo - 1,
+					m_MinRealPos + Ogre::Vector3(offset.x * halfSize, offset.y * halfSize, offset.z * halfSize), halfSize);
 			}
 		}
 	};
@@ -97,20 +98,13 @@ protected:
 
 	float m_CellSize;
 
-	 int m_MaxDepth;
-
 	/// The octree covers an axis aligned cube.
 	 Area m_RootArea;
-
-	 Vector3i getGlobalPos(const Vector3i& pos, int depth) const
-	 {
-		 return pos * (1<<(m_MaxDepth - depth));
-	 }
 
 	Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
 	{
 		auto vecs = area.getCornerVecs(corner);
-		auto tryInsert = sdfValues.insert(std::make_pair(getGlobalPos(vecs.first, area.m_Depth), Sample(0.0f)));
+		auto tryInsert = sdfValues.insert(std::make_pair(vecs.first, Sample(0.0f)));
 		if (tryInsert.second)
 		{
 			tryInsert.first->second = implicitSDF.getSample(vecs.second);
@@ -120,12 +114,12 @@ protected:
 
 	void setSample(int corner, const Area& area, const Sample& sample)
 	{
-		m_SDFValues[getGlobalPos(area.getCorner(corner), area.m_Depth)] = sample;
+		m_SDFValues[area.getCorner(corner)] = sample;
 	}
 
 	Sample lookupSample(int corner, const Area& area) const
 	{
-		auto find = m_SDFValues.find(getGlobalPos(area.getCorner(corner), area.m_Depth));
+		auto find = m_SDFValues.find(area.getCorner(corner));
 		vAssert(find != m_SDFValues.end())
 		return find->second;
 	}
@@ -133,7 +127,7 @@ protected:
 	/// Top down octree constructor given a SDF.
 	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
 	{
-		if (area.m_Depth >= m_MaxDepth ||
+		if (area.m_SizeExpo <= 0 ||
 			!implicitSDF.intersectsSurface(area.toAABB()))
 		{
 			float signedDistances[8];
@@ -141,7 +135,7 @@ protected:
 			{
 				signedDistances[i] = lookupOrComputeSample(i, area, implicitSDF, sdfValues).signedDistance;
 			}
-			if (area.m_Depth >= m_MaxDepth || allSignsAreEqual(signedDistances))
+			if (area.m_SizeExpo <= 0 || allSignsAreEqual(signedDistances))
 				return nullptr;	// leaf
 		}
 
@@ -160,12 +154,12 @@ protected:
 		if (node) area.getLowerAndUpperBound(signedDistances, lowerBound, upperBound);
 		else
 		{	// if it's a leaf we can do even better and just return min and max of the corner values.
-			float thisMin = std::numeric_limits<float>::max();
-			float thisMax = std::numeric_limits<float>::min();
+			lowerBound = std::numeric_limits<float>::max();
+			upperBound = std::numeric_limits<float>::min();
 			for (int i = 0; i < 8; i++)
 			{
-				thisMin = std::min(thisMin, signedDistances[i]);
-				thisMax = std::max(thisMax, signedDistances[i]);
+				lowerBound = std::min(lowerBound, signedDistances[i]);
+				upperBound = std::max(upperBound, signedDistances[i]);
 			}
 		}
 	}
@@ -174,7 +168,7 @@ protected:
 	{
 		if (node)
 		{
-			vAssert(area.m_Depth < m_MaxDepth)
+			vAssert(area.m_SizeExpo > 0)
 			Area subAreas[8];
 			area.getSubAreas(subAreas);
 			for (int i = 0; i < 8; i++)
@@ -189,16 +183,16 @@ protected:
 				cube.cornerSamples[i] = lookupSample(i, area);
 			}
 			if (allSignsAreEqual(cube.cornerSamples)) return;
-			if (area.m_Depth == m_MaxDepth)
+			if (area.m_SizeExpo <= 0)
 				cubes.push_back(cube);
-			else 
+			/*else 
 			{
 				interpolateLeaf(area);
 				Area subAreas[8];
 				area.getSubAreas(subAreas);
 				for (int i = 0; i < 8; i++)
 					getCubesToMarch(nullptr, subAreas[i], cubes);
-			}
+			}*/
 		}
 	}
 	Sample getSample(Node* node, const Area& area, const Ogre::Vector3& point) const
@@ -207,9 +201,9 @@ protected:
 		{
 			float invNodeSize = 1.0f / area.m_RealSize;
 			float weights[3];
-			weights[0] = (point.x - area.m_MinPos.x) * invNodeSize;
-			weights[1] = (point.y - area.m_MinPos.y) * invNodeSize;
-			weights[2] = (point.z - area.m_MinPos.z) * invNodeSize;
+			weights[0] = (point.x - area.m_MinRealPos.x) * invNodeSize;
+			weights[1] = (point.y - area.m_MinRealPos.y) * invNodeSize;
+			weights[2] = (point.z - area.m_MinRealPos.z) * invNodeSize;
 			Sample cornerSamples[8];
 			for (int i = 0; i < 8; i++)
 				cornerSamples[i] = lookupSample(i, area);
@@ -244,7 +238,7 @@ protected:
 		{
 			auto vecs = area.getCornerVecs(i);
 			Sample otherSample = lookupOrComputeSample(i, area, otherSDF, otherSDFCache);
-			Vector3i globalPos = getGlobalPos(vecs.first, area.m_Depth);
+			Vector3i globalPos = vecs.first;
 			auto find = m_SDFValues.find(globalPos);
 			vAssert(find != m_SDFValues.end())
 			otherSignedDistances[i] = otherSample.signedDistance;
@@ -265,7 +259,7 @@ protected:
 		if (otherUpperBound < thisLowerBound)
 		{	// this node is replaced with the other sdf
 			if (node) delete node;
-			node = createNode(area, otherSDF, newSDF);
+			return createNode(area, otherSDF, newSDF);
 		}
 		else if (otherLowerBound > thisUpperBound)
 		{	// no change for this node
@@ -274,7 +268,7 @@ protected:
 
 		if (node)
 		{	// need to recurse to node children
-			vAssert(area.m_Depth < m_MaxDepth)
+			vAssert(area.m_SizeExpo > 0)
 			Area subAreas[8];
 			area.getSubAreas(subAreas);
 			for (int i = 0; i < 8; i++)
@@ -282,7 +276,7 @@ protected:
 		}
 		else
 		{	// it's a leaf in the octree
-			if (area.m_Depth < m_MaxDepth && otherSDF.intersectsSurface(area.toAABB()))
+			if (area.m_SizeExpo > 0 && otherSDF.intersectsSurface(area.toAABB()))
 			{
 				// need to subdivide this node
 				node = new Node();
@@ -300,7 +294,8 @@ protected:
 	Node* merge(Node* node, const Area& area, SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
 	{
 		// if otherSDF does not overlap with the node AABB we can stop here
-		if (!area.toAABB().intersectsAABB(otherSDF.getAABB())) return node;
+		if (!area.toAABB().intersectsAABB(otherSDF.getAABB()))
+			return node;
 
 		// compute signed distances for this node and the area of the other sdf
 		float otherSignedDistances[8];
@@ -309,7 +304,7 @@ protected:
 		{
 			auto vecs = area.getCornerVecs(i);
 			Sample otherSample = lookupOrComputeSample(i, area, otherSDF, otherSDFCache);
-			Vector3i globalPos = getGlobalPos(vecs.first, area.m_Depth);
+			Vector3i globalPos = vecs.first;
 			auto find = m_SDFValues.find(globalPos);
 			vAssert(find != m_SDFValues.end())
 			otherSignedDistances[i] = otherSample.signedDistance;
@@ -327,14 +322,20 @@ protected:
 		float thisLowerBound, thisUpperBound;
 		getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
 
+		if (!node && thisLowerBound > 0)
+		{	// no change - already completely solid
+			return node;
+		}
+
 		if (!node || otherLowerBound > thisUpperBound)
 		{	// this node is replaced with the other sdf
+			// this could lead to inaccurate distance outside the volume, however these are usually not required
 			if (node) delete node;
-			node = createNode(area, otherSDF, newSDF);
+			return createNode(area, otherSDF, newSDF);
 		}
-		else if (node)
+		if (node)
 		{	// need to recurse to node children
-			vAssert(area.m_Depth < m_MaxDepth)
+			vAssert(area.m_SizeExpo > 0)
 			Area subAreas[8];
 			area.getSubAreas(subAreas);
 			for (int i = 0; i < 8; i++)
@@ -364,7 +365,7 @@ protected:
 			for (int d = 0; d < 3; d++)
 				weights[d] = subGridVecs[i][d] * 0.5f;
 			Area subArea = subAreas[0];
-			subArea.m_MinPos = subArea.m_MinPos + subGridVecs[i];
+			subArea.m_MinPos = subArea.m_MinPos + subGridVecs[i] * (1 << (subArea.m_SizeExpo));
 			setSample(0, subArea, MathMisc::trilinearInterpolation(cornerSamples, weights));
 		}
 	}
@@ -377,15 +378,14 @@ public:
 		float cubeSize = std::max(std::max(aabbSize.x, aabbSize.y), aabbSize.z);
 		octreeSDF->m_CellSize = cubeSize / (1 << maxDepth);
 		otherSDF.prepareSampling(aabb, octreeSDF->m_CellSize);
-		octreeSDF->m_RootArea = Area(Vector3i(0, 0, 0), 0, aabb.getMin(), cubeSize);
-		octreeSDF->m_MaxDepth = maxDepth;
+		octreeSDF->m_RootArea = Area(Vector3i(0, 0, 0), maxDepth, aabb.getMin(), cubeSize);
 		octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, otherSDF, octreeSDF->m_SDFValues);
 		return octreeSDF;
 	}
 
 	float getInverseCellSize()
 	{
-		return (float)(1 << m_MaxDepth) / m_RootArea.m_RealSize;
+		return (float)(1 << m_RootArea.m_SizeExpo) / m_RootArea.m_RealSize;
 	}
 
 	AABB getAABB() const override { return m_RootArea.toAABB(); }
@@ -429,8 +429,7 @@ public:
 
 	void merge(SignedDistanceField3D& otherSDF)
 	{
-		/*AABB aabb = m_RootArea.toAABB();
-		while (!m_RootArea.toAABB().containsPoint(otherSDF.getAABB().min) || !m_RootArea.toAABB().containsPoint(otherSDF.getAABB().max))
+		/*while (!m_RootArea.toAABB().containsPoint(otherSDF.getAABB().min) || !m_RootArea.toAABB().containsPoint(otherSDF.getAABB().max))
 		{	// need to resize octree
 			m_MaxDepth++;
 			m_RootArea.m_MinRealPos -= Ogre::Vector3(m_RootArea.m_RealSize, m_RootArea.m_RealSize, m_RootArea.m_RealSize);
