@@ -64,6 +64,8 @@
     <ClInclude Include="SDFManager.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="OpInvertSDF.h" />
+    <ClInclude Include="FractalNoisePlaneSDF.h" />
+    <ClInclude Include="FractalNoiseGenerator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

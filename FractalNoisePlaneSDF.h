@@ -1,0 +1,84 @@
+
+#pragma once
+
+#include "OgreMath/OgreVector3.h"
+#include <vector>
+#include "SignedDistanceField.h"
+#include "AABB.h"
+#include "FractalNoiseGenerator.h"
+
+class FractalNoisePlaneSDF : public SignedDistanceField3D
+{
+protected:
+	float** m_HeightMap;
+	int m_HeightMapSize;
+	float m_InverseCellSize;
+	float m_Roughness;
+	float m_YRange;
+	float m_Size;
+	AABB m_AABB;
+
+public:
+	FractalNoisePlaneSDF(float size, float roughness, float yRange)
+		: m_HeightMap(nullptr), m_Size(size), m_Roughness(roughness), m_YRange(yRange)
+	{
+		float halfSize = m_Size * 0.5f;
+		m_AABB.min = Ogre::Vector3(0, -m_YRange, 0);
+		m_AABB.max = Ogre::Vector3(m_Size, m_YRange, m_Size);
+	}
+	~FractalNoisePlaneSDF()
+	{
+		if (m_HeightMap)
+			FractalNoiseGenerator::freeHeightMap(m_HeightMapSize, m_HeightMap);
+	}
+
+	Sample getSample(const Ogre::Vector3& point) const override
+	{
+		Sample sample;
+		sample.normal = Ogre::Vector3(0, 1, 0);
+
+		// scale project on xz plane
+		Ogre::Vector3 scaled = point * m_InverseCellSize;
+		int x = (int)scaled.x;
+		int y = (int)scaled.z;
+		float surfaceY = 0;
+		if (x >= 0 && x < m_HeightMapSize && y >= 0 && y < m_HeightMapSize)
+			surfaceY = m_HeightMap[x][y];
+
+		sample.signedDistance = surfaceY - point.y;
+
+		if (sample.signedDistance < 0) sample.normal *= -1;
+		return sample;
+	}
+
+	bool intersectsSurface(const AABB& aabb) const override
+	{
+		return aabb.intersectsAABB(m_AABB);
+	}
+
+	AABB getAABB() const override
+	{
+		return m_AABB;
+	}
+
+	void prepareSampling(const AABB& aabb, float cellSize) override
+	{
+		if (m_HeightMap)
+			FractalNoiseGenerator::freeHeightMap(m_HeightMapSize, m_HeightMap);
+
+		m_InverseCellSize = 1.0f / cellSize;
+		m_HeightMapSize = (int)std::ceil(m_Size * m_InverseCellSize);
+		m_HeightMap = FractalNoiseGenerator::allocHeightMap(m_HeightMapSize);	
+		FractalNoiseGenerator::generate(m_HeightMapSize, m_Roughness, m_HeightMap);
+
+		float noiseMax = 0.0f;
+		for (int x = 0; x < m_HeightMapSize; x++)
+			for (int y = 0; y < m_HeightMapSize; y++)
+				if (m_HeightMap[x][y] > noiseMax) noiseMax = m_HeightMap[x][y];
+
+		float multiplier = (float)m_YRange / (noiseMax + 0.001f);
+		for (int x = 0; x < m_HeightMapSize; x++)
+			for (int y = 0; y < m_HeightMapSize; y++)
+				m_HeightMap[x][y] *= multiplier;
+	}
+};
