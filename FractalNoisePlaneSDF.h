@@ -14,17 +14,17 @@ protected:
 	int m_HeightMapSize;
 	float m_InverseCellSize;
 	float m_Roughness;
-	float m_YRange;
+	float m_ZRange;
 	float m_Size;
 	AABB m_AABB;
 
 public:
-	FractalNoisePlaneSDF(float size, float roughness, float yRange)
-		: m_HeightMap(nullptr), m_Size(size), m_Roughness(roughness), m_YRange(yRange)
+	FractalNoisePlaneSDF(float size, float roughness, float zRange)
+		: m_HeightMap(nullptr), m_Size(size), m_Roughness(roughness), m_ZRange(zRange)
 	{
 		float halfSize = m_Size * 0.5f;
-		m_AABB.min = Ogre::Vector3(0, -m_YRange, 0);
-		m_AABB.max = Ogre::Vector3(m_Size, m_YRange, m_Size);
+		m_AABB.min = Ogre::Vector3(-halfSize, -halfSize , -m_ZRange);
+		m_AABB.max = Ogre::Vector3(halfSize, halfSize, m_ZRange);
 	}
 	~FractalNoisePlaneSDF()
 	{
@@ -35,17 +35,17 @@ public:
 	Sample getSample(const Ogre::Vector3& point) const override
 	{
 		Sample sample;
-		sample.normal = Ogre::Vector3(0, 1, 0);
+		sample.normal = Ogre::Vector3(0, 0, 1);
 
-		// scale project on xz plane
-		Ogre::Vector3 scaled = point * m_InverseCellSize;
-		int x = (int)scaled.x;
-		int y = (int)scaled.z;
-		float surfaceY = 0;
+		// scale, move and project on xz plane
+		Ogre::Vector3 scaled = (point - m_AABB.min) * m_InverseCellSize;
+		int x = (int)(scaled.x);
+		int y = (int)(scaled.y);
+		float surfaceZ = 0;
 		if (x >= 0 && x < m_HeightMapSize && y >= 0 && y < m_HeightMapSize)
-			surfaceY = m_HeightMap[x][y];
+			surfaceZ = m_HeightMap[x][y];
 
-		sample.signedDistance = surfaceY - point.y;
+		sample.signedDistance = surfaceZ - point.z;
 
 		if (sample.signedDistance < 0) sample.normal *= -1;
 		return sample;
@@ -76,7 +76,7 @@ public:
 			for (int y = 0; y < m_HeightMapSize; y++)
 				if (m_HeightMap[x][y] > noiseMax) noiseMax = m_HeightMap[x][y];
 
-		float multiplier = (float)m_YRange / (noiseMax + 0.001f);
+		float multiplier = (float)m_ZRange / (noiseMax + 0.001f);
 		for (int x = 0; x < m_HeightMapSize; x++)
 			for (int y = 0; y < m_HeightMapSize; y++)
 				m_HeightMap[x][y] *= multiplier;
