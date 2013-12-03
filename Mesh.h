@@ -26,10 +26,10 @@ struct Mesh
 	{
 		std::vector<Ogre::Vector3> vertices;
 		vertices.resize(vertexBuffer.size());
-		for (int i = 0; i < vertexBuffer.size(); i++)
+		for (unsigned int i = 0; i < vertexBuffer.size(); i++)
 			vertices[i] = vertexBuffer[i].position;
 		VertexMerger::mergeVertices(vertices, indexBuffer, mergeRadius);
-		for (int i = 0; i < vertexBuffer.size(); i++)
+		for (unsigned int i = 0; i < vertexBuffer.size(); i++)
 			vertexBuffer[i].position = vertices[i];
 	}
 

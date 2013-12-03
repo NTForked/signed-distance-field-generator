@@ -187,7 +187,7 @@ void TransformedMesh::computeCache() const
 	{
 		std::vector<Vertex > vertexBuffer;
 		vertexBuffer.resize(mMesh->vertexBuffer.size());
-		for (int i = 0; i < mMesh->vertexBuffer.size(); i++)
+		for (unsigned int i = 0; i < mMesh->vertexBuffer.size(); i++)
 			vertexBuffer[i].position = mMesh->vertexBuffer[i].position;
 		ExportOBJ::writeMesh("BullshitEdges", vertexBuffer, mMesh->triangleNormals, bullshitEdgesTriangles);
 	}

@@ -112,11 +112,6 @@ protected:
 		return tryInsert.first->second;
 	}
 
-	void setSample(int corner, const Area& area, const Sample& sample)
-	{
-		m_SDFValues[area.getCorner(corner)] = sample;
-	}
-
 	Sample lookupSample(int corner, const Area& area) const
 	{
 		auto find = m_SDFValues.find(area.getCorner(corner));
@@ -185,14 +180,14 @@ protected:
 			if (allSignsAreEqual(cube.cornerSamples)) return;
 			if (area.m_SizeExpo <= 0)
 				cubes.push_back(cube);
-			/*else 
+			else 
 			{
 				interpolateLeaf(area);
 				Area subAreas[8];
 				area.getSubAreas(subAreas);
 				for (int i = 0; i < 8; i++)
 					getCubesToMarch(nullptr, subAreas[i], cubes);
-			}*/
+			}
 		}
 	}
 	Sample getSample(Node* node, const Area& area, const Ogre::Vector3& point) const
@@ -366,7 +361,31 @@ protected:
 				weights[d] = subGridVecs[i][d] * 0.5f;
 			Area subArea = subAreas[0];
 			subArea.m_MinPos = subArea.m_MinPos + subGridVecs[i] * (1 << (subArea.m_SizeExpo));
-			setSample(0, subArea, MathMisc::trilinearInterpolation(cornerSamples, weights));
+			m_SDFValues[subArea.getCorner(0)] = MathMisc::trilinearInterpolation(cornerSamples, weights);
+		}
+	}
+	void interpolateLeafNoOverwrite(const Area& area)
+	{
+		Area subAreas[8];
+		area.getSubAreas(subAreas);
+
+		Sample cornerSamples[8];
+		for (int i = 0; i < 8; i++)
+		{
+			cornerSamples[i] = lookupSample(i, area);
+		}
+
+		// interpolate 3x3x3 signed distance subgrid
+		Vector3i subGridVecs[27];
+		Vector3i::grid3(subGridVecs);
+		for (int i = 0; i < 27; i++)
+		{
+			float weights[3];
+			for (int d = 0; d < 3; d++)
+				weights[d] = subGridVecs[i][d] * 0.5f;
+			Area subArea = subAreas[0];
+			subArea.m_MinPos = subArea.m_MinPos + subGridVecs[i] * (1 << (subArea.m_SizeExpo));
+			m_SDFValues.insert(std::make_pair(subArea.getCorner(0), MathMisc::trilinearInterpolation(cornerSamples, weights)));
 		}
 	}
 public:
@@ -427,15 +446,51 @@ public:
 			m_SDFValues[i->first] = i->second;
 	}
 
-	void merge(SignedDistanceField3D& otherSDF)
+	/// Resizes the octree so that it covers the given aabb.
+	void resize(const AABB& aabb)
 	{
-		/*while (!m_RootArea.toAABB().containsPoint(otherSDF.getAABB().min) || !m_RootArea.toAABB().containsPoint(otherSDF.getAABB().max))
+		while (!m_RootArea.toAABB().containsPoint(aabb.min))
 		{	// need to resize octree
-			m_MaxDepth++;
+			m_RootArea.m_MinPos = m_RootArea.m_MinPos - Vector3i(1 << m_RootArea.m_SizeExpo, 1 << m_RootArea.m_SizeExpo, 1 << m_RootArea.m_SizeExpo);
 			m_RootArea.m_MinRealPos -= Ogre::Vector3(m_RootArea.m_RealSize, m_RootArea.m_RealSize, m_RootArea.m_RealSize);
 			m_RootArea.m_RealSize *= 2.0f;
-			std::cout << "Enlarging Octree!" << std::endl;
-		}*/
+			m_RootArea.m_SizeExpo++;
+			Node* oldRoot = m_RootNode;
+			m_RootNode = new Node();
+			m_RootNode->m_Children[7] = oldRoot;
+
+			// need to fill in some signed distance values for the new area
+			for (int i = 0; i < 7; i++)
+			{
+				Vector3i offset = Vector3i((i & 4) != 0, (i & 2) != 0, (i & 1) != 0) * (1 << m_RootArea.m_SizeExpo);
+				m_SDFValues[m_RootArea.m_MinPos + offset] = -m_RootArea.m_RealSize;
+			}
+			interpolateLeafNoOverwrite(m_RootArea);
+		}
+		while (!m_RootArea.toAABB().containsPoint(aabb.max))
+		{	// need to resize octree
+			m_RootArea.m_RealSize *= 2.0f;
+			m_RootArea.m_SizeExpo++;
+			Node* oldRoot = m_RootNode;
+			m_RootNode = new Node();
+			m_RootNode->m_Children[0] = oldRoot;
+
+			// need to fill in some signed distance values for the new area
+			for (int i = 1; i < 8; i++)
+			{
+				Vector3i offset = Vector3i((i & 4) != 0, (i & 2) != 0, (i & 1) != 0) * (1 << m_RootArea.m_SizeExpo);
+				m_SDFValues[m_RootArea.m_MinPos + offset] = -m_RootArea.m_RealSize;
+			}
+			interpolateLeafNoOverwrite(m_RootArea);
+		}
+	}
+
+	void merge(SignedDistanceField3D& otherSDF)
+	{
+		// this is not an optimal resize policy but it should work
+		// it is recommended to avoid resizes anyway
+		resize(otherSDF.getAABB());
+
 		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
 		SignedDistanceGrid newSDF;
 		m_RootNode = merge(m_RootNode, m_RootArea, otherSDF, newSDF, SignedDistanceGrid());
