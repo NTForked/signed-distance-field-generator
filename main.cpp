@@ -89,11 +89,19 @@ void testOpIntersection(const std::string& outFileName, SignedDistanceField3D& s
 	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_" + outFileName, *octreeSDF, octreeSDF->getInverseCellSize(), 0);
 }
 
+void splitBuddha()
+{
+	auto octreeSDF = SDFManager::sampleSignedDistanceFieldFromMesh("buddha2.obj", 8);
+	FractalNoisePlaneSDF plane(2.0f, 1.0f, 0.1f);
+	octreeSDF->subtract(plane);
+	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_BuddhaSplit", *octreeSDF, octreeSDF->getInverseCellSize(), 0);
+}
+
 void testFractalNoisePlane()
 {
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
 	FractalNoisePlaneSDF sdf(1.0f, 1.0f, 0.1f);
-	auto octreeSDF = OctreeSDF::sampleSDF(sdf, 7);
+	auto octreeSDF = OctreeSDF::sampleSDF(sdf, 6);
 	Profiler::printJobDuration("SDF Octree subtract", timeStamp);
 	MarchingCubes::marchSDF<ExportOBJWithNormals>("signedDistanceTestOctree_FractalNoise", *octreeSDF, octreeSDF->getInverseCellSize(), 0);
 }
@@ -102,7 +110,8 @@ int main()
 {
 	// buildSDFAndMarch("bunny_highres", 7);
 	// buildSDFAndMarch("sphere", 7);
-	testFractalNoisePlane();
+	// testFractalNoisePlane();
+	splitBuddha();
 	/*TriangleMeshSDF_Robust cubeSDF(std::make_shared<TransformedMesh>(SDFManager::loadMesh("cube.obj")));
 	Profiler::Timestamp timeStamp = Profiler::timestamp();
 	auto buddhaSampled = OctreeSDF::sampleSDF(cubeSDF, 7);

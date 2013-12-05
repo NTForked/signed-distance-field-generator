@@ -17,13 +17,17 @@ protected:
 	float m_ZRange;
 	float m_Size;
 	AABB m_AABB;
+	AABB m_SurfaceAABB;
 
 public:
 	FractalNoisePlaneSDF(float size, float roughness, float zRange)
 		: m_HeightMap(nullptr), m_Size(size), m_Roughness(roughness), m_ZRange(zRange)
 	{
 		float halfSize = m_Size * 0.5f;
-		m_AABB.min = Ogre::Vector3(-halfSize, -halfSize , -m_ZRange);
+		m_SurfaceAABB.min = Ogre::Vector3(-halfSize, -halfSize, -m_ZRange);
+		m_SurfaceAABB.max = Ogre::Vector3(halfSize, halfSize, m_ZRange);
+
+		m_AABB.min = Ogre::Vector3(-halfSize, -halfSize, -halfSize);
 		m_AABB.max = Ogre::Vector3(halfSize, halfSize, m_ZRange);
 	}
 	~FractalNoisePlaneSDF()
@@ -38,7 +42,7 @@ public:
 		sample.normal = Ogre::Vector3(0, 0, 1);
 
 		// scale, move and project on xz plane
-		Ogre::Vector3 scaled = (point - m_AABB.min) * m_InverseCellSize;
+		Ogre::Vector3 scaled = (point - m_SurfaceAABB.min) * m_InverseCellSize;
 		int x = (int)(scaled.x);
 		int y = (int)(scaled.y);
 		float surfaceZ = 0;
@@ -53,7 +57,7 @@ public:
 
 	bool intersectsSurface(const AABB& aabb) const override
 	{
-		return aabb.intersectsAABB(m_AABB);
+		return aabb.intersectsAABB(m_SurfaceAABB);
 	}
 
 	AABB getAABB() const override
@@ -68,6 +72,11 @@ public:
 
 		m_InverseCellSize = 1.0f / cellSize;
 		m_HeightMapSize = (int)std::ceil(m_Size * m_InverseCellSize);
+
+		int pow2Size = 1;
+		while (pow2Size < m_HeightMapSize)
+			pow2Size = pow2Size << 1;
+		m_HeightMapSize = pow2Size;
 		m_HeightMap = FractalNoiseGenerator::allocHeightMap(m_HeightMapSize);	
 		FractalNoiseGenerator::generate(m_HeightMapSize, m_Roughness, m_HeightMap);
 

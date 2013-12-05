@@ -361,31 +361,9 @@ protected:
 				weights[d] = subGridVecs[i][d] * 0.5f;
 			Area subArea = subAreas[0];
 			subArea.m_MinPos = subArea.m_MinPos + subGridVecs[i] * (1 << (subArea.m_SizeExpo));
-			m_SDFValues[subArea.getCorner(0)] = MathMisc::trilinearInterpolation(cornerSamples, weights);
-		}
-	}
-	void interpolateLeafNoOverwrite(const Area& area)
-	{
-		Area subAreas[8];
-		area.getSubAreas(subAreas);
-
-		Sample cornerSamples[8];
-		for (int i = 0; i < 8; i++)
-		{
-			cornerSamples[i] = lookupSample(i, area);
-		}
-
-		// interpolate 3x3x3 signed distance subgrid
-		Vector3i subGridVecs[27];
-		Vector3i::grid3(subGridVecs);
-		for (int i = 0; i < 27; i++)
-		{
-			float weights[3];
-			for (int d = 0; d < 3; d++)
-				weights[d] = subGridVecs[i][d] * 0.5f;
-			Area subArea = subAreas[0];
-			subArea.m_MinPos = subArea.m_MinPos + subGridVecs[i] * (1 << (subArea.m_SizeExpo));
-			m_SDFValues.insert(std::make_pair(subArea.getCorner(0), MathMisc::trilinearInterpolation(cornerSamples, weights)));
+			auto tryInsert = m_SDFValues.insert(std::make_pair(subArea.getCorner(0), 0.0f));
+			if (tryInsert.second)
+				tryInsert.first->second = MathMisc::trilinearInterpolation(cornerSamples, weights);
 		}
 	}
 public:
@@ -465,7 +443,7 @@ public:
 				Vector3i offset = Vector3i((i & 4) != 0, (i & 2) != 0, (i & 1) != 0) * (1 << m_RootArea.m_SizeExpo);
 				m_SDFValues[m_RootArea.m_MinPos + offset] = -m_RootArea.m_RealSize;
 			}
-			interpolateLeafNoOverwrite(m_RootArea);
+			interpolateLeaf(m_RootArea);
 		}
 		while (!m_RootArea.toAABB().containsPoint(aabb.max))
 		{	// need to resize octree
@@ -481,7 +459,7 @@ public:
 				Vector3i offset = Vector3i((i & 4) != 0, (i & 2) != 0, (i & 1) != 0) * (1 << m_RootArea.m_SizeExpo);
 				m_SDFValues[m_RootArea.m_MinPos + offset] = -m_RootArea.m_RealSize;
 			}
-			interpolateLeafNoOverwrite(m_RootArea);
+			interpolateLeaf(m_RootArea);
 		}
 	}
 
