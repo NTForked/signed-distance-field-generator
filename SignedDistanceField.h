@@ -88,4 +88,6 @@ public:
 		Sample cornerSamples[8];
 	};
 	virtual std::vector<Cube> getCubesToMarch() = 0;
+
+	virtual float getInverseCellSize() = 0;
 };

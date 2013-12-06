@@ -201,6 +201,11 @@ public:
 		return m_AABB;
 	}
 
+	float getInverseCellSize() override
+	{
+		return Generic3DArray<float>::getInverseCellSize();
+	}
+
 	template<class SDFConstructor>
 	static std::shared_ptr<SignedDistanceField3DArray> sampleSDF(SDFConstructor& constructor, float cellSize)
 	{

@@ -75,7 +75,7 @@ public:
 
 		int pow2Size = 1;
 		while (pow2Size < m_HeightMapSize)
-			pow2Size = pow2Size << 1;
+			pow2Size <<= 1;
 		m_HeightMapSize = pow2Size;
 		m_HeightMap = FractalNoiseGenerator::allocHeightMap(m_HeightMapSize);	
 		FractalNoiseGenerator::generate(m_HeightMapSize, m_Roughness, m_HeightMap);

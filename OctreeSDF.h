@@ -101,13 +101,13 @@ protected:
 	/// The octree covers an axis aligned cube.
 	 Area m_RootArea;
 
-	Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
+	Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues)
 	{
 		auto vecs = area.getCornerVecs(corner);
 		auto tryInsert = sdfValues.insert(std::make_pair(vecs.first, Sample(0.0f)));
 		if (tryInsert.second)
 		{
-			tryInsert.first->second = implicitSDF.getSample(vecs.second);
+			tryInsert.first->second = implicitSDF->getSample(vecs.second);
 		}
 		return tryInsert.first->second;
 	}
@@ -120,10 +120,10 @@ protected:
 	}
 
 	/// Top down octree constructor given a SDF.
-	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
+	Node* createNode(const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues)
 	{
 		if (area.m_SizeExpo <= 0 ||
-			!implicitSDF.intersectsSurface(area.toAABB()))
+			!implicitSDF->intersectsSurface(area.toAABB()))
 		{
 			float signedDistances[8];
 			for (int i = 0; i < 8; i++)
@@ -221,10 +221,10 @@ protected:
 	}
 
 	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
-	Node* intersect(Node* node, const Area& area, SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
+	Node* intersect(Node* node, const Area& area, SignedDistanceField3D* otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
 	{
 		// if otherSDF does not overlap with the node AABB we can stop here
-		if (!area.toAABB().intersectsAABB(otherSDF.getAABB())) return node;
+		if (!area.toAABB().intersectsAABB(otherSDF->getAABB())) return node;
 
 		// compute signed distances for this node and the area of the other sdf
 		float otherSignedDistances[8];
@@ -271,7 +271,7 @@ protected:
 		}
 		else
 		{	// it's a leaf in the octree
-			if (area.m_SizeExpo > 0 && otherSDF.intersectsSurface(area.toAABB()))
+			if (area.m_SizeExpo > 0 && otherSDF->intersectsSurface(area.toAABB()))
 			{
 				// need to subdivide this node
 				node = new Node();
@@ -286,10 +286,10 @@ protected:
 	}
 
 	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
-	Node* merge(Node* node, const Area& area, SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
+	Node* merge(Node* node, const Area& area, SignedDistanceField3D* otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
 	{
 		// if otherSDF does not overlap with the node AABB we can stop here
-		if (!area.toAABB().intersectsAABB(otherSDF.getAABB()))
+		if (!area.toAABB().intersectsAABB(otherSDF->getAABB()))
 			return node;
 
 		// compute signed distances for this node and the area of the other sdf
@@ -367,20 +367,20 @@ protected:
 		}
 	}
 public:
-	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D& otherSDF, int maxDepth)
+	static std::shared_ptr<OctreeSDF> sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, int maxDepth)
 	{
 		std::shared_ptr<OctreeSDF> octreeSDF = std::make_shared<OctreeSDF>();
-		AABB aabb = otherSDF.getAABB();
+		AABB aabb = otherSDF->getAABB();
 		Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();
 		float cubeSize = std::max(std::max(aabbSize.x, aabbSize.y), aabbSize.z);
 		octreeSDF->m_CellSize = cubeSize / (1 << maxDepth);
-		otherSDF.prepareSampling(aabb, octreeSDF->m_CellSize);
+		otherSDF->prepareSampling(aabb, octreeSDF->m_CellSize);
 		octreeSDF->m_RootArea = Area(Vector3i(0, 0, 0), maxDepth, aabb.getMin(), cubeSize);
-		octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, otherSDF, octreeSDF->m_SDFValues);
+		octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, otherSDF.get(), octreeSDF->m_SDFValues);
 		return octreeSDF;
 	}
 
-	float getInverseCellSize()
+	float getInverseCellSize() override
 	{
 		return (float)(1 << m_RootArea.m_SizeExpo) / m_RootArea.m_RealSize;
 	}
@@ -406,20 +406,21 @@ public:
 		return true;
 	}
 
-	void subtract(SignedDistanceField3D& otherSDF)
+	void subtract(std::shared_ptr<SignedDistanceField3D> otherSDF)
 	{
-		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
+		otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
 		SignedDistanceGrid newSDF;
-		m_RootNode = intersect(m_RootNode, m_RootArea, OpInvertSDF(&otherSDF), newSDF, SignedDistanceGrid());
+		OpInvertSDF invertedSDF(otherSDF.get());
+		m_RootNode = intersect(m_RootNode, m_RootArea, &invertedSDF, newSDF, SignedDistanceGrid());
 		for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 			m_SDFValues[i->first] = i->second;
 	}
 
-	void intersect(SignedDistanceField3D& otherSDF)
+	void intersect(std::shared_ptr<SignedDistanceField3D> otherSDF)
 	{
-		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
+		otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
 		SignedDistanceGrid newSDF;
-		m_RootNode = intersect(m_RootNode, m_RootArea, otherSDF, newSDF, SignedDistanceGrid());
+		m_RootNode = intersect(m_RootNode, m_RootArea, otherSDF.get(), newSDF, SignedDistanceGrid());
 		for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 			m_SDFValues[i->first] = i->second;
 	}
@@ -463,15 +464,15 @@ public:
 		}
 	}
 
-	void merge(SignedDistanceField3D& otherSDF)
+	void merge(std::shared_ptr<SignedDistanceField3D> otherSDF)
 	{
 		// this is not an optimal resize policy but it should work
 		// it is recommended to avoid resizes anyway
-		resize(otherSDF.getAABB());
+		resize(otherSDF->getAABB());
 
-		otherSDF.prepareSampling(m_RootArea.toAABB(), m_CellSize);
+		otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
 		SignedDistanceGrid newSDF;
-		m_RootNode = merge(m_RootNode, m_RootArea, otherSDF, newSDF, SignedDistanceGrid());
+		m_RootNode = merge(m_RootNode, m_RootArea, otherSDF.get(), newSDF, SignedDistanceGrid());
 		for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 			m_SDFValues[i->first] = i->second;
 	}

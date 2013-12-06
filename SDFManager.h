@@ -10,11 +10,12 @@
 #include "TriangleSDF.h"
 #include "MarchingCubes.h"
 #include "ExportOBJ.h"
+#include "FractalNoisePlaneSDF.h"
 
 class SDFManager
 {
-public:
-	static std::shared_ptr<Mesh> loadMesh(const std::string &filename)
+protected:
+	static std::shared_ptr<Mesh> loadObjMesh(const std::string &filename)
 	{
 		std::cout << "Loading mesh " + filename + "..." << std::endl;
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
@@ -40,13 +41,45 @@ public:
 		}
 		return mesh;
 	}
-	static std::shared_ptr<OctreeSDF> sampleSignedDistanceFieldFromMesh(const std::string& objFileName, int maxOctreeDepth = 7)
+public:
+	/// Creates an octree that approximates the given signed distance field.
+	static std::shared_ptr<OctreeSDF> sampleOctreeSDF(std::shared_ptr<SignedDistanceField3D> sdf, int maxOctreeDepth = 7)
 	{
-		std::shared_ptr<Mesh> mesh = loadMesh(objFileName);
-		TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
-		return std::shared_ptr<OctreeSDF>(OctreeSDF::sampleSDF(meshSDF, maxOctreeDepth));
+		return OctreeSDF::sampleSDF(sdf, maxOctreeDepth);
 	}
-	static void exportSignedDistanceFieldAsMesh(const std::string& objFileName, std::shared_ptr<OctreeSDF> sdf)
+
+	/// Creates a signed distance field given the filename of an .obj file.
+	static std::shared_ptr<SignedDistanceField3D> createSDFFromMesh(const std::string& objFileName)
+	{
+		std::shared_ptr<Mesh> mesh = loadObjMesh(objFileName);
+		return std::make_shared<TriangleMeshSDF_Robust>(std::make_shared<TransformedMesh>(mesh));
+	}
+
+	/***
+	* Creates a signed distance field given a vertex and index buffer.
+	* In the vertex buffer, it is not necessary to provide normals.
+	*/
+	static std::shared_ptr<SignedDistanceField3D> createSDFFromMesh(
+		std::vector<Vertex>& vertexBuffer,
+		std::vector<unsigned int>& indexBuffer)
+	{
+		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
+		mesh->vertexBuffer.insert(mesh->vertexBuffer.begin(), vertexBuffer.begin(), vertexBuffer.end());
+		mesh->indexBuffer.insert(mesh->indexBuffer.begin(), indexBuffer.begin(), indexBuffer.end());
+		mesh->removeDegeneratedTriangles();
+		mesh->computeTriangleNormals();
+
+		return std::make_shared<TriangleMeshSDF_Robust>(std::make_shared<TransformedMesh>(mesh));
+	}
+
+	/// Creates a fractal noise sdf.
+	static std::shared_ptr<SignedDistanceField3D> createFractalNoiseSDF(float size, float roughness, float zRange)
+	{
+		return std::make_shared<FractalNoisePlaneSDF>(size, roughness, zRange);
+	}
+
+	/// Exports a sampled signed distance field as a triangle mesh in .obj format.
+	static void exportSampledSDFAsMesh(const std::string& objFileName, std::shared_ptr<SampledSignedDistanceField3D> sdf)
 	{
 		MarchingCubes::marchSDF<ExportOBJWithNormals>(objFileName, *sdf, sdf->getInverseCellSize(), 0);
 	}
