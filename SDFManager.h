@@ -11,6 +11,7 @@
 #include "MarchingCubes.h"
 #include "ExportOBJ.h"
 #include "FractalNoisePlaneSDF.h"
+#include "TransformSDF.h"
 
 class SDFManager
 {
@@ -73,9 +74,16 @@ public:
 	}
 
 	/// Creates a fractal noise sdf.
-	static std::shared_ptr<SignedDistanceField3D> createFractalNoiseSDF(float size, float roughness, float zRange)
+	static std::shared_ptr<SignedDistanceField3D> createFractalNoiseSDF(float size,
+		float roughness,
+		float zRange,
+		const Ogre::Quaternion& rotation = Ogre::Quaternion::IDENTITY,
+		const Ogre::Vector3& position = Ogre::Vector3(0,0,0))
 	{
-		return std::make_shared<FractalNoisePlaneSDF>(size, roughness, zRange);
+		auto fractalNoiseSDF = std::make_shared<FractalNoisePlaneSDF>(size, roughness, zRange);
+		Ogre::Matrix4 transform(rotation);
+		transform.setTrans(position);
+		return std::make_shared<TransformSDF>(fractalNoiseSDF, transform);
 	}
 
 	/// Exports a sampled signed distance field as a triangle mesh in .obj format.
