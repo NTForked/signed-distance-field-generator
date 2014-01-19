@@ -351,6 +351,65 @@ protected:
 			cornerSamples[i] = lookupSample(i, area);
 		}
 
+		int expoMultiplier = (1 << (subAreas[0].m_SizeExpo));
+		int expoMultiplier2 = (expoMultiplier << 1);
+
+		Vector3i minPos = subAreas[0].m_MinPos;
+
+		// first do the xy plane at z = 0
+		Sample edgeMid15 = (cornerSamples[0] + cornerSamples[4]) * 0.5f;
+		Sample edgeMid13 = (cornerSamples[0] + cornerSamples[2]) * 0.5f;
+		Sample edgeMid57 = (cornerSamples[4] + cornerSamples[6]) * 0.5f;
+		Sample edgeMid37 = (cornerSamples[2] + cornerSamples[6]) * 0.5f;
+		Sample faceMid1 = (edgeMid15 + edgeMid37) * 0.5f;
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier, 0, 0), edgeMid15));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(0, expoMultiplier, 0), edgeMid13));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier, 0), faceMid1));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), edgeMid57));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), edgeMid37));
+
+		// then the xy plane at z = 2
+		minPos = minPos + Vector3i(0, 0, 2 * expoMultiplier);
+		Sample edgeMid26 = (cornerSamples[1] + cornerSamples[5]) * 0.5f;
+		Sample edgeMid24 = (cornerSamples[1] + cornerSamples[3]) * 0.5f;
+		Sample edgeMid68 = (cornerSamples[5] + cornerSamples[7]) * 0.5f;
+		Sample edgeMid48 = (cornerSamples[3] + cornerSamples[7]) * 0.5f;
+		Sample faceMid2 = (edgeMid26 + edgeMid48) * 0.5f;
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier, 0, 0), edgeMid26));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(0, expoMultiplier, 0), edgeMid24));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier, 0), faceMid2));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), edgeMid68));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), edgeMid48));
+
+		// 4 edges at z = 1
+		minPos = subAreas[0].m_MinPos + Vector3i(0, 0, expoMultiplier);
+		m_SDFValues.insert(std::make_pair(minPos, (cornerSamples[0] + cornerSamples[1]) * 0.5f));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(0, expoMultiplier2, 0), (cornerSamples[2] + cornerSamples[3]) * 0.5f));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, 0, 0), (cornerSamples[4] + cornerSamples[5]) * 0.5f));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier2, 0), (cornerSamples[6] + cornerSamples[7]) * 0.5f));
+
+		// 4 faces at z = 1
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(0, expoMultiplier, 0), (edgeMid13 + edgeMid24) * 0.5f));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier, 0, 0), (edgeMid15 + edgeMid26) * 0.5f));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), (edgeMid37 + edgeMid48) * 0.5f));
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), (edgeMid57 + edgeMid68) * 0.5f));
+
+		// and finally, the mid point
+		m_SDFValues.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier, 0), (faceMid1 + faceMid2) * 0.5f));
+
+		/*Area subArea = subAreas[0];
+		Sample currentSample = cornerSamples[0];
+		for (int x = 0; x < 3; x++)
+		{
+			for (int y = 0; y < 3; y++)
+			{
+				subArea.m_MinPos.y += expoMultiplier, 0;
+				currentSample += 
+			}
+		}
+		subArea.m_MinPos = subArea.m_MinPos + Vector3i(1, 0, 0) * expoMultiplier;
+		for (int x = 0; x < 3; x++)
+
 		// interpolate 3x3x3 signed distance subgrid
 		Vector3i subGridVecs[27];
 		Vector3i::grid3(subGridVecs);
@@ -364,7 +423,7 @@ protected:
 			auto tryInsert = m_SDFValues.insert(std::make_pair(subArea.getCorner(0), 0.0f));
 			if (tryInsert.second)
 				tryInsert.first->second = MathMisc::trilinearInterpolation(cornerSamples, weights);
-		}
+		}*/
 	}
 public:
 	static std::shared_ptr<OctreeSDF> sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, int maxDepth)

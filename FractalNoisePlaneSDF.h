@@ -86,8 +86,10 @@ public:
 				if (m_HeightMap[x][y] > noiseMax) noiseMax = m_HeightMap[x][y];
 
 		float multiplier = (float)m_ZRange / (noiseMax + 0.001f);
+		float max = 0;
 		for (int x = 0; x < m_HeightMapSize; x++)
 			for (int y = 0; y < m_HeightMapSize; y++)
 				m_HeightMap[x][y] *= multiplier;
+		std::cout << "Max height: " << noiseMax << std::endl;
 	}
 };

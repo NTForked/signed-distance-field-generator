@@ -156,6 +156,7 @@
     <ClInclude Include="AABB.h" />
     <ClInclude Include="FractalNoiseGenerator.h" />
     <ClInclude Include="FractalNoisePlaneSDF.h" />
+    <ClInclude Include="TransformSDF.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="OctreeSDF.h" />
     <ClInclude Include="BVH.h" />

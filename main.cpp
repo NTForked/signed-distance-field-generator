@@ -32,13 +32,15 @@ void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 void splitBuddha()
 {
 	auto octreeSDF = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("buddha2.obj"), 8);
-	octreeSDF->subtract(SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f));
+	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.5f), Ogre::Vector3(1, 0, 0)));
+	octreeSDF->subtract(fractalNoiseSDF);
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_BuddhaSplit", octreeSDF);
 }
 
 void testFractalNoisePlane()
 {
-	auto octreeSDF = SDFManager::sampleOctreeSDF(SDFManager::createFractalNoiseSDF(1.0f, 1.0f, 0.1f), 6);
+	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(1.0f, 1.0f, 0.1f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.5f), Ogre::Vector3(1, 0, 0)));
+	auto octreeSDF = SDFManager::sampleOctreeSDF(fractalNoiseSDF, 6);
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_FractalNoise", octreeSDF);
 }
 
