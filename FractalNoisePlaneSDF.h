@@ -77,13 +77,13 @@ public:
 		while (pow2Size < m_HeightMapSize)
 			pow2Size <<= 1;
 		m_HeightMapSize = pow2Size;
-		m_HeightMap = FractalNoiseGenerator::allocHeightMap(m_HeightMapSize);	
+		m_HeightMap = FractalNoiseGenerator::allocHeightMap(m_HeightMapSize);
 		FractalNoiseGenerator::generate(m_HeightMapSize, m_Roughness, m_HeightMap);
 
 		float noiseMax = 0.0f;
 		for (int x = 0; x < m_HeightMapSize; x++)
 			for (int y = 0; y < m_HeightMapSize; y++)
-				if (m_HeightMap[x][y] > noiseMax) noiseMax = m_HeightMap[x][y];
+				if (std::fabsf(m_HeightMap[x][y]) > noiseMax) noiseMax = std::fabsf(m_HeightMap[x][y]);
 
 		float multiplier = (float)m_ZRange / (noiseMax + 0.001f);
 		float max = 0;

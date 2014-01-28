@@ -10,6 +10,7 @@
 #include "AABB.h"
 #include "Profiler.h"
 #include "SignedDistanceField.h"
+#include <math.h>
 
 using std::vector;
 using Ogre::Vector3;
@@ -184,8 +185,8 @@ public:
 	{
 		numValidVotes += 2;
 		pos -= m_ImagePlaneMin;
-		int x = (int)std::round(pos[m_ImagePlaneAxis1] * m_InverseCellSize);
-		int y = (int)std::round(pos[m_ImagePlaneAxis2] * m_InverseCellSize);
+		int x = (int)std::floorf (pos[m_ImagePlaneAxis1] * m_InverseCellSize + 0.5f);
+		int y = (int)std::floorf(pos[m_ImagePlaneAxis2] * m_InverseCellSize + 0.5f);
 		if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return false;
 		float z = pos[m_ImagePlaneNormalAxis];
 		if (z <= 0) return false;

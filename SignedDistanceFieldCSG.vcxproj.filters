@@ -86,5 +86,6 @@
     <ClCompile Include="OgreMath\OgreMatrix3.cpp">
       <Filter>OgreMath</Filter>
     </ClCompile>
+    <ClCompile Include="OctreeSDF.cpp" />
   </ItemGroup>
 </Project>

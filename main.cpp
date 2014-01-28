@@ -32,15 +32,19 @@ void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 void splitBuddha()
 {
 	auto octreeSDF = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("buddha2.obj"), 8);
+	std::cout << "Buddha SDF has " << octreeSDF->countNodes() << " nodes." << std::endl;
+	// SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_Buddha", octreeSDF);
 	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.5f), Ogre::Vector3(1, 0, 0)));
 	octreeSDF->subtract(fractalNoiseSDF);
+	std::cout << "Modified buddha SDF has " << octreeSDF->countNodes() << " nodes." << std::endl;
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_BuddhaSplit", octreeSDF);
 }
 
 void testFractalNoisePlane()
 {
-	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(1.0f, 1.0f, 0.1f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.5f), Ogre::Vector3(1, 0, 0)));
-	auto octreeSDF = SDFManager::sampleOctreeSDF(fractalNoiseSDF, 6);
+	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.5f), Ogre::Vector3(1, 0, 0)));
+	auto octreeSDF = SDFManager::sampleOctreeSDF(fractalNoiseSDF, 8);
+	std::cout << "Fractal noise SDF has " << octreeSDF->countNodes() << " nodes." << std::endl;
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_FractalNoise", octreeSDF);
 }
 
@@ -48,7 +52,7 @@ int main()
 {
 	// buildSDFAndMarch("bunny_highres", 7);
 	// buildSDFAndMarch("sphere", 7);
-	// testFractalNoisePlane();
+	testFractalNoisePlane();
 	splitBuddha();
 	while (true) {}
 	return 0;
