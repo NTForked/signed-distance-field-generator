@@ -3,13 +3,20 @@
 #include "OctreeSDF.h"
 #include "SignedDistanceField.h"
 
-OctreeSDF::Node* OctreeSDF::cloneNode(Node* node)
+OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues)
 {
-	Node* cloned = allocNode();
-	if (cloned->m_Children[0])
+	Area subAreas[8];
+	area.getSubAreas(subAreas);
+	for (int i = 0; i < 8; i++)
 	{
-		for (int i = 0; i < 8; i++)
-			cloned->m_Children[i] = cloneNode(node->m_Children[i]);
+		Vector3i globalPos = area.getCorner(i);
+		clonedSDFValues[globalPos] = sdfValues[globalPos];
+	}
+	if (!node) return nullptr;
+	Node* cloned = allocNode();
+	for (int i = 0; i < 8; i++)
+	{
+		cloned->m_Children[i] = cloneNode(node->m_Children[i], subAreas[i], sdfValues, clonedSDFValues);
 	}
 	return cloned;
 }
@@ -211,7 +218,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 	if (otherUpperBound < thisLowerBound)
 	{	// this node is replaced with the other sdf
 		if (node) deallocNode(node);
-		return cloneNode(otherNode);
+		return cloneNode(otherNode, area, otherSDF, newSDF);
 	}
 	else if (otherLowerBound > thisUpperBound)
 	{	// no change for this node
@@ -221,12 +228,20 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 	if (node)
 	{	// need to recurse to node children
 		vAssert(area.m_SizeExpo > 0)
-			Area subAreas[8];
+		Area subAreas[8];
 		area.getSubAreas(subAreas);
 		if (!otherNode)
+		{
 			interpolateLeaf(area, otherSDF);
-		for (int i = 0; i < 8; i++)
-			node->m_Children[i] = intersect(node->m_Children[i], nullptr, subAreas[i], otherSDF, newSDF);
+			for (int i = 0; i < 8; i++)
+				node->m_Children[i] = intersect(node->m_Children[i], nullptr, subAreas[i], otherSDF, newSDF);
+		}
+		else
+		{
+			for (int i = 0; i < 8; i++)
+				node->m_Children[i] = intersect(node->m_Children[i], otherNode->m_Children[i], subAreas[i], otherSDF, newSDF);
+		}
+
 	}
 	else
 	{	// it's a leaf in the octree
@@ -456,8 +471,12 @@ void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 
 std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, int maxDepth)
 {
+	return sampleSDF(otherSDF, otherSDF->getAABB(), maxDepth);
+}
+
+std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, AABB& aabb, int maxDepth)
+{
 	std::shared_ptr<OctreeSDF> octreeSDF = std::make_shared<OctreeSDF>();
-	AABB aabb = otherSDF->getAABB();
 	Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();
 	float cubeSize = std::max(std::max(aabbSize.x, aabbSize.y), aabbSize.z);
 	octreeSDF->m_CellSize = cubeSize / (1 << maxDepth);
@@ -519,6 +538,7 @@ void OctreeSDF::intersectAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree)
 {
 	SignedDistanceGrid newSDF;
 	m_RootNode = intersect(m_RootNode, otherOctree->m_RootNode, m_RootArea, otherOctree->m_SDFValues, newSDF);
+	std::cout << newSDF.size() << " new values" << std::endl;
 	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 		m_SDFValues[i->first] = i->second;
 }

@@ -58,6 +58,7 @@ protected:
 			upperBound = maxDist + m_RealSize * 0.5f;
 		}
 
+		// Simply returns the minimum / maximum corner.
 		void getLowerAndUpperBoundOptimistic(float* signedDistances, float& lowerBound, float& upperBound) const
 		{
 			lowerBound = std::numeric_limits<float>::max();
@@ -132,8 +133,6 @@ protected:
 #endif
 	}
 
-	Node* cloneNode(Node* node);
-
 	typedef std::unordered_map<Vector3i, Sample> SignedDistanceGrid;
 
 	SignedDistanceGrid m_SDFValues;
@@ -146,7 +145,9 @@ protected:
 	float m_CellSize;
 
 	/// The octree covers an axis aligned cube.
-	 Area m_RootArea;
+	Area m_RootArea;
+
+	Node* cloneNode(Node* node, const Area& area, SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues);
 
 	static Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues);
 
@@ -182,6 +183,8 @@ protected:
 	void getCubesToMarch(Node* node, const Area& area, vector<Cube>& cubes);
 public:
 	static std::shared_ptr<OctreeSDF> sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, int maxDepth);
+
+	static std::shared_ptr<OctreeSDF> sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, AABB& aabb, int maxDepth);
 
 	float getInverseCellSize() override;
 
