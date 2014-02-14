@@ -22,6 +22,15 @@ struct Mesh
 	//normal for each triangle for optimization purposes
 	std::vector<Ogre::Vector3> triangleNormals;
 
+	Mesh() {}
+	Mesh(const std::vector<Vertex>& vertexBuffer, const std::vector<unsigned int>& indexBuffer)
+	{
+		this->vertexBuffer.insert(this->vertexBuffer.begin(), vertexBuffer.begin(), vertexBuffer.end());
+		this->indexBuffer.insert(this->indexBuffer.begin(), indexBuffer.begin(), indexBuffer.end());
+		removeDegeneratedTriangles();
+		computeTriangleNormals();
+	}
+
 	void mergeVertices(float mergeRadius = std::numeric_limits<float>::epsilon())
 	{
 		std::vector<Ogre::Vector3> vertices;

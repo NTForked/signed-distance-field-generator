@@ -63,11 +63,35 @@ void testFractalNoisePlane()
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_FractalNoise", octreeSDF);
 }
 
+void exampleInsideOutsideTest()
+{
+	// input: Vertex and index buffer (here I just put some nonsense in it)
+	std::vector<Vertex> vertexBuffer;
+	vertexBuffer.push_back(Vertex(Ogre::Vector3(0, 0, 0)));
+	vertexBuffer.push_back(Vertex(Ogre::Vector3(1, 0, 0)));
+	vertexBuffer.push_back(Vertex(Ogre::Vector3(0, 1, 0)));
+	vertexBuffer.push_back(Vertex(Ogre::Vector3(0, 0, 1)));
+	std::vector<unsigned int> indexBuffer;
+	indexBuffer.push_back(0);
+	indexBuffer.push_back(1);
+	indexBuffer.push_back(2);
+	indexBuffer.push_back(1);
+	indexBuffer.push_back(2);
+	indexBuffer.push_back(3);
+	auto mesh = std::make_shared<TransformedMesh>(std::make_shared<Mesh>(vertexBuffer, indexBuffer));
+	TriangleMeshSDF_Robust tester(mesh);
+	float cellSize = 0.1f;
+	tester.prepareSampling(tester.getAABB(), cellSize);
+	// now you can query any point
+	bool inside = tester.isInside(Ogre::Vector3(0, 0, 0));
+}
+
 int main()
 {
 	// buildSDFAndMarch("bunny_highres", 7);
 	// buildSDFAndMarch("sphere", 7);
 	//testFractalNoisePlane();
+	exampleInsideOutsideTest();
 	splitBuddha2();
 	//splitBuddha();
 	while (true) {}

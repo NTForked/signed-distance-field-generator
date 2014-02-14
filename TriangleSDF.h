@@ -253,7 +253,9 @@ public:
 		m_RaycastCache3 = new RaycastCache(m_RootNodeAABB, cellSize, aabbSize.y, aabbSize.z, aabb.getMin(), 0);
 		Profiler::printJobDuration("Sign cache computation", timeStamp);
 	}
-	Sample getSample(const Ogre::Vector3& point) const override
+
+	/// Chekc whether a point lies inside
+	bool isInside(const Ogre::Vector3& point) const
 	{
 		bool inside = false;
 		if (m_AABB.containsPoint(point))
@@ -262,10 +264,13 @@ public:
 			int insideVotes = m_RaycastCache1->queryPointIsInside(point, numVotes) + m_RaycastCache2->queryPointIsInside(point, numVotes) + m_RaycastCache3->queryPointIsInside(point, numVotes);
 			inside = (insideVotes >= ((numVotes / 2)));
 		}
-
+		return inside;
+	}
+	Sample getSample(const Ogre::Vector3& point) const override
+	{
 		BVH<Surface>::ClosestLeafResult result;
 		const Surface* tri = m_RootNode->getClosestLeaf(point, result);
-		if (!inside) result.closestDistance *= -1;
+		if (!isInside(point)) result.closestDistance *= -1;
 		return Sample(result.closestDistance);
 	};
 };

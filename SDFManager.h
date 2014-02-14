@@ -64,12 +64,7 @@ public:
 		std::vector<Vertex>& vertexBuffer,
 		std::vector<unsigned int>& indexBuffer)
 	{
-		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
-		mesh->vertexBuffer.insert(mesh->vertexBuffer.begin(), vertexBuffer.begin(), vertexBuffer.end());
-		mesh->indexBuffer.insert(mesh->indexBuffer.begin(), indexBuffer.begin(), indexBuffer.end());
-		mesh->removeDegeneratedTriangles();
-		mesh->computeTriangleNormals();
-
+		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(vertexBuffer, indexBuffer);
 		return std::make_shared<TriangleMeshSDF_Robust>(std::make_shared<TransformedMesh>(mesh));
 	}
 
