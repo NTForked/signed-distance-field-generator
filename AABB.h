@@ -48,6 +48,12 @@ struct AABB
 		}
 	}
 
+	Ogre::Vector3 getCorner(int corner) const
+	{
+		Ogre::Vector3 sizeVec(max - min);
+		return min + Ogre::Vector3((float)((corner & 4) != 0), (float)((corner & 2) != 0), (float)(corner & 1)) * sizeVec;
+	}
+
 	__forceinline bool intersectsAABB(const AABB& otherAABB) const
 	{
 		// perform separating axis test

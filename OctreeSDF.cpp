@@ -55,7 +55,7 @@ OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceFie
 {
 	nodeTypeMask = 3;
 	if (area.m_SizeExpo <= 0 ||
-		!implicitSDF->intersectsSurface(area.toAABB()))
+		!implicitSDF->cubeIntersectsSurface(area))
 	{
 		float signedDistances[8];
 		for (int i = 0; i < 8; i++)
@@ -290,7 +290,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, SignedDistan
 
 	// compute a lower and upper bound for this node and the other sdf
 	float otherLowerBound, otherUpperBound;
-	bool containsSurface = otherSDF->intersectsSurface(area.toAABB());
+	bool containsSurface = otherSDF->cubeIntersectsSurface(area);
 	if (containsSurface)
 		area.getLowerAndUpperBound(otherSignedDistances, otherLowerBound, otherUpperBound);
 	else

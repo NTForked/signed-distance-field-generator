@@ -156,6 +156,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AABB.h" />
+    <ClInclude Include="Area.h" />
     <ClInclude Include="FractalNoiseGenerator.h" />
     <ClInclude Include="FractalNoisePlaneSDF.h" />
     <ClInclude Include="TransformSDF.h" />

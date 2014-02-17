@@ -19,8 +19,8 @@ public:
 	{
 		m_InverseTransform = transform.inverse();
 		std::vector<Ogre::Vector3> points;
-		points.push_back(m_Transform * m_SDF->getAABB().min);
-		points.push_back(m_Transform * m_SDF->getAABB().max);
+		for (int i = 0; i < 8; i++)
+			points.push_back(m_Transform * m_SDF->getAABB().getCorner(i));
 		m_AABB = AABB(points);
 	}
 	Sample getSample(const Ogre::Vector3& point) const override
@@ -31,8 +31,8 @@ public:
 	bool intersectsSurface(const AABB& aabb) const override
 	{
 		std::vector<Ogre::Vector3> points;
-		points.push_back(m_InverseTransform * aabb.min);
-		points.push_back(m_InverseTransform * aabb.max);
+		for (int i = 0; i < 8; i++)
+			points.push_back(m_InverseTransform * aabb.getCorner(i));
 		return m_SDF->intersectsSurface(AABB(points));
 	}
 
@@ -44,8 +44,8 @@ public:
 	void prepareSampling(const AABB& aabb, float cellSize) override
 	{
 		std::vector<Ogre::Vector3> points;
-		points.push_back(m_InverseTransform * aabb.min);
-		points.push_back(m_InverseTransform * aabb.max);
+		for (int i = 0; i < 8; i++)
+			points.push_back(m_InverseTransform * aabb.getCorner(i));
 		m_SDF->prepareSampling(AABB(points), cellSize);
 	}
 };

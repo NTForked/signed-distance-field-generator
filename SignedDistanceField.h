@@ -4,6 +4,7 @@
 #include "Vector3i.h"
 #include "OgreMath/OgreVector3.h"
 #include "AABB.h"
+#include "Area.h"
 #include "OgreMath/OgreVector2.h"
 
 /**
@@ -70,6 +71,9 @@ public:
 
 	/// Retrieves whether the given AABB intersects the surface (zero contour of the sdf).
 	virtual bool intersectsSurface(const AABB& aabb) const = 0;
+
+	/// Implementations may override this to provide high speed implementations for cubic aabbs.
+	virtual bool cubeIntersectsSurface(const Area& area) const { return intersectsSurface(area.toAABB()); }
 
 	/// Retrieves the axis aligned bounding box of the sdf.
 	virtual AABB getAABB() const = 0;

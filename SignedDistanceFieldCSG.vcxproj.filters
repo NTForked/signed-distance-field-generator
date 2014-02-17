@@ -67,6 +67,7 @@
     <ClInclude Include="FractalNoisePlaneSDF.h" />
     <ClInclude Include="FractalNoiseGenerator.h" />
     <ClInclude Include="TransformSDF.h" />
+    <ClInclude Include="Area.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
