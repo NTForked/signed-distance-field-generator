@@ -23,7 +23,7 @@ protected:
 
 public:
 	FractalNoisePlaneSDF(float size, float roughness, float zRange)
-		: m_HeightMap(nullptr), m_Size(size), m_Roughness(roughness), m_ZRange(zRange)
+		: m_HeightMap(nullptr), m_HeightMapSize(0), m_Size(size), m_Roughness(roughness), m_ZRange(zRange)
 	{
 		float halfSize = m_Size * 0.5f;
 		m_SurfaceAABB.min = Ogre::Vector3(-halfSize, -halfSize, -m_ZRange);
@@ -36,6 +36,18 @@ public:
 	{
 		if (m_HeightMap)
 			FractalNoiseGenerator::freeHeightMap(m_HeightMapSize, m_HeightMap);
+
+		for (int level = 0; level < (int)m_MinMipMaps.size(); level++)
+		{
+			int mapSize = 1 << getMipLevelSizeExpo(level);
+			for (int x = 0; x < mapSize; x++)
+			{
+				delete[] m_MinMipMaps[level][x];
+				delete[] m_MaxMipMaps[level][x];
+			}
+			delete[] m_MinMipMaps[level];
+			delete[] m_MaxMipMaps[level];
+		}
 	}
 
 	inline float lookupSafe(int x, int y, float** map, int mapSize) const
@@ -140,19 +152,22 @@ public:
 	}
 	int getMipLevelSizeExpo(int mipLevel) const
 	{
-		return m_MinMipMaps.size() - mipLevel - 1;
+		return (int)m_MinMipMaps.size() - mipLevel - 1;
 	}
 
 	void prepareSampling(const AABB& aabb, float cellSize) override
 	{
+		m_InverseCellSize = 1.0f / cellSize;
+		int pow2Expo = 0;
+		int newMapSize = roundToNextPowerOfTwo((int)std::ceil(m_Size * m_InverseCellSize), pow2Expo);
+		if (newMapSize == m_HeightMapSize) return;
+		std::cout << "prepareSampling " << m_HeightMapSize << " != " << newMapSize << std::endl;
+
 		if (m_HeightMap)
 			FractalNoiseGenerator::freeHeightMap(m_HeightMapSize, m_HeightMap);
 
-		m_InverseCellSize = 1.0f / cellSize;
-		m_HeightMapSize = (int)std::ceil(m_Size * m_InverseCellSize);
+		m_HeightMapSize = newMapSize;
 
-		int pow2Expo = 0;
-		m_HeightMapSize = roundToNextPowerOfTwo(m_HeightMapSize, pow2Expo);
 		m_HeightMap = FractalNoiseGenerator::allocHeightMap(m_HeightMapSize);
 		FractalNoiseGenerator::generate(m_HeightMapSize, m_Roughness, m_HeightMap);
 
@@ -175,11 +190,12 @@ public:
 		{
 			int mapSize = 1 << getMipLevelSizeExpo(level);
 			m_MinMipMaps[level] = new float*[mapSize];
-			for (int x = 0; x < mapSize; x++)
-				m_MinMipMaps[level][x] = new float[mapSize];
 			m_MaxMipMaps[level] = new float*[mapSize];
 			for (int x = 0; x < mapSize; x++)
+			{
+				m_MinMipMaps[level][x] = new float[mapSize];
 				m_MaxMipMaps[level][x] = new float[mapSize];
+			}	
 		}
 		generateMipMap(getMipLevelSizeExpo(0), m_HeightMap, fminf, m_MinMipMaps[0]);
 		generateMipMap(getMipLevelSizeExpo(0), m_HeightMap, fmaxf, m_MaxMipMaps[0]);

@@ -70,7 +70,7 @@ protected:
 	/// The octree covers an axis aligned cube.
 	Area m_RootArea;
 
-	Node* cloneNode(Node* node, const Area& area, SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues);
+	Node* cloneNode(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues);
 
 	static Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues);
 
@@ -105,6 +105,9 @@ protected:
 
 	void getCubesToMarch(Node* node, const Area& area, vector<Cube>& cubes);
 public:
+	OctreeSDF() {}
+	OctreeSDF(const OctreeSDF& other);
+
 	static std::shared_ptr<OctreeSDF> sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, int maxDepth);
 
 	static std::shared_ptr<OctreeSDF> sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, AABB& aabb, int maxDepth);
@@ -120,16 +123,30 @@ public:
 	// TODO!
 	bool intersectsSurface(const AABB &) const override;
 
+	/// Subtracts the given signed distance field from this octree.
 	void subtract(std::shared_ptr<SignedDistanceField3D> otherSDF);
 
+	/// Intersects the octree with a signed distance field. For intersections with other octrees, use intersectAlignedOctree if possible.
 	void intersect(std::shared_ptr<SignedDistanceField3D> otherSDF);
 
+	/// Intersects the octree with another aligned octree (underlying grids must match).
 	void intersectAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree);
+
+	/// Subtracts another aligned octree from this octree.
+	void subtractAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree);
 
 	/// Resizes the octree so that it covers the given aabb.
 	void resize(const AABB& aabb);
 
+	/// Merges the octree with another signed distance field.
 	void merge(std::shared_ptr<SignedDistanceField3D> otherSDF);
 
+	/// Inverts the sdf represented by the octree.
+	void invert();
+
+	/// Clones the octree and returns the copy.
+	std::shared_ptr<OctreeSDF> clone();
+
+	/// Counts the number of nodes in the octree.
 	int countNodes();
 };

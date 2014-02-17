@@ -3,14 +3,16 @@
 #include "OctreeSDF.h"
 #include "SignedDistanceField.h"
 
-OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues)
+OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues)
 {
 	Area subAreas[8];
 	area.getSubAreas(subAreas);
 	for (int i = 0; i < 8; i++)
 	{
 		Vector3i globalPos = area.getCorner(i);
-		clonedSDFValues[globalPos] = sdfValues[globalPos];
+		auto find = sdfValues.find(globalPos);
+		vAssert(find != sdfValues.end())
+		clonedSDFValues[globalPos] = find->second;
 	}
 	if (!node) return nullptr;
 	Node* cloned = allocNode();
@@ -517,12 +519,8 @@ bool OctreeSDF::intersectsSurface(const AABB &) const
 
 void OctreeSDF::subtract(std::shared_ptr<SignedDistanceField3D> otherSDF)
 {
-	otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
-	SignedDistanceGrid newSDF;
-	OpInvertSDF invertedSDF(otherSDF.get());
-	m_RootNode = intersect(m_RootNode, m_RootArea, &invertedSDF, newSDF, SignedDistanceGrid());
-	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
-		m_SDFValues[i->first] = i->second;
+	auto invertedSDF = std::make_shared<OpInvertSDF>(otherSDF.get());
+	intersect(invertedSDF);
 }
 
 void OctreeSDF::intersect(std::shared_ptr<SignedDistanceField3D> otherSDF)
@@ -541,6 +539,13 @@ void OctreeSDF::intersectAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree)
 	std::cout << newSDF.size() << " new values" << std::endl;
 	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 		m_SDFValues[i->first] = i->second;
+}
+
+void OctreeSDF::subtractAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree)
+{
+	auto clone = otherOctree->clone();
+	clone->invert();
+	intersectAlignedOctree(clone);
 }
 
 void OctreeSDF::resize(const AABB& aabb)
@@ -592,6 +597,24 @@ void OctreeSDF::merge(std::shared_ptr<SignedDistanceField3D> otherSDF)
 	m_RootNode = merge(m_RootNode, m_RootArea, otherSDF.get(), newSDF, SignedDistanceGrid());
 	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 		m_SDFValues[i->first] = i->second;
+}
+
+void OctreeSDF::invert()
+{
+	for (auto i = m_SDFValues.begin(); i != m_SDFValues.end(); i++)
+		i->second.signedDistance *= -1.0f;
+}
+
+OctreeSDF::OctreeSDF(const OctreeSDF& other)
+{
+	m_RootNode = cloneNode(other.m_RootNode, other.m_RootArea, other.m_SDFValues, m_SDFValues);
+	m_RootArea = other.m_RootArea;
+	m_CellSize = other.m_CellSize;
+}
+
+std::shared_ptr<OctreeSDF> OctreeSDF::clone()
+{
+	return std::make_shared<OctreeSDF>(*this);
 }
 
 int OctreeSDF::countNodes()

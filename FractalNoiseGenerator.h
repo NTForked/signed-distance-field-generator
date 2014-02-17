@@ -27,7 +27,7 @@ public:
 	{
 		float** pMap = new float*[iResolution + 1];
 
-		for (int x = 0; x<iResolution + 1; x++)
+		for (unsigned int x = 0; x<iResolution + 1; x++)
 			pMap[x] = new float[iResolution + 1];
 		return pMap;
 	}
@@ -35,7 +35,7 @@ public:
 	static void
 	freeHeightMap(unsigned int iResolution, float** pMap)
 	{
-		for (int x = 0; x<iResolution + 1; x++)
+		for (unsigned int x = 0; x<iResolution + 1; x++)
 			delete pMap[x];
 		delete pMap;
 	}

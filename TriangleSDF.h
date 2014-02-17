@@ -205,7 +205,7 @@ public:
 			}
 			faceCounter++;
 		}
-		faceCounter = (intersections.end() - i);
+		faceCounter = (int)(intersections.end() - i);
 		insideCounter += ((faceCounter % 2) == 1);
 		return insideCounter;
 	}
