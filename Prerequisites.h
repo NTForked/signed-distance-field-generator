@@ -19,7 +19,7 @@
 
 #define ENABLE_ASSERTIONS 1
 
-#define USE_BOOST_THREADING
+// #define USE_BOOST_THREADING
 
 #if ENABLE_ASSERTIONS
 #define vAssert(condition) {if (!(condition)) { std::cout << "assertion failed: " << #condition << std::endl; __debugbreak(); }}

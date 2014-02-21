@@ -10,6 +10,8 @@
 #include "Prerequisites.h"
 #include "OpInvertSDF.h"
 #include "Area.h"
+#include "BVH.h"
+#include "Surfaces.h"
 
 // #define USE_BOOST_POOL
 
@@ -104,8 +106,11 @@ protected:
 	void interpolateLeaf(const Area& area) { interpolateLeaf(area, m_SDFValues); }
 
 	void getCubesToMarch(Node* node, const Area& area, vector<Cube>& cubes);
+
+	std::shared_ptr<BVH<Surface> > m_TriangleCacheBVH;
+	std::shared_ptr<TransformedMesh> m_TriangleCache;
 public:
-	OctreeSDF() {}
+	OctreeSDF() : m_TriangleCacheBVH(nullptr) {}
 	OctreeSDF(const OctreeSDF& other);
 
 	static std::shared_ptr<OctreeSDF> sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, int maxDepth);

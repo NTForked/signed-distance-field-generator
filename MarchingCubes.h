@@ -146,31 +146,31 @@ public:
 		}
 	}
 
-	static Mesh marchSDF( SampledSignedDistanceField3D& sdf, float voxelsPerUnit)
+	static std::shared_ptr<Mesh> marchSDF( SampledSignedDistanceField3D& sdf, float voxelsPerUnit)
 	{
 		std::cout << "[Marching cubes] Fetching cubes..." << std::endl;
 		vector<SampledSignedDistanceField3D::Cube > cubes = sdf.getCubesToMarch();
 		std::cout << "Fetched " << cubes.size() << " cubes!" << std::endl;
 
-		Mesh outMesh;
+		std::shared_ptr<Mesh> outMesh = std::make_shared<Mesh>();
 		std::unordered_map<Vector3i, VertexIndexed> vertexMap;
 		std::cout << "[Marching cubes] Marching..." << std::endl;
 		for (auto ic = cubes.begin(); ic != cubes.end(); ++ic)
 		{
-			marchCube(*ic, vertexMap, outMesh.indexBuffer);
+			marchCube(*ic, vertexMap, outMesh->indexBuffer);
 		}
 		std::cout << "[Marching cubes] " << vertexMap.size() << " vertices created." << std::endl;
 
 		// build vertex buffer
-		outMesh.vertexBuffer.resize(vertexMap.size());
+		outMesh->vertexBuffer.resize(vertexMap.size());
 		for (auto it = vertexMap.begin(); it != vertexMap.end(); it++)
 		{
-			outMesh.vertexBuffer[it->second.index] = it->second.vertex;
+			outMesh->vertexBuffer[it->second.index] = it->second.vertex;
 		}
 
 		// finally scale with respect to voxelsPerUnit 
 		float scale = 1.0f / voxelsPerUnit;
-		for (auto it = outMesh.vertexBuffer.begin(); it != outMesh.vertexBuffer.end(); it++)
+		for (auto it = outMesh->vertexBuffer.begin(); it != outMesh->vertexBuffer.end(); it++)
 			it->position *= scale;
 
 		return outMesh;

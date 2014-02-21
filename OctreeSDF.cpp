@@ -2,6 +2,8 @@
 #include <stack>
 #include "OctreeSDF.h"
 #include "SignedDistanceField.h"
+#include "MarchingCubes.h"
+#include "Mesh.h"
 
 OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues)
 {
@@ -610,6 +612,7 @@ OctreeSDF::OctreeSDF(const OctreeSDF& other)
 	m_RootNode = cloneNode(other.m_RootNode, other.m_RootArea, other.m_SDFValues, m_SDFValues);
 	m_RootArea = other.m_RootArea;
 	m_CellSize = other.m_CellSize;
+	m_TriangleCacheBVH = other.m_TriangleCacheBVH;
 }
 
 std::shared_ptr<OctreeSDF> OctreeSDF::clone()
@@ -626,5 +629,18 @@ int OctreeSDF::countNodes()
 
 void OctreeSDF::generateTriangleCache()
 {
-
+	std::vector<Cube> cubes = getCubesToMarch();
+	auto mesh = MarchingCubes::marchSDF(*this, getInverseCellSize());
+	m_TriangleCache = std::make_shared<TransformedMesh>(mesh);
+	m_TriangleCache->computeCache();
+	vector<Surface*> surfaces;
+	for (auto iTri = m_TriangleCache->triangleSurfaces.begin(); iTri != m_TriangleCache->triangleSurfaces.end(); ++iTri)
+		surfaces.push_back(&(*iTri));
+#ifdef USE_BOOST_THREADING
+	const int numThreads = 16;
+	m_TriangleCacheBVH = std::shared_ptr<BVH<Surface> >(BVHNodeThreaded<AABB, Surface>::create(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads) / std::log(2.0))));
+#else
+	m_TriangleCacheBVH = std::shared_ptr<BVH<Surface> >(BVHNode<AABB, Surface>::create(surfaces, 0, (int)surfaces.size(), 0));
+#endif
+	m_TriangleCache;
 }

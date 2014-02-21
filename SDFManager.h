@@ -84,12 +84,12 @@ public:
 	/// Exports a sampled signed distance field as a triangle mesh in .obj format.
 	static void exportSampledSDFAsMesh(const std::string& objFileName, std::shared_ptr<SampledSignedDistanceField3D> sdf)
 	{
-		Mesh marched = MarchingCubes::marchSDF(*sdf, sdf->getInverseCellSize());
+		auto marched = MarchingCubes::marchSDF(*sdf, sdf->getInverseCellSize());
 		std::cout << "[Marching cubes] Computing normals ..." << std::endl;
-		marched.computeTriangleNormals();
-		marched.computeVertexNormals();
+		marched->computeTriangleNormals();
+		marched->computeVertexNormals();
 		std::cout << "[Marching cubes] Writing file \"" << objFileName << "\" ..." << std::endl;
-		ExportOBJ::writeMesh(objFileName, marched.vertexBuffer, marched.indexBuffer);
+		ExportOBJ::writeMesh(objFileName, marched->vertexBuffer, marched->indexBuffer);
 		std::cout << "[Marching cubes] Finished!" << std::endl;
 	}
 };
