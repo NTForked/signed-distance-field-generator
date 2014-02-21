@@ -18,12 +18,12 @@ using Ogre::Vector3;
 class TriangleMeshSDF : public SignedDistanceField3D
 {
 protected:
-	BVHNode<SphereBV, Surface>* m_RootNode;
+	BVH<Surface>* m_RootNode;
 	AABB m_AABB;
 	std::shared_ptr<TransformedMesh> m_TransformedMesh;
 
 	// Use aabbs for raycasting and AABB collision queries, it's faster.
-	BVHNode<AABB, Surface>* m_RootNodeAABB;
+	BVH<Surface>* m_RootNodeAABB;
 public:
 	virtual ~TriangleMeshSDF()
 	{
@@ -42,10 +42,10 @@ public:
 		Profiler::Timestamp timeStamp = Profiler::timestamp();
 
 #ifdef USE_BOOST_THREADING
-		const int numThreads = 8;
-		m_RootNode = new BVHNodeThreaded<SphereBV, Surface>(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
+		const int numThreads = 16;
+		m_RootNode = BVHNodeThreaded<SphereBV, Surface>::create(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
 #else
-		m_RootNode = new BVHNode<SphereBV, Surface>(surfaces, 0, (int)surfaces.size(), 0);
+		m_RootNode = BVHNode<SphereBV, Surface>::create(surfaces, 0, (int)surfaces.size(), 0);
 #endif
 		// BVHNodeThreaded<AABB, Surface> rootNodeAABB(surfaces, 0, surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
 		Profiler::printJobDuration("BVH creation", timeStamp);
@@ -54,9 +54,9 @@ public:
 
 		timeStamp = Profiler::timestamp();
 #ifdef USE_BOOST_THREADING
-		m_RootNodeAABB = new BVHNodeThreaded<AABB, Surface>(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
+		m_RootNodeAABB = BVHNodeThreaded<AABB, Surface>::create(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
 #else
-		m_RootNodeAABB = new BVHNode<AABB, Surface>(surfaces, 0, (int)surfaces.size(), 0);
+		m_RootNodeAABB = BVHNode<AABB, Surface>::create(surfaces, 0, (int)surfaces.size(), 0);
 #endif
 		// BVHNodeThreaded<AABB, Surface> rootNodeAABB(surfaces, 0, surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
 		Profiler::printJobDuration("AABB BVH creation", timeStamp);

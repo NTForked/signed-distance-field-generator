@@ -23,82 +23,19 @@ struct Mesh
 	std::vector<Ogre::Vector3> triangleNormals;
 
 	Mesh() {}
-	Mesh(const std::vector<Vertex>& vertexBuffer, const std::vector<unsigned int>& indexBuffer)
-	{
-		this->vertexBuffer.insert(this->vertexBuffer.begin(), vertexBuffer.begin(), vertexBuffer.end());
-		this->indexBuffer.insert(this->indexBuffer.begin(), indexBuffer.begin(), indexBuffer.end());
-		removeDegeneratedTriangles();
-		computeTriangleNormals();
-	}
+	Mesh(const std::vector<Vertex>& vertexBuffer, const std::vector<unsigned int>& indexBuffer);
 
-	void mergeVertices(float mergeRadius = std::numeric_limits<float>::epsilon())
-	{
-		std::vector<Ogre::Vector3> vertices;
-		vertices.resize(vertexBuffer.size());
-		for (unsigned int i = 0; i < vertexBuffer.size(); i++)
-			vertices[i] = vertexBuffer[i].position;
-		VertexMerger::mergeVertices(vertices, indexBuffer, mergeRadius);
-		for (unsigned int i = 0; i < vertexBuffer.size(); i++)
-			vertexBuffer[i].position = vertices[i];
-	}
+	void mergeVertices(float mergeRadius = std::numeric_limits<float>::epsilon());
+
+	void smoothMesh(unsigned int numIterations);
 
 	/// Removes triangles with a surface area of 0.
-	void removeDegeneratedTriangles()
-	{
-		std::vector<unsigned int> validTris;
-		int numRemovedTriangles = 0;
-		for (auto i = indexBuffer.begin(); i != indexBuffer.end(); i+=3)
-		{
-			Ogre::Vector3 v0 = vertexBuffer[*(i+1)].position-vertexBuffer[*i].position;
-			Ogre::Vector3 v1 = vertexBuffer[*(i+2)].position-vertexBuffer[*i].position;
-			// std::cout << v0.crossProduct(v1).squaredLength() << std::endl;
-			if (v0.crossProduct(v1).length() > 0)
-			{
-				validTris.push_back(*i);
-				validTris.push_back(*(i+1));
-				validTris.push_back(*(i+2));
-			}
-			else numRemovedTriangles++;
-		}
-		indexBuffer = validTris;
-		std::cout << "Removed " << numRemovedTriangles << " degenerated triangles." << std::endl;
-		if (!triangleNormals.empty())
-			computeTriangleNormals();
-	}
+	void removeDegeneratedTriangles();
 
 	///Computes the normals for each triangle and stores them in triangleNormals.
-	void computeTriangleNormals()
-	{
-		triangleNormals.resize(indexBuffer.size() / 3);
-		unsigned int triIndex = 0;
-		for (auto i = indexBuffer.begin(); i != indexBuffer.end(); i+=3)
-		{
-			Ogre::Vector3 v0 = vertexBuffer[*(i+1)].position-vertexBuffer[*i].position;
-			Ogre::Vector3 v1 = vertexBuffer[*(i+2)].position-vertexBuffer[*i].position;
-			triangleNormals[triIndex] = v0.crossProduct(v1);
-			triangleNormals[triIndex].normalise();
-			++triIndex;
-		}
-	}
+	void computeTriangleNormals();
 
-	void computeVertexNormals()
-	{
-		assert(triangleNormals.size() == indexBuffer.size() / 3);
-
-		for (auto i = vertexBuffer.begin(); i != vertexBuffer.end(); i++)
-			i->normal = Ogre::Vector3(0,0,0);
-
-		unsigned int triIndex = 0;
-		for (auto i = indexBuffer.begin(); i != indexBuffer.end(); i+=3)
-		{
-			vertexBuffer[*i].normal += triangleNormals[triIndex];
-			vertexBuffer[*(i+1)].normal += triangleNormals[triIndex];
-			vertexBuffer[*(i+2)].normal += triangleNormals[triIndex];
-			triIndex++;
-		}
-		for (auto i = vertexBuffer.begin(); i != vertexBuffer.end(); i++)
-			if (i->normal.squaredLength() > 0) i->normal.normalise();
-	}
+	void computeVertexNormals();
 };
 
 class TriangleSurface;

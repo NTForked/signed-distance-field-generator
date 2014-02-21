@@ -27,7 +27,7 @@
 class ExportOBJ
 {
 public:
-	static void writeMesh(const std::string &fileName, const std::vector<Vertex > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer)
+	static void writeMesh(const std::string &fileName, const std::vector<Vertex > &vertexBuffer, const std::vector<unsigned int> &indexBuffer)
 	{
 		std::ofstream objFile(fileName + ".obj", std::ios_base::out|std::ios_base::trunc);
 
@@ -48,7 +48,7 @@ public:
 class ExportOBJWithNormals
 {
 public:
-	static void writeMesh(const std::string &fileName, const std::vector<Vertex > &vertexBuffer, const std::vector<Ogre::Vector3> &normalBuffer, const std::vector<unsigned int> &indexBuffer)
+	static void writeMesh(const std::string &fileName, const std::vector<Vertex > &vertexBuffer, const std::vector<unsigned int> &indexBuffer)
 	{
 		std::ofstream objFile(fileName + ".obj", std::ios_base::out|std::ios_base::trunc);
 		std::ostringstream stringStream;
@@ -56,8 +56,8 @@ public:
 		for (unsigned int i = 0; i < vertexBuffer.size(); i++)
 			objFile << "v " << vertexBuffer[i].position.x << " " << vertexBuffer[i].position.z << " " << -vertexBuffer[i].position.y << std::endl;
 
-		for (unsigned int i = 0; i < normalBuffer.size(); i++)
-			objFile << "vn " << normalBuffer[i].x << " " << normalBuffer[i].z << " " << -normalBuffer[i].y << std::endl;
+		for (unsigned int i = 0; i < vertexBuffer.size(); i++)
+			objFile << "vn " << vertexBuffer[i].normal.x << " " << vertexBuffer[i].normal.z << " " << -vertexBuffer[i].normal.y << std::endl;
 
 		objFile << "s 1" << std::endl;
 

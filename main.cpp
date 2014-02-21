@@ -45,12 +45,12 @@ void splitBuddha()
 
 void splitBuddha2()
 {
-	auto part1 = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("buddha2.obj"), 8);
+	auto part1 = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("buddha2.obj"), 9);
 	auto part2 = part1->clone();
 	std::cout << "Buddha SDF has " << part1->countNodes() << " nodes." << std::endl;
 	// SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_Buddha", octreeSDF);
 	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.15f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.1f), Ogre::Vector3(1, 0, 0)));
-	auto fractalNoiseOctreeSDF = OctreeSDF::sampleSDF(fractalNoiseSDF, part1->getAABB(), 8);
+	auto fractalNoiseOctreeSDF = OctreeSDF::sampleSDF(fractalNoiseSDF, part1->getAABB(), 9);
 	std::cout << "Fractal noise SDF has " << fractalNoiseOctreeSDF->countNodes() << " nodes." << std::endl;
 	auto ts = Profiler::timestamp();
 	part1->intersectAlignedOctree(fractalNoiseOctreeSDF);

@@ -155,7 +155,7 @@ public:
 		return (int)m_MinMipMaps.size() - mipLevel - 1;
 	}
 
-	void prepareSampling(const AABB& aabb, float cellSize) override
+	virtual void prepareSampling(const AABB& aabb, float cellSize) override
 	{
 		m_InverseCellSize = 1.0f / cellSize;
 		int pow2Expo = 0;

@@ -116,9 +116,12 @@ public:
 
 	AABB getAABB() const override;
 
-	vector<Cube> getCubesToMarch();
+	vector<Cube> getCubesToMarch() override;
 
 	Sample getSample(const Ogre::Vector3& point) const override;
+
+	/// Builds the triangle cache using marching cubes required for fast intersectsSurface queries.
+	void generateTriangleCache();
 
 	// TODO!
 	bool intersectsSurface(const AABB &) const override;

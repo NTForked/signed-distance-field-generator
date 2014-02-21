@@ -9,6 +9,114 @@
 using std::vector;
 using std::unordered_set;
 
+Mesh::Mesh(const std::vector<Vertex>& vertexBuffer, const std::vector<unsigned int>& indexBuffer)
+{
+	this->vertexBuffer.insert(this->vertexBuffer.begin(), vertexBuffer.begin(), vertexBuffer.end());
+	this->indexBuffer.insert(this->indexBuffer.begin(), indexBuffer.begin(), indexBuffer.end());
+	removeDegeneratedTriangles();
+	computeTriangleNormals();
+}
+
+void Mesh::mergeVertices(float mergeRadius)
+{
+	std::vector<Ogre::Vector3> vertices;
+	vertices.resize(vertexBuffer.size());
+	for (unsigned int i = 0; i < vertexBuffer.size(); i++)
+		vertices[i] = vertexBuffer[i].position;
+	VertexMerger::mergeVertices(vertices, indexBuffer, mergeRadius);
+	for (unsigned int i = 0; i < vertexBuffer.size(); i++)
+		vertexBuffer[i].position = vertices[i];
+}
+
+void Mesh::smoothMesh(unsigned int numIterations)
+{
+	std::vector<std::unordered_set<unsigned int>> vertexNeighbors;
+	vertexNeighbors.resize(vertexBuffer.size());
+	for (int i = 0; i < ((int)indexBuffer.size()) - 2; i += 3)
+	{
+		vertexNeighbors[indexBuffer[i]].insert(indexBuffer[i + 1]);
+		vertexNeighbors[indexBuffer[i]].insert(indexBuffer[i + 2]);
+
+		vertexNeighbors[indexBuffer[i + 1]].insert(indexBuffer[i]);
+		vertexNeighbors[indexBuffer[i + 1]].insert(indexBuffer[i + 2]);
+
+		vertexNeighbors[indexBuffer[i + 2]].insert(indexBuffer[i]);
+		vertexNeighbors[indexBuffer[i + 2]].insert(indexBuffer[i + 1]);
+	}
+
+	std::vector<Vertex > swapBuffer = vertexBuffer;
+	std::vector<Vertex > *oldBufferPtr = &vertexBuffer;
+	std::vector<Vertex > *newBufferPtr = &swapBuffer;
+	for (unsigned int i = 0; i < numIterations; i++)
+	{
+		for (unsigned int v = 0; v < oldBufferPtr->size(); v++)
+		{
+			Ogre::Vector3 accum = (*oldBufferPtr)[v].position;
+			for (auto it = vertexNeighbors[v].begin(); it != vertexNeighbors[v].end(); it++)
+				accum += (*oldBufferPtr)[*it].position;
+			(*newBufferPtr)[v].position = accum / (1.0f + vertexNeighbors[v].size());
+		}
+		std::swap(oldBufferPtr, newBufferPtr);
+	}
+	if (oldBufferPtr != &vertexBuffer) vertexBuffer = swapBuffer;
+}
+
+void Mesh::removeDegeneratedTriangles()
+{
+	std::vector<unsigned int> validTris;
+	int numRemovedTriangles = 0;
+	for (auto i = indexBuffer.begin(); i != indexBuffer.end(); i += 3)
+	{
+		Ogre::Vector3 v0 = vertexBuffer[*(i + 1)].position - vertexBuffer[*i].position;
+		Ogre::Vector3 v1 = vertexBuffer[*(i + 2)].position - vertexBuffer[*i].position;
+		// std::cout << v0.crossProduct(v1).squaredLength() << std::endl;
+		if (v0.crossProduct(v1).length() > 0)
+		{
+			validTris.push_back(*i);
+			validTris.push_back(*(i + 1));
+			validTris.push_back(*(i + 2));
+		}
+		else numRemovedTriangles++;
+	}
+	indexBuffer = validTris;
+	std::cout << "Removed " << numRemovedTriangles << " degenerated triangles." << std::endl;
+	if (!triangleNormals.empty())
+		computeTriangleNormals();
+}
+
+void Mesh::computeTriangleNormals()
+{
+	triangleNormals.resize(indexBuffer.size() / 3);
+	unsigned int triIndex = 0;
+	for (auto i = indexBuffer.begin(); i != indexBuffer.end(); i += 3)
+	{
+		Ogre::Vector3 v0 = vertexBuffer[*(i + 1)].position - vertexBuffer[*i].position;
+		Ogre::Vector3 v1 = vertexBuffer[*(i + 2)].position - vertexBuffer[*i].position;
+		triangleNormals[triIndex] = v0.crossProduct(v1);
+		triangleNormals[triIndex].normalise();
+		++triIndex;
+	}
+}
+
+void Mesh::computeVertexNormals()
+{
+	assert(triangleNormals.size() == indexBuffer.size() / 3);
+
+	for (auto i = vertexBuffer.begin(); i != vertexBuffer.end(); i++)
+		i->normal = Ogre::Vector3(0, 0, 0);
+
+	unsigned int triIndex = 0;
+	for (auto i = indexBuffer.begin(); i != indexBuffer.end(); i += 3)
+	{
+		vertexBuffer[*i].normal += triangleNormals[triIndex];
+		vertexBuffer[*(i + 1)].normal += triangleNormals[triIndex];
+		vertexBuffer[*(i + 2)].normal += triangleNormals[triIndex];
+		triIndex++;
+	}
+	for (auto i = vertexBuffer.begin(); i != vertexBuffer.end(); i++)
+		if (i->normal.squaredLength() > 0) i->normal.normalise();
+}
+
 TransformedMesh::TransformedMesh(std::shared_ptr<Mesh> mesh)
 	: mMesh(mesh), mPosition(Ogre::Vector3(0,0,0)), mScale(Ogre::Vector3(1,1,1)), mRotation(Ogre::Matrix3::IDENTITY), vertexBufferVS(mesh->vertexBuffer)
 {
@@ -50,7 +158,6 @@ void TransformedMesh::computeCache() const
 	// Maps vertices to triangles that share this vertex.
 	vector<std::unordered_set<int> > verticesTotris;
 	verticesTotris.resize(vertexBufferVS.size());
-	const int numTriangles = triangleDataVS.size();
 
 	int triIndex = 0;
 	int numDegeneratedTris = 0;
@@ -189,7 +296,7 @@ void TransformedMesh::computeCache() const
 		vertexBuffer.resize(mMesh->vertexBuffer.size());
 		for (unsigned int i = 0; i < mMesh->vertexBuffer.size(); i++)
 			vertexBuffer[i].position = mMesh->vertexBuffer[i].position;
-		ExportOBJ::writeMesh("BullshitEdges", vertexBuffer, mMesh->triangleNormals, bullshitEdgesTriangles);
+		ExportOBJ::writeMesh("BullshitEdges", vertexBuffer, bullshitEdgesTriangles);
 	}
 
 	for (auto i = triangleSurfaces.begin(); i != triangleSurfaces.end(); i++)

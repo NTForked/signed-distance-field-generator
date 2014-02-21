@@ -26,6 +26,7 @@
 #include "TriangleLookupTable.h"
 #include "Vertex.h"
 #include "SignedDistanceField.h"
+#include "Mesh.h"
 
 using std::vector;
 
@@ -145,81 +146,33 @@ public:
 		}
 	}
 
-	static void smoothMesh(std::vector<Vertex > &vertexBuffer, const std::vector<unsigned int> &indexBuffer, unsigned int numIterations)
-	{
-		std::vector<std::unordered_set<unsigned int>> vertexNeighbors;		
-		vertexNeighbors.resize(vertexBuffer.size());
-		for (int i = 0; i < ((int)indexBuffer.size())-2; i+=3)
-		{
-			vertexNeighbors[indexBuffer[i]].insert(indexBuffer[i+1]);
-			vertexNeighbors[indexBuffer[i]].insert(indexBuffer[i+2]);
-
-			vertexNeighbors[indexBuffer[i+1]].insert(indexBuffer[i]);
-			vertexNeighbors[indexBuffer[i+1]].insert(indexBuffer[i+2]);
-
-			vertexNeighbors[indexBuffer[i+2]].insert(indexBuffer[i]);
-			vertexNeighbors[indexBuffer[i+2]].insert(indexBuffer[i+1]);
-		}
-
-		std::vector<Vertex > swapBuffer = vertexBuffer;
-		std::vector<Vertex > *oldBufferPtr = &vertexBuffer;
-		std::vector<Vertex > *newBufferPtr = &swapBuffer;
-		for (unsigned int i = 0; i < numIterations; i++)
-		{
-			for (unsigned int v = 0; v < oldBufferPtr->size(); v++)
-			{
-				Ogre::Vector3 accum = (*oldBufferPtr)[v].position;
-				for (auto it = vertexNeighbors[v].begin(); it != vertexNeighbors[v].end(); it++)
-					accum += (*oldBufferPtr)[*it].position;
-				(*newBufferPtr)[v].position = accum / (1.0f+vertexNeighbors[v].size());
-			}
-			std::swap(oldBufferPtr, newBufferPtr);
-		}
-		if (oldBufferPtr != &vertexBuffer) vertexBuffer = swapBuffer;
-	}
-
-	template<class MeshWriter>
-	static void marchSDF(const std::string &fileName, SampledSignedDistanceField3D& sdf,
-			float voxelsPerUnit, int numSmoothIterations = 1)
+	static Mesh marchSDF( SampledSignedDistanceField3D& sdf, float voxelsPerUnit)
 	{
 		std::cout << "[Marching cubes] Fetching cubes..." << std::endl;
 		vector<SampledSignedDistanceField3D::Cube > cubes = sdf.getCubesToMarch();
 		std::cout << "Fetched " << cubes.size() << " cubes!" << std::endl;
 
+		Mesh outMesh;
 		std::unordered_map<Vector3i, VertexIndexed> vertexMap;
-		std::vector<unsigned int> indexBuffer;
 		std::cout << "[Marching cubes] Marching..." << std::endl;
 		for (auto ic = cubes.begin(); ic != cubes.end(); ++ic)
 		{
-			marchCube(*ic, vertexMap, indexBuffer);
+			marchCube(*ic, vertexMap, outMesh.indexBuffer);
 		}
 		std::cout << "[Marching cubes] " << vertexMap.size() << " vertices created." << std::endl;
 
 		// build vertex buffer
-		std::vector<Vertex> vertexBuffer;
-		vertexBuffer.resize(vertexMap.size());
+		outMesh.vertexBuffer.resize(vertexMap.size());
 		for (auto it = vertexMap.begin(); it != vertexMap.end(); it++)
 		{
-			vertexBuffer[it->second.index] = it->second.vertex;
-		}
-
-		if (numSmoothIterations > 0)
-		{
-			std::cout << "[Marching cubes] Smoothing mesh ..." << std::endl;
-			smoothMesh(vertexBuffer, indexBuffer, numSmoothIterations);
+			outMesh.vertexBuffer[it->second.index] = it->second.vertex;
 		}
 
 		// finally scale with respect to voxelsPerUnit 
 		float scale = 1.0f / voxelsPerUnit;
-		for (auto it = vertexBuffer.begin(); it != vertexBuffer.end(); it++)
+		for (auto it = outMesh.vertexBuffer.begin(); it != outMesh.vertexBuffer.end(); it++)
 			it->position *= scale;
 
-		std::cout << "[Marching cubes] Computing normals ..." << std::endl;
-		std::vector<Ogre::Vector3> normalBuffer;
-		computeVertexNormals(normalBuffer, vertexBuffer, indexBuffer);
-
-		std::cout << "[Marching cubes] Writing file \"" << fileName << "\" ..." << std::endl;
-		MeshWriter::writeMesh(fileName, vertexBuffer, normalBuffer, indexBuffer);
-		std::cout << "[Marching cubes] Finished!" << std::endl;
+		return outMesh;
 	}
 };

@@ -68,6 +68,7 @@
     <ClInclude Include="FractalNoiseGenerator.h" />
     <ClInclude Include="TransformSDF.h" />
     <ClInclude Include="Area.h" />
+    <ClInclude Include="FracturePattern.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

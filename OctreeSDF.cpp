@@ -287,7 +287,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, SignedDistan
 	float thisLowerBound, thisUpperBound;
 	getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
 
-	// Empty space stays empty - end of story.
+	// empty space stays empty - end of story
 	if (thisUpperBound < 0) return node;
 
 	// compute a lower and upper bound for this node and the other sdf
@@ -622,4 +622,9 @@ int OctreeSDF::countNodes()
 	int counter = 0;
 	countNodes(m_RootNode, m_RootArea, counter);
 	return counter;
+}
+
+void OctreeSDF::generateTriangleCache()
+{
+
 }

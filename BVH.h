@@ -82,6 +82,9 @@ public:
 
 	/// Retrieves whether the AABB intersects any surfaces.
 	virtual bool intersectsAABB(const AABB& aabb) const = 0;
+
+	virtual unsigned int getHeight() const { return 1; }
+	virtual float getHeightAvg() const { return 1.0f; }
 };
 
 /// Bucket that just stores a list of leaves.
@@ -100,7 +103,7 @@ public:
 		for (; begin != end; begin++)
 			*(copyBegin++) = *begin;
 	}
-	~BVHContainer() {}
+	virtual ~BVHContainer() {}
 
 	const LeafType* rayIntersectClosest(Ray::Intersection &intersection, const Ray &ray) const override
 	{
@@ -183,10 +186,6 @@ protected:
 	int mSplitAxis;
 
 	static const int PRIMITIVES_PER_LEAF = 6;
-
-	// node height, useful for algorithm analysis
-	unsigned int mHeight;
-	float mHeightAvg;
 
 	__forceinline static void updateSplitParameters(const BoundingVolume &objBV, const Ogre::Vector3 &objCenter, const Ogre::Vector3 &pivot, int axis, int &numLeft, float &maxLeft, float &minRight)
 	{
@@ -310,7 +309,7 @@ protected:
 		return mid;
 	}
 
-	BVHNode() : mSplitAxis(0), mHeight(0), mHeightAvg(0)
+	BVHNode() : mSplitAxis(0)
 	{}
 
 public:
@@ -320,38 +319,25 @@ public:
 		if (mChildren[1]->getType() != BVH<LeafType>::PRIMITIVE) delete mChildren[1];
 	}
 
+	static BVH<LeafType>* create(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis)
+	{
+		if (right - left > PRIMITIVES_PER_LEAF)
+			return new BVHNode<BoundingVolume, LeafType>(surfaces, left, right, splitAxis);
+		else if (right - left > 1)
+			return new BVHContainer<LeafType>(surfaces.begin() + left, surfaces.begin() + right);
+		else return surfaces[left];
+	}
+
 	/// Constructs a BVH for a list of surfaces - implemented inplace
 	BVHNode(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis)
 	{
 		assert(right-left >= 2);
 		this->mType = BVH<LeafType>::NODE;
-		mHeight = 0;
-		mHeightAvg = 0;
 
 		int mid = partitionSurfaces(surfaces, left, right, splitAxis);
 
-		int heightLeft = 1, heightRight = 1;
-		float heightAvgLeft = 1.0f, heightAvgRight = 1.0f;
-		if (mid-left > PRIMITIVES_PER_LEAF)
-		{
-			mChildren[0] = new BVHNode<BoundingVolume, LeafType>(surfaces, left, mid, splitAxis+1);
-			heightLeft = ((BVHNode*)mChildren[0])->mHeight;
-			heightAvgLeft = ((BVHNode*)mChildren[0])->mHeightAvg;
-		}
-		else if (mid-left > 1) mChildren[0] = new BVHContainer<LeafType>(surfaces.begin()+left, surfaces.begin()+mid);
-		else mChildren[0] = surfaces[left];
-
-		if (right-mid > PRIMITIVES_PER_LEAF)
-		{
-			mChildren[1] = new BVHNode<BoundingVolume, LeafType>(surfaces, mid, right, splitAxis+1);
-			heightRight = ((BVHNode*)mChildren[1])->mHeight;
-			heightAvgRight = ((BVHNode*)mChildren[1])->mHeightAvg;
-		}
-		else if (right-mid > 1) mChildren[1] = new BVHContainer<LeafType>(surfaces.begin()+mid, surfaces.begin()+right);
-		else mChildren[1] = surfaces[right-1];
-
-		mHeight = 1 + std::max(heightLeft, heightRight);
-		mHeightAvg = 1 + (heightAvgLeft + heightAvgRight) * 0.5f;
+		mChildren[0] = create(surfaces, left, mid, splitAxis + 1);
+		mChildren[1] = create(surfaces, mid, right, splitAxis + 1);
 	}
 
 	const LeafType* rayIntersectClosest(Ray::Intersection &intersection, const Ray &ray) const override
@@ -462,8 +448,8 @@ public:
 		return  mChildren[1]->intersectsAABB(aabb);
 	}
 
-	unsigned int getHeight() { return mHeight; }
-	float getHeightAvg() { return mHeightAvg; }
+	virtual unsigned int getHeight() const override { return 1 + std::max(mChildren[0]->getHeight(), mChildren[1]->getHeight()); }
+	virtual float getHeightAvg() const override { return 1.0f + (mChildren[0]->getHeight() + mChildren[1]->getHeight()) * 0.5f; }
 
 	__forceinline BoundingVolume getBoundingVolume() const
 	{
@@ -494,65 +480,56 @@ private:
 	};
 
 public:
-	~BVHNodeThreaded() {}
+	virtual ~BVHNodeThreaded() {}
 	BVHNodeThreaded(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis, int maxParallelDepth)
 	{
 		this->mType = BVH<LeafType>::NODE;
-		this->mHeight = 0;
-		this->mHeightAvg = 0;
 		assert(right-left >= 2);
 		initialize(surfaces, left, right, splitAxis, maxParallelDepth);
 	}
 	BVHNodeThreaded(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis, int maxParallelDepth, boost::thread_group &threads)
 	{
 		this->mType = BVH<LeafType>::NODE;
-		this->mHeight = 0;
-		this->mHeightAvg = 0;
 		assert(right-left >= 2);
 		threads.create_thread(Worker(&surfaces, left, right, splitAxis, this, maxParallelDepth));
 	}
 
+	static BVH<LeafType>* create(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis, int maxParallelDepth)
+	{
+		if (right - left > PRIMITIVES_PER_LEAF)
+		{
+			if (maxParallelDepth > 0)
+				return new BVHNodeThreaded<BoundingVolume, LeafType>(surfaces, left, right, splitAxis, maxParallelDepth);
+			else
+				return new BVHNode<BoundingVolume, LeafType>(surfaces, left, right, splitAxis);
+		}
+		else if (right - left > 1)
+			return new BVHContainer<LeafType>(surfaces.begin() + left, surfaces.begin() + right);
+		else return surfaces[left];
+	}
+
+	static BVH<LeafType>* create(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis, int maxParallelDepth, boost::thread_group &threads)
+	{
+		if (right - left > PRIMITIVES_PER_LEAF)
+		{
+			if (maxParallelDepth > 0)
+				return new BVHNodeThreaded<BoundingVolume, LeafType>(surfaces, left, right, splitAxis, maxParallelDepth, threads);
+			else
+				return new BVHNode<BoundingVolume, LeafType>(surfaces, left, right, splitAxis);
+		}
+		else if (right - left > 1)
+			return new BVHContainer<LeafType>(surfaces.begin() + left, surfaces.begin() + right);
+		else return surfaces[left];
+	}
+
 	void initialize(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis, int maxParallelDepth)
 	{
-		int mid = this->partitionSurfaces(surfaces, left, right, splitAxis);
+		int mid = partitionSurfaces(surfaces, left, right, splitAxis);
 
-		int heightLeft = 1, heightRight = 1;
-		float heightAvgLeft = 1.0f, heightAvgRight = 1.0f;
 		boost::thread_group threads;
-		if (mid-left > this->PRIMITIVES_PER_LEAF)
-		{
-			if (maxParallelDepth > 0)
-				this->mChildren[0] = new BVHNodeThreaded<BoundingVolume, LeafType>(surfaces, left, mid, splitAxis+1, maxParallelDepth-1, threads);
-			else
-				this->mChildren[0] = new BVHNode<BoundingVolume, LeafType>(surfaces, left, mid, splitAxis+1);
-		}
-		else if (mid-left > 1) this->mChildren[0] = new BVHContainer<LeafType>(surfaces.begin()+left, surfaces.begin()+mid);
-		else this-> mChildren[0] = surfaces[left];
-
-		if (right-mid > this->PRIMITIVES_PER_LEAF)
-		{
-			if (maxParallelDepth > 0)
-				this->mChildren[1] = new BVHNodeThreaded<BoundingVolume, LeafType>(surfaces, mid, right, splitAxis+1, maxParallelDepth-1, threads);
-			else
-				this->mChildren[1] = new BVHNode<BoundingVolume, LeafType>(surfaces, mid, right, splitAxis+1);
-		}
-		else if (right-mid > 1) this->mChildren[1] = new BVHContainer<LeafType>(surfaces.begin()+mid, surfaces.begin()+right);
-		else this->mChildren[1] = surfaces[mid];
-
-		threads.join_all();
-		if (this->mChildren[0]->getType() == BVH<LeafType>::NODE)
-		{
-			heightLeft = ((BVHNode<BoundingVolume, LeafType>*)this->mChildren[0])->getHeight();
-			heightAvgLeft = ((BVHNode<BoundingVolume, LeafType>*)this->mChildren[0])->getHeightAvg();
-		}
-		if (this->mChildren[1]->getType() == BVH<LeafType>::NODE)
-		{
-			heightRight = ((BVHNode<BoundingVolume, LeafType>*)this->mChildren[1])->getHeight();
-			heightAvgRight = ((BVHNode<BoundingVolume, LeafType>*)this->mChildren[1])->getHeightAvg();
-		}
-		this->mHeight = 1 + std::max(heightLeft, heightRight);
-		this->mHeightAvg = 1 + (heightAvgLeft + heightAvgRight) * 0.5f;
-		
+		mChildren[0] = create(surfaces, left, mid, splitAxis + 1, maxParallelDepth-1, threads);
+		mChildren[1] = create(surfaces, mid, right, splitAxis + 1, maxParallelDepth-1, threads);
+		threads.join_all();		
 	}
 };
 
