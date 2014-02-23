@@ -15,11 +15,18 @@ struct Area
 	Ogre::Vector3 m_MinRealPos;
 	float m_RealSize;
 
-	__forceinline bool containsPoint(const Ogre::Vector3& point)
+	__forceinline bool containsPoint(const Ogre::Vector3& point) const
 	{
 		return (point.x >= m_MinRealPos.x && point.x < (m_MinRealPos.x + m_RealSize)
 			&& point.y >= m_MinRealPos.y && point.y < (m_MinRealPos.y + m_RealSize)
 			&& point.z >= m_MinRealPos.z && point.z < (m_MinRealPos.z + m_RealSize));
+	}
+
+	__forceinline bool containsPoint(const Ogre::Vector3& point, float epsilon) const
+	{
+		return (point.x >= m_MinRealPos.x - epsilon && point.x < (m_MinRealPos.x + m_RealSize + epsilon)
+			&& point.y >= m_MinRealPos.y - epsilon && point.y < (m_MinRealPos.y + m_RealSize + epsilon)
+			&& point.z >= m_MinRealPos.z - epsilon && point.z < (m_MinRealPos.z + m_RealSize + epsilon));
 	}
 
 	// Computes a lower and upper bound inside the area given the 8 corner signed distances.

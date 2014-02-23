@@ -179,14 +179,13 @@ OctreeSDF::Sample OctreeSDF::getSample(Node* node, const Area& area, const Ogre:
 		area.getSubAreas(subAreas);
 		for (int i = 0; i < 8; i++)
 		{
-			if (subAreas[i].containsPoint(point))
+			if (subAreas[i].containsPoint(point, 0.0001f))
 			{
 				return getSample(node->m_Children[i], subAreas[i], point);
-				break;
 			}
 		}
 	}
-	return 0.0f;		// should never occur
+	return Sample(-99999.0f);		// should never occur
 }
 
 OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& area, SignedDistanceGrid& otherSDF, SignedDistanceGrid& newSDF)
@@ -511,8 +510,10 @@ OctreeSDF::Sample OctreeSDF::getSample(const Ogre::Vector3& point) const
 }
 
 // TODO!
-bool OctreeSDF::intersectsSurface(const AABB &) const
+bool OctreeSDF::intersectsSurface(const AABB& aabb) const
 {
+	if (m_TriangleCache.getBVH())
+		return m_TriangleCache.getBVH()->intersectsAABB(aabb);
 	return true;
 }
 
@@ -629,8 +630,12 @@ void OctreeSDF::generateTriangleCache()
 	std::vector<Cube> cubes = getCubesToMarch();
 	auto mesh = MarchingCubes::marchSDF(*this, getInverseCellSize());
 	auto transformedMesh = std::make_shared<TransformedMesh>(mesh);
+	std::cout << "Computing cache" << std::endl;
+	mesh->computeTriangleNormals();
 	transformedMesh->computeCache();
 	m_TriangleCache.clearMeshes();
 	m_TriangleCache.addMesh(transformedMesh);
+	std::cout << "Generating BVH" << std::endl;
 	m_TriangleCache.generateBVH<AABB>();
+	std::cout << "Finished generating BVH" << std::endl;
 }

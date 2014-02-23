@@ -57,6 +57,16 @@ void splitBunny()
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_BunnySplit2", part2);
 }
 
+void testBVHResampling()
+{
+	auto bunny = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("bunny.capped.obj"), 8);
+	bunny->generateTriangleCache();
+	auto ts = Profiler::timestamp();
+	auto bunnyRotated = SDFManager::sampleOctreeSDF(std::make_shared<TransformSDF>(bunny, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.4f), Ogre::Vector3(1, 0, 0))), 8);
+	Profiler::printJobDuration("Bunny resampling", ts);
+	SDFManager::exportSampledSDFAsMesh("sdfOctree_BunnyResampled", bunnyRotated);
+}
+
 void splitBuddha2()
 {
 	auto part1 = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("buddha2.obj"), 9);
@@ -111,7 +121,7 @@ int main()
 {
 	// buildSDFAndMarch("bunny_highres", 7);
 	// buildSDFAndMarch("sphere", 7);
-	splitBunny();
+	testBVHResampling();
 	// testFractalNoisePlane();
 	// splitBuddha2();
 	//splitBuddha();

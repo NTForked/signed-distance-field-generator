@@ -171,7 +171,7 @@ public:
 		// finally scale with respect to voxelsPerUnit 
 		float scale = 1.0f / voxelsPerUnit;
 		for (auto it = outMesh->vertexBuffer.begin(); it != outMesh->vertexBuffer.end(); it++)
-			it->position *= scale;
+			it->position = (it->position * scale) + sdf.getAABB().getMin();
 
 		return outMesh;
 	}
