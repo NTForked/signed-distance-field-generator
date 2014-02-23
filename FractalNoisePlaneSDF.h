@@ -50,11 +50,15 @@ public:
 		}
 	}
 
+	inline int clamp(int x, int minX, int maxX) const
+	{
+		return std::min(std::max(x, minX), maxX);
+	}
 	inline float lookupSafe(int x, int y, float** map, int mapSize) const
 	{
-		float surfaceZ = 0;
-		if (x >= 0 && x < mapSize && y >= 0 && y < mapSize)
-			surfaceZ = map[x][y];
+		x = clamp(x, 0, mapSize);
+		y = clamp(y, 0, mapSize);
+		float surfaceZ = map[x][y];
 		return surfaceZ;
 	}
 

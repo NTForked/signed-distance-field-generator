@@ -43,6 +43,20 @@ void splitBuddha()
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_BuddhaSplit2", part2);
 }
 
+void splitBunny()
+{
+	auto part1 = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("bunny.capped.obj"), 8);
+	auto part2 = part1->clone();
+	std::cout << "Bunny SDF has " << part1->countNodes() << " nodes." << std::endl;
+	// SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_Buddha", octreeSDF);
+	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(3.0f, 1.0f, 0.1f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.1f), Ogre::Vector3(1, 0, 0)));
+	part1->subtract(fractalNoiseSDF);
+	std::cout << "Bunny part1 has " << part1->countNodes() << " nodes." << std::endl;
+	part2->intersect(fractalNoiseSDF);
+	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_BunnySplit1", part1);
+	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_BunnySplit2", part2);
+}
+
 void splitBuddha2()
 {
 	auto part1 = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("buddha2.obj"), 9);
@@ -97,7 +111,7 @@ int main()
 {
 	// buildSDFAndMarch("bunny_highres", 7);
 	// buildSDFAndMarch("sphere", 7);
-	splitBuddha2();
+	splitBunny();
 	// testFractalNoisePlane();
 	// splitBuddha2();
 	//splitBuddha();

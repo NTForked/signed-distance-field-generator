@@ -265,9 +265,6 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 
 OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, SignedDistanceField3D* otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
 {
-	// if otherSDF does not overlap with the node AABB we can stop here
-	if (!area.toAABB().intersectsAABB(otherSDF->getAABB())) return node;
-
 	// compute signed distances for this node and the area of the other sdf
 	float otherSignedDistances[8];
 	float thisSignedDistances[8];
