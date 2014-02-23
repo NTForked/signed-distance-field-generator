@@ -5,7 +5,7 @@
 #include "OgreMath/OgreVector3.h"
 #include "OBJReader.h"
 #include "Mesh.h"
-#include "BVH.h"
+#include "BVHScene.h"
 #include "Surfaces.h"
 #include "AABB.h"
 #include "Profiler.h"
@@ -18,53 +18,34 @@ using Ogre::Vector3;
 class TriangleMeshSDF : public SignedDistanceField3D
 {
 protected:
-	BVH<Surface>* m_RootNode;
+	BVHScene m_RootNode;
 	AABB m_AABB;
-	std::shared_ptr<TransformedMesh> m_TransformedMesh;
 
 	// Use aabbs for raycasting and AABB collision queries, it's faster.
-	BVH<Surface>* m_RootNodeAABB;
+	BVHScene m_RootNodeAABB;
 public:
 	virtual ~TriangleMeshSDF()
 	{
-		// It's important that the root node is destroyed before the TransformedMesh, because the TransformedMesh manages the leaves of the BVH.
-		delete m_RootNode;
-		delete m_RootNodeAABB;
 	}
 	TriangleMeshSDF(std::shared_ptr<TransformedMesh> mesh)
 	{
-		m_TransformedMesh = mesh;
-		m_TransformedMesh->computeCache();
-		vector<Surface*> surfaces;
-		for (auto iTri = m_TransformedMesh->triangleSurfaces.begin(); iTri != m_TransformedMesh->triangleSurfaces.end(); ++iTri)
-			surfaces.push_back(&(*iTri));
-
+		mesh->computeCache();
+		m_RootNode.addMesh(mesh);
+		m_RootNodeAABB.addMesh(mesh);
 		Profiler::Timestamp timeStamp = Profiler::timestamp();
-
-#ifdef USE_BOOST_THREADING
-		const int numThreads = 16;
-		m_RootNode = BVHNodeThreaded<SphereBV, Surface>::create(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
-#else
-		m_RootNode = BVHNode<SphereBV, Surface>::create(surfaces, 0, (int)surfaces.size(), 0);
-#endif
-		// BVHNodeThreaded<AABB, Surface> rootNodeAABB(surfaces, 0, surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
+		m_RootNode.generateBVH<SphereBV>();
 		Profiler::printJobDuration("BVH creation", timeStamp);
-		std::cout << "Tree height max: " << m_RootNode->getHeight() << std::endl;
-		std::cout << "Tree height avg: " << m_RootNode->getHeightAvg() << std::endl;
+		std::cout << "Tree height max: " << m_RootNode.getBVH()->getHeight() << std::endl;
+		std::cout << "Tree height avg: " << m_RootNode.getBVH()->getHeightAvg() << std::endl;
 
 		timeStamp = Profiler::timestamp();
-#ifdef USE_BOOST_THREADING
-		m_RootNodeAABB = BVHNodeThreaded<AABB, Surface>::create(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
-#else
-		m_RootNodeAABB = BVHNode<AABB, Surface>::create(surfaces, 0, (int)surfaces.size(), 0);
-#endif
-		// BVHNodeThreaded<AABB, Surface> rootNodeAABB(surfaces, 0, surfaces.size(), 0, static_cast<int>(std::log((double)numThreads)/std::log(2.0)));
+		m_RootNodeAABB.generateBVH<AABB>();
 		Profiler::printJobDuration("AABB BVH creation", timeStamp);
-		std::cout << "Tree height max: " << m_RootNodeAABB->getHeight() << std::endl;
-		std::cout << "Tree height avg: " << m_RootNodeAABB->getHeightAvg() << std::endl;
+		std::cout << "Tree height max: " << m_RootNodeAABB.getBVH()->getHeight() << std::endl;
+		std::cout << "Tree height avg: " << m_RootNodeAABB.getBVH()->getHeightAvg() << std::endl;
 
 		vector<Vector3> positions;
-		for (auto i = m_TransformedMesh->vertexBufferVS.begin(); i != m_TransformedMesh->vertexBufferVS.end(); ++i)
+		for (auto i = mesh->vertexBufferVS.begin(); i != mesh->vertexBufferVS.end(); ++i)
 			positions.push_back(i->position);
 		m_AABB = AABB(positions);
 		m_AABB.max *= 1.05f;
@@ -73,7 +54,7 @@ public:
 
 	bool intersectsSurface(const AABB& aabb) const override
 	{
-		return m_RootNodeAABB->intersectsAABB(aabb);
+		return m_RootNodeAABB.getBVH()->intersectsAABB(aabb);
 	}
 
 	AABB getAABB() const override { return m_AABB; }
@@ -88,7 +69,7 @@ public:
 	Sample getSample(const Ogre::Vector3& point) const override
 	{
 		BVH<Surface>::ClosestLeafResult result;
-		const Surface* tri = m_RootNode->getClosestLeaf(point, result);
+		const Surface* tri = m_RootNode.getBVH()->getClosestLeaf(point, result);
 		// test sign
 		Vector3 rayDir = result.closestPoint - point;
 		if (rayDir.dotProduct(result.normal) < 0.0f) result.closestDistance *= -1;
@@ -248,9 +229,9 @@ public:
 		}
 		Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();
 		Profiler::Timestamp timeStamp = Profiler::timestamp();
-		m_RaycastCache1 = new RaycastCache(m_RootNodeAABB, cellSize, aabbSize.x, aabbSize.y, aabb.getMin(), 2);
-		m_RaycastCache2 = new RaycastCache(m_RootNodeAABB, cellSize, aabbSize.x, aabbSize.z, aabb.getMin(), 1);
-		m_RaycastCache3 = new RaycastCache(m_RootNodeAABB, cellSize, aabbSize.y, aabbSize.z, aabb.getMin(), 0);
+		m_RaycastCache1 = new RaycastCache(m_RootNodeAABB.getBVH(), cellSize, aabbSize.x, aabbSize.y, aabb.getMin(), 2);
+		m_RaycastCache2 = new RaycastCache(m_RootNodeAABB.getBVH(), cellSize, aabbSize.x, aabbSize.z, aabb.getMin(), 1);
+		m_RaycastCache3 = new RaycastCache(m_RootNodeAABB.getBVH(), cellSize, aabbSize.y, aabbSize.z, aabb.getMin(), 0);
 		Profiler::printJobDuration("Sign cache computation", timeStamp);
 	}
 
@@ -269,7 +250,7 @@ public:
 	Sample getSample(const Ogre::Vector3& point) const override
 	{
 		BVH<Surface>::ClosestLeafResult result;
-		const Surface* tri = m_RootNode->getClosestLeaf(point, result);
+		const Surface* tri = m_RootNode.getBVH()->getClosestLeaf(point, result);
 		if (!isInside(point)) result.closestDistance *= -1;
 		return Sample(result.closestDistance);
 	};
