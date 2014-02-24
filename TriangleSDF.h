@@ -20,9 +20,6 @@ class TriangleMeshSDF : public SignedDistanceField3D
 protected:
 	BVHScene m_RootNode;
 	AABB m_AABB;
-
-	// Use aabbs for raycasting and AABB collision queries, it's faster.
-	BVHScene m_RootNodeAABB;
 public:
 	virtual ~TriangleMeshSDF()
 	{
@@ -31,18 +28,11 @@ public:
 	{
 		mesh->computeCache();
 		m_RootNode.addMesh(mesh);
-		m_RootNodeAABB.addMesh(mesh);
 		Profiler::Timestamp timeStamp = Profiler::timestamp();
-		m_RootNode.generateBVH<SphereBV>();
+		m_RootNode.generateBVH<AABB>();
 		Profiler::printJobDuration("BVH creation", timeStamp);
 		std::cout << "Tree height max: " << m_RootNode.getBVH()->getHeight() << std::endl;
 		std::cout << "Tree height avg: " << m_RootNode.getBVH()->getHeightAvg() << std::endl;
-
-		timeStamp = Profiler::timestamp();
-		m_RootNodeAABB.generateBVH<AABB>();
-		Profiler::printJobDuration("AABB BVH creation", timeStamp);
-		std::cout << "Tree height max: " << m_RootNodeAABB.getBVH()->getHeight() << std::endl;
-		std::cout << "Tree height avg: " << m_RootNodeAABB.getBVH()->getHeightAvg() << std::endl;
 
 		vector<Vector3> positions;
 		for (auto i = mesh->vertexBufferVS.begin(); i != mesh->vertexBufferVS.end(); ++i)
@@ -54,7 +44,7 @@ public:
 
 	bool intersectsSurface(const AABB& aabb) const override
 	{
-		return m_RootNodeAABB.getBVH()->intersectsAABB(aabb);
+		return m_RootNode.getBVH()->intersectsAABB(aabb);
 	}
 
 	AABB getAABB() const override { return m_AABB; }
@@ -229,9 +219,9 @@ public:
 		}
 		Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();
 		Profiler::Timestamp timeStamp = Profiler::timestamp();
-		m_RaycastCache1 = new RaycastCache(m_RootNodeAABB.getBVH(), cellSize, aabbSize.x, aabbSize.y, aabb.getMin(), 2);
-		m_RaycastCache2 = new RaycastCache(m_RootNodeAABB.getBVH(), cellSize, aabbSize.x, aabbSize.z, aabb.getMin(), 1);
-		m_RaycastCache3 = new RaycastCache(m_RootNodeAABB.getBVH(), cellSize, aabbSize.y, aabbSize.z, aabb.getMin(), 0);
+		m_RaycastCache1 = new RaycastCache(m_RootNode.getBVH(), cellSize, aabbSize.x, aabbSize.y, aabb.getMin(), 2);
+		m_RaycastCache2 = new RaycastCache(m_RootNode.getBVH(), cellSize, aabbSize.x, aabbSize.z, aabb.getMin(), 1);
+		m_RaycastCache3 = new RaycastCache(m_RootNode.getBVH(), cellSize, aabbSize.y, aabbSize.z, aabb.getMin(), 0);
 		Profiler::printJobDuration("Sign cache computation", timeStamp);
 	}
 

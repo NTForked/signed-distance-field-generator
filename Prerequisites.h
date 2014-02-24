@@ -27,6 +27,8 @@
 #define vAssert(condition) 
 #endif
 
+// #define NDEBUG
+
 #define OGRE_ENDIAN OGRE_ENDIAN_BIG
 
 struct SphereBV;

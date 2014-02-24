@@ -72,14 +72,13 @@ struct AABB
 
 	__forceinline bool intersectsSphere(const Ogre::Vector3& center, float radius) const
 	{
-		// NIY
-		return false;
+		// if (!intersectsAABB(AABB(center, radius))) return false;
+		return squaredDistance(center) < radius*radius;
 	}
 
 	__forceinline float squaredDistance(const Ogre::Vector3& point) const
 	{
-		// NIY
-		return 0;
+		return MathMisc::aabbPointSquaredDistance(min, max, point);
 	}
 
 	__forceinline bool intersectsTriangle(const Ogre::Vector3& p1, const Ogre::Vector3& p2, const Ogre::Vector3& p3, const Ogre::Vector3& normal) const

@@ -15,7 +15,7 @@
 
 class SDFManager
 {
-protected:
+public:
 	static std::shared_ptr<Mesh> loadObjMesh(const std::string &filename)
 	{
 		std::cout << "Loading mesh " + filename + "..." << std::endl;
@@ -42,7 +42,7 @@ protected:
 		}
 		return mesh;
 	}
-public:
+
 	/// Creates an octree that approximates the given signed distance field.
 	static std::shared_ptr<OctreeSDF> sampleOctreeSDF(std::shared_ptr<SignedDistanceField3D> sdf, int maxOctreeDepth = 7)
 	{

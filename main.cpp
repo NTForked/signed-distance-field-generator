@@ -25,8 +25,17 @@ using Ogre::Vector3;
 
 void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 {
-	auto octreeSDF = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh(fileName + ".obj"), maxDepth);
+	std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh(fileName);
+	auto ts = Profiler::timestamp();
+	auto octreeSDF = OctreeSDF::sampleSDF(std::make_shared<TriangleMeshSDF_Robust>(std::make_shared<TransformedMesh>(mesh)), maxDepth);
+	Profiler::printJobDuration("SDF import " + fileName, ts);
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_" + fileName, octreeSDF);
+}
+
+void testMeshImport()
+{
+	buildSDFAndMarch("bunny.capped.obj", 8);		// 5.441 seconds
+	buildSDFAndMarch("buddha2.obj", 8);				// 17.33 seconds
 }
 
 void splitBuddha()
@@ -62,7 +71,9 @@ void testBVHResampling()
 	auto bunny = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("bunny.capped.obj"), 8);
 	bunny->generateTriangleCache();
 	auto ts = Profiler::timestamp();
-	auto bunnyRotated = SDFManager::sampleOctreeSDF(std::make_shared<TransformSDF>(bunny, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.4f), Ogre::Vector3(1, 0, 0))), 8);
+	Ogre::Matrix4 transform = (Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.5f), Ogre::Vector3(1, 0, 0)));
+	transform.setTrans(Ogre::Vector3(1.2f, 5.1f, 3.4f));
+	auto bunnyRotated = SDFManager::sampleOctreeSDF(std::make_shared<TransformSDF>(bunny, transform), 8);
 	Profiler::printJobDuration("Bunny resampling", ts);
 	SDFManager::exportSampledSDFAsMesh("sdfOctree_BunnyResampled", bunnyRotated);
 }
@@ -121,7 +132,7 @@ int main()
 {
 	// buildSDFAndMarch("bunny_highres", 7);
 	// buildSDFAndMarch("sphere", 7);
-	testBVHResampling();
+	testMeshImport();
 	// testFractalNoisePlane();
 	// splitBuddha2();
 	//splitBuddha();

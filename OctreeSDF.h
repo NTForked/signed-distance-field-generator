@@ -155,4 +155,6 @@ public:
 
 	/// Counts the number of nodes in the octree.
 	int countNodes();
+
+	int getHeight() { return m_RootArea.m_SizeExpo;  }
 };

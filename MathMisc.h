@@ -150,6 +150,45 @@ struct MathMisc
 		return (i1Min > i2Max) || (i2Min > i1Max);
 	}
 
+	// source: http://www.idt.mdh.se/personal/tla/publ/sb.pdf
+	__forceinline static float aabbPointSquaredDistance(const Ogre::Vector3& aabbMin, const Ogre::Vector3& aabbMax, const Ogre::Vector3& point)
+	{
+		float squaredDist = 0;
+		if (point.x < aabbMin.x)
+		{
+			float e = point.x - aabbMin.x;
+			squaredDist += e*e;
+		}
+		else if (point.x > aabbMax.x)
+		{
+			float e = point.x - aabbMax.x;
+			squaredDist += e*e;
+		}
+
+		if (point.y < aabbMin.y)
+		{
+			float e = point.y - aabbMin.y;
+			squaredDist += e*e;
+		}
+		else if (point.y > aabbMax.y)
+		{
+			float e = point.y - aabbMax.y;
+			squaredDist += e*e;
+		}
+
+		if (point.z < aabbMin.z)
+		{
+			float e = point.z - aabbMin.z;
+			squaredDist += e*e;
+		}
+		else if (point.z > aabbMax.z)
+		{
+			float e = point.z - aabbMax.z;
+			squaredDist += e*e;
+		}
+		return squaredDist;
+	}
+
 	/// Performs trilinear interpolation.
 	template<class T>
 	static inline T  trilinearInterpolation(const T* cornerValues, float* weights)
