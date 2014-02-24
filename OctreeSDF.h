@@ -73,16 +73,16 @@ protected:
 
 	Node* cloneNode(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues);
 
-	static Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues);
+	static Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
 
 	static Sample lookupSample(int corner, const Area& area, const SignedDistanceGrid& sdfValues);
 
 	Sample lookupSample(int corner, const Area& area) const;
 
-	Node* createNode(const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues);
+	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
 
 	/// Top down octree constructor given a SDF.
-	Node* createNode(const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues, int& nodeTypeMask);
+	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, int& nodeTypeMask);
 
 	// Computes a lower and upper bound inside the area given the 8 corner signed distances.
 	void getLowerAndUpperBound(Node* node, const Area& area, float* signedDistances, float& lowerBound, float& upperBound) const;
@@ -95,10 +95,10 @@ protected:
 	Node* intersect(Node* node, Node* otherNode, const Area& area, SignedDistanceGrid& otherSDF, SignedDistanceGrid& newSDF);
 
 	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
-	Node* intersect(Node* node, const Area& area, SignedDistanceField3D* otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
+	Node* intersect(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
 
 	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
-	Node* merge(Node* node, const Area& area, SignedDistanceField3D* otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
+	Node* merge(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
 
 	/// Interpolates signed distance for the 3x3x3 subgrid of a leaf.
 	static void interpolateLeaf(const Area& area, SignedDistanceGrid& grid);
@@ -111,9 +111,9 @@ public:
 	OctreeSDF() {}
 	OctreeSDF(const OctreeSDF& other);
 
-	static std::shared_ptr<OctreeSDF> sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, int maxDepth);
+	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth);
 
-	static std::shared_ptr<OctreeSDF> sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, AABB& aabb, int maxDepth);
+	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, AABB& aabb, int maxDepth);
 
 	float getInverseCellSize() override;
 
@@ -126,26 +126,25 @@ public:
 	/// Builds the triangle cache using marching cubes required for fast intersectsSurface queries.
 	void generateTriangleCache();
 
-	// TODO!
-	bool intersectsSurface(const AABB &) const override;
+	virtual bool intersectsSurface(const AABB &) const override;
 
 	/// Subtracts the given signed distance field from this octree.
-	void subtract(std::shared_ptr<SignedDistanceField3D> otherSDF);
+	void subtract(SignedDistanceField3D* otherSDF);
 
 	/// Intersects the octree with a signed distance field. For intersections with other octrees, use intersectAlignedOctree if possible.
-	void intersect(std::shared_ptr<SignedDistanceField3D> otherSDF);
+	void intersect(SignedDistanceField3D* otherSDF);
 
 	/// Intersects the octree with another aligned octree (underlying grids must match).
-	void intersectAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree);
+	void intersectAlignedOctree(OctreeSDF* otherOctree);
 
 	/// Subtracts another aligned octree from this octree.
-	void subtractAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree);
+	void subtractAlignedOctree(OctreeSDF* otherOctree);
 
 	/// Resizes the octree so that it covers the given aabb.
 	void resize(const AABB& aabb);
 
 	/// Merges the octree with another signed distance field.
-	void merge(std::shared_ptr<SignedDistanceField3D> otherSDF);
+	void merge(SignedDistanceField3D* otherSDF);
 
 	/// Inverts the sdf represented by the octree.
 	void invert();

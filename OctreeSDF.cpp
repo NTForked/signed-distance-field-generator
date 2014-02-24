@@ -25,13 +25,13 @@ OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, const Signed
 	return cloned;
 }
 
-OctreeSDF::Sample OctreeSDF::lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues)
+OctreeSDF::Sample OctreeSDF::lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
 {
 	auto vecs = area.getCornerVecs(corner);
 	auto tryInsert = sdfValues.insert(std::make_pair(vecs.first, Sample(0.0f)));
 	if (tryInsert.second)
 	{
-		tryInsert.first->second = implicitSDF->getSample(vecs.second);
+		tryInsert.first->second = implicitSDF.getSample(vecs.second);
 	}
 	return tryInsert.first->second;
 }
@@ -49,17 +49,17 @@ OctreeSDF::Sample OctreeSDF::lookupSample(int corner, const Area& area) const
 }
 
 
-OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues)
+OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
 {
 	int nodeTypeMask = 0;
 	return createNode(area, implicitSDF, sdfValues, nodeTypeMask);
 }
 
-OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceField3D* implicitSDF, SignedDistanceGrid& sdfValues, int& nodeTypeMask)
+OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, int& nodeTypeMask)
 {
 	nodeTypeMask = 3;
 	if (area.m_SizeExpo <= 0 ||
-		!implicitSDF->cubeIntersectsSurface(area))
+		!implicitSDF.cubeIntersectsSurface(area))
 	{
 		float signedDistances[8];
 		for (int i = 0; i < 8; i++)
@@ -262,7 +262,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 	return node;
 }
 
-OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, SignedDistanceField3D* otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
+OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
 {
 	// compute signed distances for this node and the area of the other sdf
 	float otherSignedDistances[8];
@@ -290,7 +290,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, SignedDistan
 
 	// compute a lower and upper bound for this node and the other sdf
 	float otherLowerBound, otherUpperBound;
-	bool containsSurface = otherSDF->cubeIntersectsSurface(area);
+	bool containsSurface = otherSDF.cubeIntersectsSurface(area);
 	if (containsSurface)
 		area.getLowerAndUpperBound(otherSignedDistances, otherLowerBound, otherUpperBound);
 	else
@@ -330,10 +330,10 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, SignedDistan
 	return node;
 }
 
-OctreeSDF::Node* OctreeSDF::merge(Node* node, const Area& area, SignedDistanceField3D* otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
+OctreeSDF::Node* OctreeSDF::merge(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
 {
 	// if otherSDF does not overlap with the node AABB we can stop here
-	if (!area.toAABB().intersectsAABB(otherSDF->getAABB()))
+	if (!area.toAABB().intersectsAABB(otherSDF.getAABB()))
 		return node;
 
 	// compute signed distances for this node and the area of the other sdf
@@ -469,12 +469,12 @@ void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 	}*/
 }
 
-std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, int maxDepth)
+std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth)
 {
 	return sampleSDF(otherSDF, otherSDF->getAABB(), maxDepth);
 }
 
-std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(std::shared_ptr<SignedDistanceField3D> otherSDF, AABB& aabb, int maxDepth)
+std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF, AABB& aabb, int maxDepth)
 {
 	std::shared_ptr<OctreeSDF> octreeSDF = std::make_shared<OctreeSDF>();
 	Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();
@@ -482,7 +482,7 @@ std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(std::shared_ptr<SignedDistanceFi
 	octreeSDF->m_CellSize = cubeSize / (1 << maxDepth);
 	otherSDF->prepareSampling(aabb, octreeSDF->m_CellSize);
 	octreeSDF->m_RootArea = Area(Vector3i(0, 0, 0), maxDepth, aabb.getMin(), cubeSize);
-	octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, otherSDF.get(), octreeSDF->m_SDFValues);
+	octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, *otherSDF, octreeSDF->m_SDFValues);
 	return octreeSDF;
 }
 
@@ -517,22 +517,22 @@ bool OctreeSDF::intersectsSurface(const AABB& aabb) const
 	return true;
 }
 
-void OctreeSDF::subtract(std::shared_ptr<SignedDistanceField3D> otherSDF)
+void OctreeSDF::subtract(SignedDistanceField3D* otherSDF)
 {
-	auto invertedSDF = std::make_shared<OpInvertSDF>(otherSDF.get());
-	intersect(invertedSDF);
+	OpInvertSDF invertedSDF(otherSDF);
+	intersect(&invertedSDF);
 }
 
-void OctreeSDF::intersect(std::shared_ptr<SignedDistanceField3D> otherSDF)
+void OctreeSDF::intersect(SignedDistanceField3D* otherSDF)
 {
 	otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
 	SignedDistanceGrid newSDF;
-	m_RootNode = intersect(m_RootNode, m_RootArea, otherSDF.get(), newSDF, SignedDistanceGrid());
+	m_RootNode = intersect(m_RootNode, m_RootArea, *otherSDF, newSDF, SignedDistanceGrid());
 	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 		m_SDFValues[i->first] = i->second;
 }
 
-void OctreeSDF::intersectAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree)
+void OctreeSDF::intersectAlignedOctree(OctreeSDF* otherOctree)
 {
 	SignedDistanceGrid newSDF;
 	m_RootNode = intersect(m_RootNode, otherOctree->m_RootNode, m_RootArea, otherOctree->m_SDFValues, newSDF);
@@ -541,11 +541,11 @@ void OctreeSDF::intersectAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree)
 		m_SDFValues[i->first] = i->second;
 }
 
-void OctreeSDF::subtractAlignedOctree(std::shared_ptr<OctreeSDF> otherOctree)
+void OctreeSDF::subtractAlignedOctree(OctreeSDF* otherOctree)
 {
 	auto clone = otherOctree->clone();
 	clone->invert();
-	intersectAlignedOctree(clone);
+	intersectAlignedOctree(clone.get());
 }
 
 void OctreeSDF::resize(const AABB& aabb)
@@ -586,7 +586,7 @@ void OctreeSDF::resize(const AABB& aabb)
 	}
 }
 
-void OctreeSDF::merge(std::shared_ptr<SignedDistanceField3D> otherSDF)
+void OctreeSDF::merge(SignedDistanceField3D* otherSDF)
 {
 	// this is not an optimal resize policy but it should work
 	// it is recommended to avoid resizes anyway
@@ -594,7 +594,7 @@ void OctreeSDF::merge(std::shared_ptr<SignedDistanceField3D> otherSDF)
 
 	otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
 	SignedDistanceGrid newSDF;
-	m_RootNode = merge(m_RootNode, m_RootArea, otherSDF.get(), newSDF, SignedDistanceGrid());
+	m_RootNode = merge(m_RootNode, m_RootArea, *otherSDF, newSDF, SignedDistanceGrid());
 	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
 		m_SDFValues[i->first] = i->second;
 }

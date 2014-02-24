@@ -46,7 +46,7 @@ public:
 	/// Creates an octree that approximates the given signed distance field.
 	static std::shared_ptr<OctreeSDF> sampleOctreeSDF(std::shared_ptr<SignedDistanceField3D> sdf, int maxOctreeDepth = 7)
 	{
-		return OctreeSDF::sampleSDF(sdf, maxOctreeDepth);
+		return OctreeSDF::sampleSDF(sdf.get(), maxOctreeDepth);
 	}
 
 	/// Creates a signed distance field given the filename of an .obj file.

@@ -10,7 +10,7 @@
 #include "Ray.h"
 #include "Mesh.h"
 #include "BVH.h"
-#include "SphereBV.h"
+#include "Sphere.h"
 #include "MathMisc.h"
 
 class Surface : public BVH<Surface>
@@ -147,68 +147,3 @@ public:
 		// return m_AABB.intersectsAABB(aabb);
 	}
 };
-
-class Sphere : public Surface
-{
-public:
-	float radius, radiusSquared;
-	Ogre::Vector3 position;
-
-	Sphere(const Ogre::Vector3 &_position, float _radius)
-		: position(_position), radius(_radius), radiusSquared(_radius*radius) { updateBoundingVolume(); }
-	~Sphere() {}
-
-	mutable Ogre::Vector3 positionViewSpace;
-	inline void applyModelView(const Ogre::Matrix4 &modelViewMatrix) const
-	{
-		positionViewSpace = modelViewMatrix * position;
-	}
-	const Surface* rayIntersectClosest(Ray::Intersection &intersection, const Ray &ray) const override
-	{
-		if (ray.intersectSphere(intersection, positionViewSpace, radiusSquared)) return this;
-		return nullptr;
-	}
-
-	void updateBoundingVolume()
-	{
-		m_ExtremalPoints.clear();
-		m_ExtremalPoints.push_back(position + Ogre::Vector3(-radius, 0, 0));
-		m_ExtremalPoints.push_back(position + Ogre::Vector3(radius, 0, 0));
-		m_AABB = AABB(m_ExtremalPoints);
-		m_SphereBV = SphereBV(position, radius);
-	}
-
-	const Surface* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) const override
-	{
-		float dist = position.squaredDistance(point);
-		if (dist < result.closestDistance*result.closestDistance)
-		{
-			result.closestDistance = std::sqrtf(dist);
-			result.closestPoint = position + (point - position).normalisedCopy() * radius;
-			return this;
-		}
-		return nullptr;
-	}
-};
-
-/*class Plane
-{
-public:
-	Plane(const Ogre::Vector3 &_normal,
-		const Ogre::Vector3 &_position,
-		const Material &_material) : normal(_normal), position(_position), material(_material) {}
-	~Plane() {}
-	Ogre::Vector3 normal;
-	Ogre::Vector3 position;
-	Material material;
-
-	mutable Ogre::Vector3 normalViewSpace, positionViewSpace;
-	inline void applyModelView(const Ogre::Matrix4 &modelViewMatrix) const
-	{
-		Ogre::Matrix3 rotMatrix;
-		modelViewMatrix.extract3x3Matrix(rotMatrix);
-		normalViewSpace = rotMatrix * normal;	//apply only the rotation the normal
-		positionViewSpace = modelViewMatrix * position;		
-	}
-	const Material* getMaterial() const { return &material; }
-};*/

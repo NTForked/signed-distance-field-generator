@@ -6,8 +6,9 @@
 #include "Ray.h"
 #include "MathMisc.h"
 
-struct AABB
+class AABB
 {
+public:
 	Ogre::Vector3 min, max;
 	AABB() {}
 	AABB(const Ogre::Vector3 &_min, const Ogre::Vector3 &_max) : min(_min), max(_max) {}

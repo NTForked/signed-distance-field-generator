@@ -189,6 +189,12 @@ struct MathMisc
 		return squaredDist;
 	}
 
+	template<class T>
+	static __forceinline T square(const T& val)
+	{
+		return val*val;
+	}
+
 	/// Performs trilinear interpolation.
 	template<class T>
 	static inline T  trilinearInterpolation(const T* cornerValues, float* weights)

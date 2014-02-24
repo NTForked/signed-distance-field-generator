@@ -24,15 +24,14 @@
 #if ENABLE_ASSERTIONS
 #define vAssert(condition) {if (!(condition)) { std::cout << "assertion failed: " << #condition << std::endl; __debugbreak(); }}
 #else
-#define vAssert(condition) 
+#define vAssert(condition)
+#define NDEBUG
 #endif
-
-// #define NDEBUG
 
 #define OGRE_ENDIAN OGRE_ENDIAN_BIG
 
-struct SphereBV;
-struct AABB;
+class Sphere;
+class AABB;
 
 namespace Ogre
 {

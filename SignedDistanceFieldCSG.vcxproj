@@ -189,7 +189,7 @@
     <ClInclude Include="SDFManager.h" />
     <ClInclude Include="TriangleSDF.h" />
     <ClInclude Include="SignedDistanceField.h" />
-    <ClInclude Include="SphereBV.h" />
+    <ClInclude Include="Sphere.h" />
     <ClInclude Include="Surfaces.h" />
     <ClInclude Include="Triangle.h" />
     <ClInclude Include="TriangleLookupTable.h" />

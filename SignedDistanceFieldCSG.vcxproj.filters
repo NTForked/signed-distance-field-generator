@@ -45,7 +45,6 @@
       <Filter>OgreMath</Filter>
     </ClInclude>
     <ClInclude Include="BVH.h" />
-    <ClInclude Include="SphereBV.h" />
     <ClInclude Include="MarchingCubes.h" />
     <ClInclude Include="Triangle.h" />
     <ClInclude Include="TriangleLookupTable.h" />
@@ -70,6 +69,7 @@
     <ClInclude Include="Area.h" />
     <ClInclude Include="FracturePattern.h" />
     <ClInclude Include="BVHScene.h" />
+    <ClInclude Include="Sphere.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
