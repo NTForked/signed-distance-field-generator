@@ -4,7 +4,6 @@
 #include <vector>
 #include <memory>
 #include "OgreMath/OgreVector3.h"
-#include "OgreMath/OgreColourValue.h"
 #include "OgreMath/OgreMatrix4.h"
 #include "AABB.h"
 #include "Triangle.h"

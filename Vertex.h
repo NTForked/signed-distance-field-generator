@@ -3,7 +3,6 @@
 
 #include "OgreMath/OgreVector3.h"
 #include "OgreMath/OgreVector2.h"
-#include "OgreMath/OgreColourValue.h"
 
 struct Vertex
 {

@@ -38,9 +38,6 @@
     <ClInclude Include="OgreMath\asm_math.h">
       <Filter>OgreMath</Filter>
     </ClInclude>
-    <ClInclude Include="OgreMath\OgreColourValue.h">
-      <Filter>OgreMath</Filter>
-    </ClInclude>
     <ClInclude Include="OgreMath\OgreMath.h">
       <Filter>OgreMath</Filter>
     </ClInclude>
@@ -78,9 +75,6 @@
       <Filter>OgreMath</Filter>
     </ClCompile>
     <ClCompile Include="OgreMath\OgreQuaternion.cpp">
-      <Filter>OgreMath</Filter>
-    </ClCompile>
-    <ClCompile Include="OgreMath\OgreColourValue.cpp">
       <Filter>OgreMath</Filter>
     </ClCompile>
     <ClCompile Include="OgreMath\OgreMath.cpp">

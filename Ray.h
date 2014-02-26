@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include "OgreMath/OgreVector3.h"
-#include "OgreMath/OgreColourValue.h"
 #include "OgreMath/OgreMatrix3.h"
 #include "Triangle.h"
 
