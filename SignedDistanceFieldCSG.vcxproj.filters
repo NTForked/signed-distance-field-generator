@@ -90,5 +90,8 @@
       <Filter>OgreMath</Filter>
     </ClCompile>
     <ClCompile Include="OctreeSDF.cpp" />
+    <ClCompile Include="OgreMath\OgreVector3.cpp">
+      <Filter>OgreMath</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

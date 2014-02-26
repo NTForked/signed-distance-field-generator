@@ -56,8 +56,8 @@ public:
 	}
 	inline float lookupSafe(int x, int y, float** map, int mapSize) const
 	{
-		x = clamp(x, 0, mapSize);
-		y = clamp(y, 0, mapSize);
+		x = clamp(x, 0, mapSize-1);
+		y = clamp(y, 0, mapSize-1);
 		float surfaceZ = map[x][y];
 		return surfaceZ;
 	}

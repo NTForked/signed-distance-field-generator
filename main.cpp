@@ -20,6 +20,7 @@
 #include "SDFManager.h"
 #include "FractalNoisePlaneSDF.h"
 #include "Sphere.h"
+#include "FracturePattern.h"
 
 using std::vector;
 using Ogre::Vector3;
@@ -82,6 +83,7 @@ void testBVHResampling()
 	auto ts = Profiler::timestamp();
 	Ogre::Matrix4 transform = (Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.5f), Ogre::Vector3(1, 0, 0)));
 	transform.setTrans(Ogre::Vector3(1.2f, 5.1f, 3.4f));
+	transform.setScale(Ogre::Vector3(10, 10, 10));
 	auto bunnyRotated = SDFManager::sampleOctreeSDF(std::make_shared<TransformSDF>(bunny, transform), 8);
 	Profiler::printJobDuration("Bunny resampling", ts);
 	SDFManager::exportSampledSDFAsMesh("sdfOctree_BunnyResampled", bunnyRotated);
@@ -114,6 +116,11 @@ void testFractalNoisePlane()
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_FractalNoise", octreeSDF);
 }
 
+void testSphericalFracturePattern()
+{
+	SphericalFracturePattern pattern(2, 8, 20);
+}
+
 void exampleInsideOutsideTest()
 {
 	// input: Vertex and index buffer (here I just put some nonsense in it)
@@ -139,7 +146,7 @@ void exampleInsideOutsideTest()
 
 int main()
 {
-	testSphere();
+	testSphericalFracturePattern();
 	// testFractalNoisePlane();
 	// splitBuddha2();
 	//splitBuddha();

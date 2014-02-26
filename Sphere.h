@@ -86,11 +86,11 @@ public:
 		int numContainedCorners = 0;
 		for (int i = 0; i < 8; i++)
 		{
-			if (containsPoint(aabb.getCorner(i)))
-				numContainedCorners++;
+			if (!containsPoint(aabb.getCorner(i)))
+				return true;
 		}
 		// if the sphere contains all aabb corners, the AABB is completely inside the sphere and does not intersect the surface
-		return numContainedCorners < 8;
+		return false;
 	}
 
 	virtual AABB getAABB() const override

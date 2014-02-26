@@ -5,6 +5,20 @@
 #include "MarchingCubes.h"
 #include "Mesh.h"
 
+void OctreeSDF::deallocNode(Node* node)
+{
+	if (!node) return;
+	for (int i = 0; i < 8; i++)
+	{
+		deallocNode(node->m_Children[i]);
+	}
+#ifdef USE_BOOST_POOL
+	m_NodePool.destroy(node);
+#else
+		delete node;
+#endif
+}
+
 OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues)
 {
 	Area subAreas[8];
@@ -121,10 +135,67 @@ void OctreeSDF::countNodes(Node* node, const Area& area, int& counter)
 	if (node)
 	{
 		vAssert(area.m_SizeExpo > 0)
-			Area subAreas[8];
+		Area subAreas[8];
 		area.getSubAreas(subAreas);
 		for (int i = 0; i < 8; i++)
 			countNodes(node->m_Children[i], subAreas[i], counter);
+	}
+}
+
+OctreeSDF::Node* OctreeSDF::simplifyNode(Node* node, const Area& area, int& nodeTypeMask)
+{
+	nodeTypeMask = 0;
+	if (node)
+	{
+		Area subAreas[8];
+		area.getSubAreas(subAreas);
+		for (int i = 0; i < 8; i++)
+		{
+			int nodeType;
+			node->m_Children[i] = simplifyNode(node->m_Children[i], subAreas[i], nodeType);
+			nodeTypeMask |= nodeType;
+		}
+		if (nodeTypeMask != 3)
+		{
+			deallocNode(node);
+			node = nullptr;
+		}
+	}
+	else
+	{
+		float signedDistances[8];
+		for (int i = 0; i < 8; i++)
+		{
+			signedDistances[i] = lookupSample(i, area, m_SDFValues).signedDistance;
+		}
+		bool mono = allSignsAreEqual(signedDistances);
+		if (!mono) nodeTypeMask = 3;
+		else
+		{
+			if (signedDistances[0] > 0) nodeTypeMask = 1;
+			else nodeTypeMask = 2;
+		}
+	}
+	return node;
+}
+
+void OctreeSDF::removeReferencedSDFEntries(const Node* node, const Area& area, std::unordered_set<Vector3i>* deletionCandidates) const
+{
+	if (node)
+	{
+		Area subAreas[8];
+		area.getSubAreas(subAreas);
+		for (int i = 0; i < 8; i++)
+			removeReferencedSDFEntries(node->m_Children[i], subAreas[i], deletionCandidates);
+	}
+	else
+	{
+		for (int i = 0; i < 8; i++)
+		{
+			auto find = (*deletionCandidates).find(area.getCorner(i));
+			if (find != (*deletionCandidates).end())
+				(*deletionCandidates).erase(find);
+		}
 	}
 }
 
@@ -613,6 +684,12 @@ OctreeSDF::OctreeSDF(const OctreeSDF& other)
 	m_TriangleCache = other.m_TriangleCache;
 }
 
+OctreeSDF::~OctreeSDF()
+{
+	if (m_RootNode)
+		deallocNode(m_RootNode);
+}
+
 std::shared_ptr<OctreeSDF> OctreeSDF::clone()
 {
 	return std::make_shared<OctreeSDF>(*this);
@@ -623,6 +700,33 @@ int OctreeSDF::countNodes()
 	int counter = 0;
 	countNodes(m_RootNode, m_RootArea, counter);
 	return counter;
+}
+
+void OctreeSDF::cleanupSDF()
+{
+	// mark and sweep style garbage collection
+	std::cout << "Cleaning up SDF..." << std::endl;
+	std::unordered_set<Vector3i> deletionCandidates;
+	for (auto i = m_SDFValues.begin(); i != m_SDFValues.end(); ++i)
+	{
+		deletionCandidates.insert(i->first);
+	}
+	removeReferencedSDFEntries(m_RootNode, m_RootArea, &deletionCandidates);
+
+	int numRemoved = 0;
+	for (auto i = deletionCandidates.begin(); i != deletionCandidates.end(); ++i)
+	{
+		m_SDFValues.erase(m_SDFValues.find(*i));
+		numRemoved++;
+	}
+	std::cout << numRemoved << " entries removed " << std::endl;
+}
+
+void OctreeSDF::simplify()
+{
+	int nodeMask;
+	m_RootNode = simplifyNode(m_RootNode, m_RootArea, nodeMask);
+	cleanupSDF();
 }
 
 void OctreeSDF::generateTriangleCache()

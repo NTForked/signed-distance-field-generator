@@ -48,14 +48,7 @@ protected:
 #endif
 		return node;
 	}
-	__forceinline void deallocNode(Node* node)
-	{
-#ifdef USE_BOOST_POOL
-		m_NodePool.destroy(node);
-#else
-		delete node;
-#endif
-	}
+	__forceinline void deallocNode(Node* node);
 
 	typedef std::unordered_map<Vector3i, Sample> SignedDistanceGrid;
 
@@ -89,6 +82,10 @@ protected:
 
 	void countNodes(Node* node, const Area& area, int& counter);
 
+	void removeReferencedSDFEntries(const Node* node, const Area& area, std::unordered_set<Vector3i>* deletionCandidates) const;
+
+	Node* simplifyNode(Node* node, const Area& area, int& nodeTypeMask);
+
 	Sample getSample(Node* node, const Area& area, const Ogre::Vector3& point) const;
 
 	/// Intersects aligned octree nodes.
@@ -108,7 +105,8 @@ protected:
 
 	BVHScene m_TriangleCache;
 public:
-	OctreeSDF() {}
+	~OctreeSDF();
+	OctreeSDF() : m_RootNode(nullptr) {}
 	OctreeSDF(const OctreeSDF& other);
 
 	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth);
@@ -154,6 +152,12 @@ public:
 
 	/// Counts the number of nodes in the octree.
 	int countNodes();
+
+	/// Removes not referenced sdf values, call this when you have memory problems.
+	void cleanupSDF();
+
+	/// Removes nodes that are not required.
+	void simplify();
 
 	int getHeight() { return m_RootArea.m_SizeExpo;  }
 };

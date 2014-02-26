@@ -207,6 +207,7 @@
     <ClCompile Include="OgreMath\OgreMatrix3.cpp" />
     <ClCompile Include="OgreMath\OgreMatrix4.cpp" />
     <ClCompile Include="OgreMath\OgreQuaternion.cpp" />
+    <ClCompile Include="OgreMath\OgreVector3.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
