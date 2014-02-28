@@ -82,6 +82,8 @@ protected:
 
 	void countNodes(Node* node, const Area& area, int& counter);
 
+	void sumPositionsAndMass(Node* node, const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass);
+
 	void removeReferencedSDFEntries(const Node* node, const Area& area, std::unordered_set<Vector3i>* deletionCandidates) const;
 
 	Node* simplifyNode(Node* node, const Area& area, int& nodeTypeMask);
@@ -152,6 +154,9 @@ public:
 
 	/// Counts the number of nodes in the octree.
 	int countNodes();
+
+	/// Computes the center of mass, the return value is the total mass (centerOfMass is only valid if mass is bigger than zero).
+	float getCenterOfMass(Ogre::Vector3& centerOfMass);
 
 	/// Removes not referenced sdf values, call this when you have memory problems.
 	void cleanupSDF();

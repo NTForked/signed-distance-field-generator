@@ -142,6 +142,35 @@ void OctreeSDF::countNodes(Node* node, const Area& area, int& counter)
 	}
 }
 
+void OctreeSDF::sumPositionsAndMass(Node* node, const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass)
+{
+	if (node)
+	{
+		vAssert(area.m_SizeExpo > 0)
+			Area subAreas[8];
+		area.getSubAreas(subAreas);
+		for (int i = 0; i < 8; i++)
+			sumPositionsAndMass(node->m_Children[i], subAreas[i], weightedPosSum, totalMass);
+	}
+	else
+	{
+		float signedDistances[8];
+		for (int i = 0; i < 8; i++)
+		{
+			signedDistances[i] = lookupSample(i, area, m_SDFValues).signedDistance;
+		}
+		float factor = 0.0f;
+		if (!allSignsAreEqual(signedDistances))
+			factor = 0.5f;
+		else if (signedDistances[0] >= 0.0f)
+			factor = 1.0f;
+		float size = factor * area.m_RealSize;
+		float mass = size * size * size;
+		weightedPosSum += area.toAABB().getCenter() * mass;
+		totalMass += mass;
+	}
+}
+
 OctreeSDF::Node* OctreeSDF::simplifyNode(Node* node, const Area& area, int& nodeTypeMask)
 {
 	nodeTypeMask = 0;
@@ -700,6 +729,14 @@ int OctreeSDF::countNodes()
 	int counter = 0;
 	countNodes(m_RootNode, m_RootArea, counter);
 	return counter;
+}
+
+float OctreeSDF::getCenterOfMass(Ogre::Vector3& centerOfMass)
+{
+	float totalMass = 0;
+	sumPositionsAndMass(m_RootNode, m_RootArea, centerOfMass, totalMass);
+	if (totalMass > 0) centerOfMass /= totalMass;
+	return totalMass;
 }
 
 void OctreeSDF::cleanupSDF()
