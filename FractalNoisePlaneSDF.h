@@ -6,20 +6,21 @@
 #include "SignedDistanceField.h"
 #include "AABB.h"
 #include "FractalNoiseGenerator.h"
+#include "Mesh.h"
 
 class FractalNoisePlaneSDF : public SignedDistanceField3D
 {
 protected:
 	float** m_HeightMap;
-	std::vector<float**> m_MinMipMaps;
-	std::vector<float**> m_MaxMipMaps;
 	int m_HeightMapSize;
 	float m_InverseCellSize;
+	float m_CellSize;
 	float m_Roughness;
 	float m_ZRange;
 	float m_Size;
 	AABB m_AABB;
 	AABB m_SurfaceAABB;
+	BVHScene m_TriangleCache;
 
 public:
 	FractalNoisePlaneSDF(float size, float roughness, float zRange)
@@ -36,18 +37,6 @@ public:
 	{
 		if (m_HeightMap)
 			FractalNoiseGenerator::freeHeightMap(m_HeightMapSize, m_HeightMap);
-
-		for (int level = 0; level < (int)m_MinMipMaps.size(); level++)
-		{
-			int mapSize = 1 << getMipLevelSizeExpo(level);
-			for (int x = 0; x < mapSize; x++)
-			{
-				delete[] m_MinMipMaps[level][x];
-				delete[] m_MaxMipMaps[level][x];
-			}
-			delete[] m_MinMipMaps[level];
-			delete[] m_MaxMipMaps[level];
-		}
 	}
 
 	inline int clamp(int x, int minX, int maxX) const
@@ -91,40 +80,7 @@ public:
 
 	bool intersectsSurface(const AABB& aabb) const override
 	{
-		// return aabb.intersectsAABB(m_SurfaceAABB);
-		if (!aabb.intersectsAABB(m_SurfaceAABB)) return false;
-		Ogre::Vector3 scaledMin = (aabb.min - m_SurfaceAABB.min) * m_InverseCellSize;
-		int totalMin = (int)std::min(scaledMin.x, scaledMin.y);
-		Ogre::Vector3 scaledMax = (aabb.max - m_SurfaceAABB.min) * m_InverseCellSize;
-		int totalMax = (int)std::ceil(std::max(scaledMax.x, scaledMax.y));
-		int rangeExpo;
-		int range = roundToNextPowerOfTwo(totalMax - totalMin, rangeExpo);		
-		rangeExpo = clamp(rangeExpo, 1, (int)m_MinMipMaps.size());
-		int x = (int)(scaledMin.x);
-		int y = (int)(scaledMin.y);
-		x >>= rangeExpo;
-		y >>= rangeExpo;
-		int mipLevel = getMipLevelFromPixelRange(rangeExpo);
-		vAssert(mipLevel >= 0);
-		vAssert(mipLevel < m_MinMipMaps.size());
-		float minVal = lookupSafe(x, y, m_MinMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.max.z;
-		float maxVal = lookupSafe(x, y, m_MaxMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.min.z;
-		if (minVal <= 0 && maxVal > 0) return true;
-		totalMin = std::min(x << rangeExpo, y << rangeExpo);
-		if (totalMax - totalMin > range)
-		{
-			// need check 3 more for full aabb coverage
-			minVal = lookupSafe(x+1, y, m_MinMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.max.z;
-			maxVal = lookupSafe(x+1, y, m_MaxMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.min.z;
-			if (minVal <= 0 && maxVal > 0) return true;
-			minVal = lookupSafe(x, y+1, m_MinMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.max.z;
-			maxVal = lookupSafe(x, y+1, m_MaxMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.min.z;
-			if (minVal <= 0 && maxVal > 0) return true;
-			minVal = lookupSafe(x+1, y+1, m_MinMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.max.z;
-			maxVal = lookupSafe(x+1, y+1, m_MaxMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.min.z;
-			if (minVal <= 0 && maxVal > 0) return true;
-		}
-		return false;
+		return m_TriangleCache.getBVH()->intersectsAABB(aabb);
 	}
 
 	AABB getAABB() const override
@@ -132,36 +88,9 @@ public:
 		return m_AABB;
 	}
 
-	void generateMipMap(int expo, float** inputValues, std::function<float(float, float)> combinerFn, float** outputMipMap)
-	{
-		int mapSize = 1 << expo;
-		for (int x = 0; x < mapSize; x++)
-		{
-			for (int y = 0; y < mapSize; y++)
-			{
-				float parentMin = combinerFn(inputValues[2 * x][2 * y], inputValues[2 * x][2 * y + 1]);
-				parentMin = combinerFn(parentMin, inputValues[2 * x + 1][2 * y]);
-				parentMin = combinerFn(parentMin, inputValues[2 * x + 1][2 * y + 1]);
-				outputMipMap[x][y] = parentMin;
-			}
-		}
-	}
-
-	int getMipLevelFromPixelRange(int pixelRangeExpo) const
-	{
-		return pixelRangeExpo - 1;
-	}
-	int getMipLevelPixelRangeExpo(int mipLevel) const
-	{
-		return mipLevel + 1;
-	}
-	int getMipLevelSizeExpo(int mipLevel) const
-	{
-		return (int)m_MinMipMaps.size() - mipLevel - 1;
-	}
-
 	virtual void prepareSampling(const AABB& aabb, float cellSize) override
 	{
+		m_CellSize = cellSize;
 		m_InverseCellSize = 1.0f / cellSize;
 		int pow2Expo = 0;
 		int newMapSize = roundToNextPowerOfTwo((int)std::ceil(m_Size * m_InverseCellSize), pow2Expo);
@@ -186,29 +115,49 @@ public:
 		for (int x = 0; x < m_HeightMapSize; x++)
 			for (int y = 0; y < m_HeightMapSize; y++)
 				m_HeightMap[x][y] *= multiplier;
-		
-		// allocate mip maps
-		if (pow2Expo < 2) return;
-		m_MinMipMaps.resize(pow2Expo);
-		m_MaxMipMaps.resize(pow2Expo);
-		for (int level = 0; level < (int)m_MinMipMaps.size(); level++)
-		{
-			int mapSize = 1 << getMipLevelSizeExpo(level);
-			m_MinMipMaps[level] = new float*[mapSize];
-			m_MaxMipMaps[level] = new float*[mapSize];
-			for (int x = 0; x < mapSize; x++)
-			{
-				m_MinMipMaps[level][x] = new float[mapSize];
-				m_MaxMipMaps[level][x] = new float[mapSize];
-			}	
-		}
-		generateMipMap(getMipLevelSizeExpo(0), m_HeightMap, fminf, m_MinMipMaps[0]);
-		generateMipMap(getMipLevelSizeExpo(0), m_HeightMap, fmaxf, m_MaxMipMaps[0]);
-		for (int level = 1; level < (int)m_MinMipMaps.size(); level++)
-		{
-			generateMipMap(getMipLevelSizeExpo(level), m_MinMipMaps[level - 1], fminf, m_MinMipMaps[level]);
-			generateMipMap(getMipLevelSizeExpo(level), m_MaxMipMaps[level - 1], fmaxf, m_MaxMipMaps[level]);
-		}
 
+		generateTriangleCache();
+	}
+
+	void generateTriangleCache()
+	{
+		std::cout << "[FractalNoisePlaneSDF] Generating triangle cache..." << std::endl;
+		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
+		for (int x = 0; x < m_HeightMapSize; x++)
+		{
+			for (int y = 0; y < m_HeightMapSize; y++)
+			{
+				Vertex v(Ogre::Vector3(x * m_CellSize, y * m_CellSize, m_HeightMap[x][y]));
+				mesh->vertexBuffer.push_back(v);
+			}
+		}
+		for (int x = 0; x < m_HeightMapSize - 1; x++)
+		{
+			for (int y = 0; y < m_HeightMapSize - 1; y++)
+			{
+				int index1 = x*m_HeightMapSize + y;
+				int index2 = (x + 1)*m_HeightMapSize + y;
+				int index3 = x*m_HeightMapSize + y + 1;
+				int index4 = (x + 1)*m_HeightMapSize + y + 1;
+				mesh->indexBuffer.push_back(index1);
+				mesh->indexBuffer.push_back(index4);
+				mesh->indexBuffer.push_back(index2);
+				mesh->indexBuffer.push_back(index1);
+				mesh->indexBuffer.push_back(index3);
+				mesh->indexBuffer.push_back(index4);
+			}
+		}
+		std::shared_ptr<TransformedMesh> transformedMesh = std::make_shared<TransformedMesh>(mesh);
+		mesh->computeTriangleNormals();
+		transformedMesh->setPosition(Ogre::Vector3(m_SurfaceAABB.getMin().x, m_SurfaceAABB.getMin().y, 0));
+		transformedMesh->computeCache();
+		// ExportOBJ::writeMesh("FractalNoisePlaneMesh", transformedMesh->vertexBufferVS, mesh->indexBuffer);
+		m_TriangleCache.clearMeshes();
+		m_TriangleCache.addMesh(transformedMesh);
+		m_TriangleCache.generateBVH<AABB>();
+		m_TriangleCache.addMesh(transformedMesh);
+		std::cout << "BVH height avg: " << m_TriangleCache.getBVH()->getHeightAvg() << std::endl;
+		std::cout << "BVH height max: " << m_TriangleCache.getBVH()->getHeight() << std::endl;
+		std::cout << "[FractalNoisePlaneSDF] Finished!" << std::endl;
 	}
 };

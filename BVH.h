@@ -217,10 +217,12 @@ protected:
 		// create bounding volume big enough to contain all surfaces
 		std::vector<Ogre::Vector3> extremalPoints;
 		for (int i = left; i < right; i++)
+		{
 			extremalPoints.insert(
-			extremalPoints.end(),
-			surfaces[i]->getExtremalPoints().begin(),
-			surfaces[i]->getExtremalPoints().end());
+				extremalPoints.end(),
+				surfaces[i]->getExtremalPoints().begin(),
+				surfaces[i]->getExtremalPoints().end());
+		}
 		mBoundingVolume = BoundingVolume(extremalPoints);
 		
 		// use spatial median
@@ -249,14 +251,18 @@ protected:
 
 		float penalty[3];
 		// for (int i = 0; i < 3; i++) penalty[i] = (numSurfaces/2 - numLeft[i]) * (numSurfaces/2 - numLeft[i]);
-		for (int i = 0; i < 3; i++) penalty[i] = std::max(0.0f, maxLeft[i] - minRight[i]);
 		for (int i = 0; i < 3; i++)
-			if (numLeft[i] == numSurfaces || numLeft[i] == 0) penalty[i] += 999999.0f;
+			penalty[i] = std::max(0.0f, maxLeft[i] - minRight[i]);
+		for (int i = 0; i < 3; i++)
+		{
+			if (numLeft[i] == numSurfaces || numLeft[i] == 0)
+				penalty[i] += 999999.0f;
+		}
 		// for (int i = 0; i < 3; i++) penalty[i] /= (mBoundingVolume.getMax()[i]-mBoundingVolume.getMin()[i]);
 
 		mSplitAxis = 0;
-		if (penalty[1] <= penalty[0] && penalty[1] <= penalty[2]) mSplitAxis = 1;
-		if (penalty[2] <= penalty[0] && penalty[2] <= penalty[1]) mSplitAxis = 2;
+		if (penalty[1] <= penalty[0]) mSplitAxis = 1;
+		if (penalty[2] <= penalty[mSplitAxis]) mSplitAxis = 2;
 
 		// mSplitAxis = axisCounter % 3;
 

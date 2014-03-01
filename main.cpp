@@ -110,7 +110,8 @@ void splitBuddha2()
 
 void testFractalNoisePlane()
 {
-	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.25f), Ogre::Vector3(1, 0, 0)));
+	Ogre::Quaternion rotation(Ogre::Radian(Ogre::Math::PI*0.25f), Ogre::Vector3(1, 0, 0));
+	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, rotation);
 	auto octreeSDF = SDFManager::sampleOctreeSDF(std::static_pointer_cast<SignedDistanceField3D>(fractalNoiseSDF), 8);
 	std::cout << "Fractal noise SDF has " << octreeSDF->countNodes() << " nodes." << std::endl;
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_FractalNoise", octreeSDF);
