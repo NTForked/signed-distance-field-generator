@@ -118,7 +118,7 @@ void testFractalNoisePlane()
 
 void testSphericalFracturePattern()
 {
-	SphericalFracturePattern pattern(2, 8, 20);
+	SphericalFracturePattern pattern(8, 3);
 }
 
 void exampleInsideOutsideTest()

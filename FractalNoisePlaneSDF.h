@@ -92,20 +92,21 @@ public:
 	bool intersectsSurface(const AABB& aabb) const override
 	{
 		// return aabb.intersectsAABB(m_SurfaceAABB);
-		// if (!aabb.intersectsAABB(m_SurfaceAABB)) return false;
+		if (!aabb.intersectsAABB(m_SurfaceAABB)) return false;
 		Ogre::Vector3 scaledMin = (aabb.min - m_SurfaceAABB.min) * m_InverseCellSize;
 		int totalMin = (int)std::min(scaledMin.x, scaledMin.y);
 		Ogre::Vector3 scaledMax = (aabb.max - m_SurfaceAABB.min) * m_InverseCellSize;
 		int totalMax = (int)std::ceil(std::max(scaledMax.x, scaledMax.y));
 		int rangeExpo;
 		int range = roundToNextPowerOfTwo(totalMax - totalMin, rangeExpo);		
-		if (rangeExpo > (int)m_MinMipMaps.size())
-			rangeExpo = (int)m_MinMipMaps.size();
+		rangeExpo = clamp(rangeExpo, 1, (int)m_MinMipMaps.size());
 		int x = (int)(scaledMin.x);
 		int y = (int)(scaledMin.y);
 		x >>= rangeExpo;
 		y >>= rangeExpo;
 		int mipLevel = getMipLevelFromPixelRange(rangeExpo);
+		vAssert(mipLevel >= 0);
+		vAssert(mipLevel < m_MinMipMaps.size());
 		float minVal = lookupSafe(x, y, m_MinMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.max.z;
 		float maxVal = lookupSafe(x, y, m_MaxMipMaps[mipLevel], 1 << getMipLevelSizeExpo(mipLevel)) - aabb.min.z;
 		if (minVal <= 0 && maxVal > 0) return true;

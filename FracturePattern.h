@@ -41,43 +41,37 @@ public:
 
 class SphericalFracturePattern : public FracturePattern
 {
+protected:
+	void splitRecursive(const Ogre::Vector3& pointOfImpact, int maxSplitDepth, std::shared_ptr<OctreeSDF> sdf, std::vector<std::shared_ptr<OctreeSDF> >& outPieces)
+	{
+		if (maxSplitDepth <= 0) return;
+		Ogre::Vector3 planeVec1 = Ogre::Vector3(Ogre::Math::RangeRandom(-1.0f, 1.0f), Ogre::Math::RangeRandom(-1.0f, 1.0f), Ogre::Math::RangeRandom(-1.0f, 1.0f));
+		planeVec1.normalise();
+		Ogre::Vector3 planePos = sdf->getCenterOfMass();
+		Ogre::Vector3 planeVec2 = (planePos - pointOfImpact).normalisedCopy();
+		Ogre::Vector3 planeNormal = planeVec1.crossProduct(planeVec2);
+		Ogre::Quaternion planeOrientation = Ogre::Vector3(0, 0, 1).getRotationTo(planeNormal);
+		auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, planeOrientation, planePos);
+		std::cout << "[SphericalFracturePattern] Processing cut plane with normal " << planeNormal << std::endl;
+		// auto cutPlaneSDF = OctreeSDF::sampleSDF(fractalNoiseSDF.get(), sdf->getAABB(), sdf->getHeight());
+		auto newPiece = sdf->clone();
+		// newPiece->intersectAlignedOctree(cutPlaneSDF.get());
+		newPiece->intersect(fractalNoiseSDF.get());
+		newPiece->simplify();
+		sdf->subtractAlignedOctree(newPiece.get());
+		sdf->simplify();
+		outPieces.push_back(newPiece);
+		splitRecursive(pointOfImpact, maxSplitDepth - 1, sdf, outPieces);
+		splitRecursive(pointOfImpact, maxSplitDepth - 1, newPiece, outPieces);
+	}
 public:
-	SphericalFracturePattern(int numCutPlanes, int octreeDepth, int maxNumPieces)
+	SphericalFracturePattern(int octreeDepth, int numRecursiveSplits)
 	{
 		SphereSDF sdf(Ogre::Vector3(0, 0, 0), 1.0f);
 		auto sphereSDF = OctreeSDF::sampleSDF(&sdf, octreeDepth);
 		m_PatternPieces.push_back(sphereSDF);
+		splitRecursive(Ogre::Vector3(0, 0, 0), numRecursiveSplits, sphereSDF, m_PatternPieces);
 
-		for (float h = Ogre::Math::PI / 4 / numCutPlanes; h<Ogre::Math::PI / 2; h += Ogre::Math::PI / 2 / numCutPlanes)
-		{
-			for (float v = 0; v < 2 * Ogre::Math::PI; v += Ogre::Math::PI / 2 / (numCutPlanes*Ogre::Math::Cos(h)))
-			{
-				Ogre::Vector3 normal = Ogre::Vector3(Ogre::Math::Cos(h)*Ogre::Math::Sin(v), Ogre::Math::Sin(h), Ogre::Math::Cos(h)*Ogre::Math::Cos(v));
-				normal.normalise();
-				std::cout << "[SphericalFracturePattern] Processing cut plane with normal " << normal << std::endl;
-				Ogre::Quaternion randOrientation = Ogre::Vector3(0, 0, 1).getRotationTo(normal);
-				auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, randOrientation);
-				auto cutPlaneSDF = OctreeSDF::sampleSDF(fractalNoiseSDF.get(), sphereSDF->getAABB(), octreeDepth);
-				// SDFManager::exportSampledSDFAsMesh("Cutplane", cutPlaneSDF);
-
-				std::vector<std::shared_ptr<OctreeSDF> > newPieces;
-				for (auto iPiece = m_PatternPieces.begin(); iPiece != m_PatternPieces.end(); iPiece++)
-				{
-					auto newPiece = (*iPiece)->clone();
-					newPiece->intersectAlignedOctree(cutPlaneSDF.get());
-					(*iPiece)->simplify();
-					(*iPiece)->subtractAlignedOctree(newPiece.get());
-					newPiece->simplify();
-					newPieces.push_back(*iPiece);
-					newPieces.push_back(newPiece);
-				}
-				m_PatternPieces = newPieces;
-				if (m_PatternPieces.size() >= maxNumPieces)
-					break;
-			}
-			if (m_PatternPieces.size() >= maxNumPieces)
-				break;
-		}
 		std::cout << "[SphericalFracturePattern] Finished!" << std::endl;
 		int i = 0;
 		for (auto iPiece = m_PatternPieces.begin(); iPiece != m_PatternPieces.end(); iPiece++)

@@ -44,7 +44,7 @@ protected:
 	};
 
 	// Convenient helper methods for subclasses.
-	bool allSignsAreEqual(float* signedDistances)
+	bool allSignsAreEqual(const float* signedDistances) const
 	{
 		bool positive = (signedDistances[0] >= 0.0f);
 		for (int i = 1; i < 8; i++)
@@ -55,7 +55,7 @@ protected:
 		return true;
 	}
 
-	bool allSignsAreEqual(Sample* samples)
+	bool allSignsAreEqual(const Sample* samples) const
 	{
 		bool positive = (samples[0].signedDistance >= 0.0f);
 		for (int i = 1; i < 8; i++)
@@ -74,6 +74,14 @@ public:
 
 	/// Implementations may override this to provide high speed implementations for cubic aabbs.
 	virtual bool cubeIntersectsSurface(const Area& area) const { return intersectsSurface(area.toAABB()); }
+
+	virtual void getLowerAndUpperBound(const Area& area, bool containsSurface, const float* signedCornerDistances, float& lowerBound, float& upperBound) const
+	{
+		if (containsSurface)
+			area.getLowerAndUpperBound(signedCornerDistances, lowerBound, upperBound);
+		else
+			area.getLowerAndUpperBoundOptimistic(signedCornerDistances, lowerBound, upperBound);
+	}
 
 	/// Retrieves the axis aligned bounding box of the sdf.
 	virtual AABB getAABB() const = 0;

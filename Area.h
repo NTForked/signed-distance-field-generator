@@ -30,7 +30,7 @@ struct Area
 	}
 
 	// Computes a lower and upper bound inside the area given the 8 corner signed distances.
-	void getLowerAndUpperBound(float* signedDistances, float& lowerBound, float& upperBound) const
+	void getLowerAndUpperBound(const float* signedDistances, float& lowerBound, float& upperBound) const
 	{
 		float minDist = std::numeric_limits<float>::max();
 		float maxDist = std::numeric_limits<float>::min();
@@ -44,7 +44,7 @@ struct Area
 	}
 
 	// Simply returns the minimum / maximum corner.
-	void getLowerAndUpperBoundOptimistic(float* signedDistances, float& lowerBound, float& upperBound) const
+	void getLowerAndUpperBoundOptimistic(const float* signedDistances, float& lowerBound, float& upperBound) const
 	{
 		lowerBound = std::numeric_limits<float>::max();
 		upperBound = std::numeric_limits<float>::min();

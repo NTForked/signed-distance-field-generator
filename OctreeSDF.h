@@ -155,8 +155,11 @@ public:
 	/// Counts the number of nodes in the octree.
 	int countNodes();
 
-	/// Computes the center of mass, the return value is the total mass (centerOfMass is only valid if mass is bigger than zero).
-	float getCenterOfMass(Ogre::Vector3& centerOfMass);
+	/// Computes the center of mass, also returns the total mass which is computed along the way.
+	Ogre::Vector3 getCenterOfMass(float& totalMass);
+
+	/// Computes the center of mass.
+	Ogre::Vector3 getCenterOfMass();
 
 	/// Removes not referenced sdf values, call this when you have memory problems.
 	void cleanupSDF();

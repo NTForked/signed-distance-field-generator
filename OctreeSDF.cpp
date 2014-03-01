@@ -391,10 +391,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const Signed
 	// compute a lower and upper bound for this node and the other sdf
 	float otherLowerBound, otherUpperBound;
 	bool containsSurface = otherSDF.cubeIntersectsSurface(area);
-	if (containsSurface)
-		area.getLowerAndUpperBound(otherSignedDistances, otherLowerBound, otherUpperBound);
-	else
-		area.getLowerAndUpperBoundOptimistic(otherSignedDistances, otherLowerBound, otherUpperBound);
+	otherSDF.getLowerAndUpperBound(area, containsSurface, otherSignedDistances, otherLowerBound, otherUpperBound);
 
 	if (otherUpperBound < thisLowerBound)
 	{	// this node is replaced with the other sdf
@@ -456,7 +453,8 @@ OctreeSDF::Node* OctreeSDF::merge(Node* node, const Area& area, const SignedDist
 
 	// compute a lower and upper bound for this node and the other sdf
 	float otherLowerBound, otherUpperBound;
-	area.getLowerAndUpperBound(otherSignedDistances, otherLowerBound, otherUpperBound);
+	bool containsSurface = otherSDF.cubeIntersectsSurface(area);
+	otherSDF.getLowerAndUpperBound(area, containsSurface, otherSignedDistances, otherLowerBound, otherUpperBound);
 
 	float thisLowerBound, thisUpperBound;
 	getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
@@ -731,12 +729,19 @@ int OctreeSDF::countNodes()
 	return counter;
 }
 
-float OctreeSDF::getCenterOfMass(Ogre::Vector3& centerOfMass)
+Ogre::Vector3 OctreeSDF::getCenterOfMass(float& totalMass)
 {
-	float totalMass = 0;
+	Ogre::Vector3 centerOfMass(0, 0, 0);
+	totalMass = 0;
 	sumPositionsAndMass(m_RootNode, m_RootArea, centerOfMass, totalMass);
 	if (totalMass > 0) centerOfMass /= totalMass;
-	return totalMass;
+	return centerOfMass;
+}
+
+Ogre::Vector3 OctreeSDF::getCenterOfMass()
+{
+	float mass = 0.0f;
+	return getCenterOfMass(mass);
 }
 
 void OctreeSDF::cleanupSDF()
