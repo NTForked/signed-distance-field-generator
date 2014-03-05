@@ -113,7 +113,7 @@ public:
 
 	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth);
 
-	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, AABB& aabb, int maxDepth);
+	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, const AABB& aabb, int maxDepth);
 
 	float getInverseCellSize() override;
 

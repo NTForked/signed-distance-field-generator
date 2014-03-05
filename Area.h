@@ -32,6 +32,7 @@ struct Area
 	// Computes a lower and upper bound inside the area given the 8 corner signed distances.
 	void getLowerAndUpperBound(const float* signedDistances, float& lowerBound, float& upperBound) const
 	{
+		// Ogre::Vector3 mid = m_MinRealPos + Ogre::Vector3(m_RealSize, m_RealSize, m_RealSize);
 		float minDist = std::numeric_limits<float>::max();
 		float maxDist = std::numeric_limits<float>::min();
 		for (int i = 0; i < 8; i++)
@@ -39,8 +40,10 @@ struct Area
 			minDist = std::min(minDist, signedDistances[i]);
 			maxDist = std::max(maxDist, signedDistances[i]);
 		}
-		lowerBound = minDist - m_RealSize * 0.5f;
-		upperBound = maxDist + m_RealSize * 0.5f;
+		float halfSize = m_RealSize * 0.5f;
+		float maxOffset = std::sqrtf(halfSize*halfSize*halfSize);
+		lowerBound = minDist - maxOffset;
+		upperBound = maxDist + maxOffset;
 	}
 
 	// Simply returns the minimum / maximum corner.

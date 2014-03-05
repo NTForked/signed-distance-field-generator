@@ -156,8 +156,6 @@ public:
 		m_TriangleCache.addMesh(transformedMesh);
 		m_TriangleCache.generateBVH<AABB>();
 		m_TriangleCache.addMesh(transformedMesh);
-		std::cout << "BVH height avg: " << m_TriangleCache.getBVH()->getHeightAvg() << std::endl;
-		std::cout << "BVH height max: " << m_TriangleCache.getBVH()->getHeight() << std::endl;
 		std::cout << "[FractalNoisePlaneSDF] Finished!" << std::endl;
 	}
 };

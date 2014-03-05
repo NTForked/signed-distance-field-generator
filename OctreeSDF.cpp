@@ -285,7 +285,11 @@ OctreeSDF::Sample OctreeSDF::getSample(Node* node, const Area& area, const Ogre:
 			}
 		}
 	}
-	return Sample(-99999.0f);		// should never occur
+	// should never occur
+	std::cout << "Warning OctreeSDF::getSample: Queried point is outside octree." << std::endl;
+	// std::cout << -std::sqrtf(area.toAABB().squaredDistance(point)) << std::endl;
+	return Sample(-std::sqrtf(area.toAABB().squaredDistance(point)));
+	// return Sample(-0.001f);
 }
 
 OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& area, SignedDistanceGrid& otherSDF, SignedDistanceGrid& newSDF)
@@ -316,7 +320,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 	getLowerAndUpperBound(otherNode, area, otherSignedDistances, otherLowerBound, otherUpperBound);
 
 	// Empty space stays empty - end of story.
-	if (thisUpperBound < 0) return node;
+	// if (thisUpperBound < 0) return node;
 
 	if (otherUpperBound < thisLowerBound)
 	{	// this node is replaced with the other sdf
@@ -386,7 +390,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const Signed
 	getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
 
 	// empty space stays empty - end of story
-	if (thisUpperBound < 0) return node;
+	// if (thisUpperBound < 0) return node;
 
 	// compute a lower and upper bound for this node and the other sdf
 	float otherLowerBound, otherUpperBound;
@@ -572,7 +576,7 @@ std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF,
 	return sampleSDF(otherSDF, otherSDF->getAABB(), maxDepth);
 }
 
-std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF, AABB& aabb, int maxDepth)
+std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF, const AABB& aabb, int maxDepth)
 {
 	std::shared_ptr<OctreeSDF> octreeSDF = std::make_shared<OctreeSDF>();
 	Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();

@@ -111,15 +111,57 @@ void splitBuddha2()
 void testFractalNoisePlane()
 {
 	Ogre::Quaternion rotation(Ogre::Radian(Ogre::Math::PI*0.25f), Ogre::Vector3(1, 0, 0));
-	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, rotation);
+	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.15f);	// , rotation);
 	auto octreeSDF = SDFManager::sampleOctreeSDF(std::static_pointer_cast<SignedDistanceField3D>(fractalNoiseSDF), 8);
 	std::cout << "Fractal noise SDF has " << octreeSDF->countNodes() << " nodes." << std::endl;
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_FractalNoise", octreeSDF);
 }
 
+void testFractureBuddha()
+{
+	auto buddha = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("buddha2.obj"), 8);
+	std::vector<std::shared_ptr<OctreeSDF> > pieces;
+	FracturePattern::splitRecursiveRandom(2, buddha, pieces);
+	SDFManager::exportSampledSDFAsMesh("BuddhaFractured0", buddha);
+	int i = 1;
+	for (auto iPiece = pieces.begin(); iPiece != pieces.end(); iPiece++)
+	{
+		std::stringstream ss;
+		ss << "BuddhaFractured" << (i++);
+		SDFManager::exportSampledSDFAsMesh(ss.str(), *iPiece);
+	}
+}
+void testFractureBunny()
+{
+	auto bunny = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("bunny.capped.obj"), 8);
+	std::vector<std::shared_ptr<OctreeSDF> > pieces;
+	FracturePattern::splitRecursiveRandom(4, bunny, pieces);
+	SDFManager::exportSampledSDFAsMesh("BunnyFractured0", bunny);
+	int i = 1;
+	for (auto iPiece = pieces.begin(); iPiece != pieces.end(); iPiece++)
+	{
+		std::stringstream ss;
+		ss << "BunnyFractured" << (i++);
+		SDFManager::exportSampledSDFAsMesh(ss.str(), *iPiece);
+	}
+}
+
+
 void testSphericalFracturePattern()
 {
-	SphericalFracturePattern pattern(8, 3);
+	SphericalFracturePattern pattern(8, 2);
+	auto buddha = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("buddha2.obj"), 8);
+	Ogre::Matrix4 mat;
+	mat.makeTransform(Ogre::Vector3(0, 0, 0), Ogre::Vector3(0.2f, 0.2f, 0.2f), Ogre::Quaternion::IDENTITY);
+	auto pieces = pattern.fractureSDF(buddha.get(), mat);
+	SDFManager::exportSampledSDFAsMesh("buddhaFractured0", buddha);
+	int num = 1;
+	for (auto i = pieces.begin(); i != pieces.end(); i++)
+	{
+		std::stringstream ss;
+		ss << "buddhaFractured" << num++;
+		SDFManager::exportSampledSDFAsMesh(ss.str(), *i);
+	}
 }
 
 void exampleInsideOutsideTest()
@@ -147,7 +189,7 @@ void exampleInsideOutsideTest()
 
 int main()
 {
-	testSphericalFracturePattern();
+	splitBuddha2();
 	// testFractalNoisePlane();
 	// splitBuddha2();
 	//splitBuddha();
