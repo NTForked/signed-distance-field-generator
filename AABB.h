@@ -10,6 +10,7 @@ class AABB
 {
 public:
 	Ogre::Vector3 min, max;
+	virtual ~AABB() {}
 	AABB() {}
 	AABB(const Ogre::Vector3 &_min, const Ogre::Vector3 &_max) : min(_min), max(_max) {}
 
@@ -68,7 +69,7 @@ public:
 	{
 		return (point.x >= min.x && point.x < max.x
 			&& point.y >= min.y && point.y < max.y
-			&& point.z >= min.z && point.x < max.z);
+			&& point.z >= min.z && point.z < max.z);
 	}
 
 	__forceinline bool intersectsSphere(const Ogre::Vector3& center, float radius) const
@@ -77,6 +78,7 @@ public:
 		return squaredDistance(center) < radius*radius;
 	}
 
+	/// Returns the squared distance to the AABB for the given point, returns 0 if the point is inside the AABB.
 	__forceinline float squaredDistance(const Ogre::Vector3& point) const
 	{
 		return MathMisc::aabbPointSquaredDistance(min, max, point);

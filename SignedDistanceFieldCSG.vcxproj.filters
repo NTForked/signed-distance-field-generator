@@ -67,6 +67,7 @@
     <ClInclude Include="FracturePattern.h" />
     <ClInclude Include="BVHScene.h" />
     <ClInclude Include="Sphere.h" />
+    <ClInclude Include="AABBSDF.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

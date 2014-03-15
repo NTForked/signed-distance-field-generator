@@ -23,11 +23,6 @@ public:
 		return center.squaredDistance(otherCenter) <= radiusSum*radiusSum;
 	}
 
-	__forceinline float squaredDistance(const Ogre::Vector3& point) const
-	{
-		return center.squaredDistance(point);
-	}
-
 	__forceinline bool containsPoint(const Ogre::Vector3& point) const
 	{
 		return center.squaredDistance(point) <= radius*radius;
@@ -73,9 +68,10 @@ public:
 	virtual Sample getSample(const Ogre::Vector3& point) const override
 	{
 		Sample s;
-		s.signedDistance = radius - std::sqrtf(squaredDistance(point));
+		float distToCenter = std::sqrtf(center.squaredDistance(point));
+		s.signedDistance = radius - distToCenter;
 		if (s.signedDistance)
-			s.normal = (point - center) / s.signedDistance;
+			s.normal = (point - center) / distToCenter;
 		return s;
 	}
 

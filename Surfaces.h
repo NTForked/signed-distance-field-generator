@@ -17,7 +17,7 @@ class Surface : public BVH<Surface>
 {
 protected:
 	AABB m_AABB;
-	SphereBV m_SphereBV;
+	// SphereBV m_SphereBV;
 	std::vector<Ogre::Vector3> m_ExtremalPoints;
 public:
 	virtual ~Surface() {}
@@ -25,11 +25,11 @@ public:
 	/// Retrieves the aabb of the Surface.
 	__forceinline void getBoundingVolume(AABB& aabb) { aabb = m_AABB; }
 
-	__forceinline void getBoundingVolume(SphereBV& sphereBV) { sphereBV = m_SphereBV; }
+	// __forceinline void getBoundingVolume(SphereBV& sphereBV) { sphereBV = m_SphereBV; }
 
 	__forceinline const std::vector<Ogre::Vector3>& getExtremalPoints() { return m_ExtremalPoints; }
 
-	float squaredDistance(const Ogre::Vector3& point) const { return m_SphereBV.squaredDistance(point); }
+	float squaredDistance(const Ogre::Vector3& point) const { return m_AABB.squaredDistance(point); }
 };
 
 class TriangleSurface : public Surface
@@ -138,7 +138,7 @@ public:
 		m_ExtremalPoints.push_back(mMesh->vertexBufferVS[mIndex2].position);
 		m_ExtremalPoints.push_back(mMesh->vertexBufferVS[mIndex3].position);
 		m_AABB = AABB(m_ExtremalPoints);
-		m_SphereBV = SphereBV(m_ExtremalPoints);
+		// m_SphereBV = SphereBV(m_ExtremalPoints);
 	}
 
 	bool intersectsAABB(const AABB& aabb) const override

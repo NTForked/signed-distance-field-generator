@@ -573,7 +573,11 @@ void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 
 std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth)
 {
-	return sampleSDF(otherSDF, otherSDF->getAABB(), maxDepth);
+	AABB aabb = otherSDF->getAABB();
+	Ogre::Vector3 epsilonVec(0.1f, 0.1f, 0.1f);
+	aabb.min -= epsilonVec;
+	aabb.max += epsilonVec;
+	return sampleSDF(otherSDF, aabb, maxDepth);
 }
 
 std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF, const AABB& aabb, int maxDepth)

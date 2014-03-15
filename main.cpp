@@ -21,6 +21,7 @@
 #include "FractalNoisePlaneSDF.h"
 #include "Sphere.h"
 #include "FracturePattern.h"
+#include "AABBSDF.h"
 
 using std::vector;
 using Ogre::Vector3;
@@ -47,6 +48,14 @@ void testSphere()
 	auto octreeSDF = OctreeSDF::sampleSDF(&sdf, 8);
 	SDFManager::exportSampledSDFAsMesh("SphereSDF", octreeSDF);
 }
+
+void testCube()
+{
+	AABBSDF sdf(Ogre::Vector3(-0.5f, -0.5f, -0.5f), Ogre::Vector3(0.5f, 0.5f, 0.5f));
+	auto octreeSDF = OctreeSDF::sampleSDF(&sdf, 8);
+	SDFManager::exportSampledSDFAsMesh("CubeSDF", octreeSDF);
+}
+
 
 void splitBuddha()
 {
@@ -189,7 +198,7 @@ void exampleInsideOutsideTest()
 
 int main()
 {
-	splitBuddha2();
+	testCube();
 	// testFractalNoisePlane();
 	// splitBuddha2();
 	//splitBuddha();

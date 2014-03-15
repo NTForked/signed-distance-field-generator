@@ -512,9 +512,13 @@ namespace Ogre
                 ( z + vec.z ) * 0.5f );
         }
 
-		inline int maxComponent() const
+		inline float maxComponent() const
 		{
-			return (int)ceil(std::max(std::max(abs(x), abs(y)), abs(z)));
+			return std::max(std::max(abs(x), abs(y)), abs(z));
+		}
+		inline float minComponent() const
+		{
+			return std::min(std::min(abs(x), abs(y)), abs(z));
 		}
 
         /** Returns true if the vector's scalar components are all greater
