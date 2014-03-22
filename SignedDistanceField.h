@@ -30,6 +30,7 @@ protected:
 		MaterialID materialID;
 
 		Ogre::Vector3 normal;
+		Ogre::Vector3 correctionVector;
 		Ogre::Vector2 uv;
 
 		// Operators required for trilinear interpolation, obviously this can not handle the materialID correctly.
@@ -73,7 +74,7 @@ public:
 	virtual bool intersectsSurface(const AABB& aabb) const = 0;
 
 	/// Implementations may override this to provide high speed implementations for cubic aabbs.
-	virtual bool cubeIntersectsSurface(const Area& area) const { return intersectsSurface(area.toAABB()); }
+	virtual bool cubeNeedsSubdivision(const Area& area) const { return intersectsSurface(area.toAABB()); }
 
 	virtual void getLowerAndUpperBound(const Area& area, bool containsSurface, const float* signedCornerDistances, float& lowerBound, float& upperBound) const
 	{

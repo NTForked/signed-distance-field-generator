@@ -68,6 +68,8 @@ protected:
 
 	static Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
 
+	static Sample lookupOrComputeSample(const Vector3i& globalPos, const Ogre::Vector3& realPos, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
+
 	static Sample lookupSample(int corner, const Area& area, const SignedDistanceGrid& sdfValues);
 
 	Sample lookupSample(int corner, const Area& area) const;
@@ -96,12 +98,18 @@ protected:
 	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
 	Node* intersect(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
 
+	Node* intersect2(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF);
+
 	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
 	Node* merge(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
 
 	/// Interpolates signed distance for the 3x3x3 subgrid of a leaf.
 	static void interpolateLeaf(const Area& area, SignedDistanceGrid& grid);
 	void interpolateLeaf(const Area& area) { interpolateLeaf(area, m_SDFValues); }
+
+	std::vector<std::pair<Vector3i, float> > getControlPoints(const Area& area, float* cornerSignedDistances);
+
+	bool approximatesWell(const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, const std::vector<std::pair<Vector3i, float> >& controlPoints);
 
 	void getCubesToMarch(Node* node, const Area& area, vector<Cube>& cubes);
 
@@ -133,6 +141,8 @@ public:
 
 	/// Intersects the octree with a signed distance field. For intersections with other octrees, use intersectAlignedOctree if possible.
 	void intersect(SignedDistanceField3D* otherSDF);
+
+	void intersect2(SignedDistanceField3D* otherSDF);
 
 	/// Intersects the octree with another aligned octree (underlying grids must match).
 	void intersectAlignedOctree(OctreeSDF* otherOctree);

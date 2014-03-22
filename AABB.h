@@ -50,6 +50,13 @@ public:
 		}
 	}
 
+	void addEpsilon(float epsilon)
+	{
+		Ogre::Vector3 epsilonVec(epsilon, epsilon, epsilon);
+		min -= epsilonVec;
+		max += epsilonVec;
+	}
+
 	Ogre::Vector3 getCorner(int corner) const
 	{
 		Ogre::Vector3 sizeVec(max - min);

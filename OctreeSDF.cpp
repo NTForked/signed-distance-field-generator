@@ -37,6 +37,15 @@ OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, const Signed
 	return cloned;
 }
 
+OctreeSDF::Sample OctreeSDF::lookupOrComputeSample(const Vector3i& globalPos, const Ogre::Vector3& realPos, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
+{
+	bool created;
+	Sample& sample = sdfValues.lookupOrCreate(globalPos, created);
+	if (created)
+		sample = implicitSDF.getSample(realPos);
+	return sample;
+}
+
 OctreeSDF::Sample OctreeSDF::lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
 {
 	auto vecs = area.getCornerVecs(corner);
@@ -68,16 +77,15 @@ OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceFie
 {
 	nodeTypeMask = 3;
 	if (area.m_SizeExpo <= 0 ||
-		!implicitSDF.cubeIntersectsSurface(area))
+		!implicitSDF.cubeNeedsSubdivision(area))
 	{
 		float signedDistances[8];
 		for (int i = 0; i < 8; i++)
 		{
 			signedDistances[i] = lookupOrComputeSample(i, area, implicitSDF, sdfValues).signedDistance;
 		}
-
 		bool mono = allSignsAreEqual(signedDistances);
-		if (area.m_SizeExpo <= 0 || mono)
+		// if (area.m_SizeExpo <= 0 || mono)
 		{
 			if (mono)
 			{
@@ -380,7 +388,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const Signed
 
 		if (otherSignedDistances[i] < thisSignedDistances[i])
 			newSDF.lookupOrCreate(hash, globalPos) = otherSample;
-		else newSDF.lookupOrCreate(hash, globalPos) = thisSample;
+		// else newSDF.lookupOrCreate(hash, globalPos) = thisSample;
 	}
 
 	// if we reached the bottom level we can stop here
@@ -394,7 +402,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const Signed
 
 	// compute a lower and upper bound for this node and the other sdf
 	float otherLowerBound, otherUpperBound;
-	bool containsSurface = otherSDF.cubeIntersectsSurface(area);
+	bool containsSurface = otherSDF.cubeNeedsSubdivision(area);
 	otherSDF.getLowerAndUpperBound(area, containsSurface, otherSignedDistances, otherLowerBound, otherUpperBound);
 
 	if (otherUpperBound < thisLowerBound)
@@ -431,6 +439,40 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const Signed
 	return node;
 }
 
+OctreeSDF::Node* OctreeSDF::intersect2(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF)
+{
+	for (int i = 0; i < 8; i++)
+	{
+		newSDF.lookupOrCreate(area.getCorner(i));
+	}
+
+	// if we reached the bottom level we can stop here
+	if (area.m_SizeExpo == 0) return node;
+
+	if (node)
+	{	// need to recurse to node children
+		vAssert(area.m_SizeExpo > 0)
+		Area subAreas[8];
+		area.getSubAreas(subAreas);
+		for (int i = 0; i < 8; i++)
+			node->m_Children[i] = intersect2(node->m_Children[i], subAreas[i], otherSDF, newSDF);
+	}
+	else
+	{	// it's a leaf in the octree
+		if (otherSDF.cubeNeedsSubdivision(area))
+		{
+			// need to subdivide this node
+			node = allocNode();
+			interpolateLeaf(area);
+			Area subAreas[8];
+			area.getSubAreas(subAreas);
+			for (int i = 0; i < 8; i++)
+				node->m_Children[i] = intersect2(nullptr, subAreas[i], otherSDF, newSDF);
+		}
+	}
+	return node;
+}
+
 OctreeSDF::Node* OctreeSDF::merge(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache)
 {
 	// if otherSDF does not overlap with the node AABB we can stop here
@@ -459,7 +501,7 @@ OctreeSDF::Node* OctreeSDF::merge(Node* node, const Area& area, const SignedDist
 
 	// compute a lower and upper bound for this node and the other sdf
 	float otherLowerBound, otherUpperBound;
-	bool containsSurface = otherSDF.cubeIntersectsSurface(area);
+	bool containsSurface = otherSDF.cubeNeedsSubdivision(area);
 	otherSDF.getLowerAndUpperBound(area, containsSurface, otherSignedDistances, otherLowerBound, otherUpperBound);
 
 	float thisLowerBound, thisUpperBound;
@@ -486,6 +528,73 @@ OctreeSDF::Node* OctreeSDF::merge(Node* node, const Area& area, const SignedDist
 	return node;
 }
 
+bool OctreeSDF::approximatesWell(const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, const std::vector<std::pair<Vector3i, float> >& controlPoints)
+{
+	for (auto i = controlPoints.begin(); i != controlPoints.end(); ++i)
+	{
+		Sample realSample = lookupOrComputeSample(i->first, m_RootArea.m_MinRealPos + m_CellSize * i->first.toOgreVec(), implicitSDF, sdfValues);
+		// if (realSample.signedDistance > 0 && i->second < 0) return false;
+		// if (realSample.signedDistance < 0 && i->second > 0) return false;
+		float diff = realSample.signedDistance - i->second;
+		if (fabs(diff) > 0.1f) return false;
+	}
+	//std::cout << "MUH" << std::endl;
+	return true;
+}
+
+std::vector<std::pair<Vector3i, float> > OctreeSDF::getControlPoints(const Area& area, float* cornerSamples)
+{
+	int expoMultiplier2 = (1 << area.m_SizeExpo);
+	int expoMultiplier = (1 << (area.m_SizeExpo - 1));
+
+	Vector3i minPos = area.m_MinPos;
+
+	std::vector<std::pair<Vector3i, float> > samples;
+
+	// first do the xy plane at z = 0
+	float edgeMid15 = (cornerSamples[0] + cornerSamples[4]) * 0.5f;
+	float edgeMid13 = (cornerSamples[0] + cornerSamples[2]) * 0.5f;
+	float edgeMid57 = (cornerSamples[4] + cornerSamples[6]) * 0.5f;
+	float edgeMid37 = (cornerSamples[2] + cornerSamples[6]) * 0.5f;
+	float faceMid1 = (edgeMid15 + edgeMid37) * 0.5f;
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier, 0, 0), edgeMid15));
+	samples.push_back(std::make_pair(minPos + Vector3i(0, expoMultiplier, 0), edgeMid13));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier, 0), faceMid1));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), edgeMid57));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), edgeMid37));
+
+	// then the xy plane at z = 2
+	minPos = minPos + Vector3i(0, 0, expoMultiplier2);
+	float edgeMid26 = (cornerSamples[1] + cornerSamples[5]) * 0.5f;
+	float edgeMid24 = (cornerSamples[1] + cornerSamples[3]) * 0.5f;
+	float edgeMid68 = (cornerSamples[5] + cornerSamples[7]) * 0.5f;
+	float edgeMid48 = (cornerSamples[3] + cornerSamples[7]) * 0.5f;
+	float faceMid2 = (edgeMid26 + edgeMid48) * 0.5f;
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier, 0, 0), edgeMid26));
+	samples.push_back(std::make_pair(minPos + Vector3i(0, expoMultiplier, 0), edgeMid24));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier, 0), faceMid2));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), edgeMid68));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), edgeMid48));
+
+	// 4 edges at z = 1
+	minPos = area.m_MinPos + Vector3i(0, 0, expoMultiplier);
+	samples.push_back(std::make_pair(minPos, (cornerSamples[0] + cornerSamples[1]) * 0.5f));
+	samples.push_back(std::make_pair(minPos + Vector3i(0, expoMultiplier2, 0), (cornerSamples[2] + cornerSamples[3]) * 0.5f));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier2, 0, 0), (cornerSamples[4] + cornerSamples[5]) * 0.5f));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier2, 0), (cornerSamples[6] + cornerSamples[7]) * 0.5f));
+
+	// 4 faces at z = 1
+	samples.push_back(std::make_pair(minPos + Vector3i(0, expoMultiplier, 0), (edgeMid13 + edgeMid24) * 0.5f));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier, 0, 0), (edgeMid15 + edgeMid26) * 0.5f));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), (edgeMid37 + edgeMid48) * 0.5f));
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), (edgeMid57 + edgeMid68) * 0.5f));
+
+	// and finally, the mid point
+	samples.push_back(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier, 0), (faceMid1 + faceMid2) * 0.5f));
+
+	return samples;
+}
+
 void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 {
 	Area subAreas[8];
@@ -497,10 +606,10 @@ void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 		cornerSamples[i] = lookupSample(i, area, grid);
 	}
 
-	int expoMultiplier = (1 << (subAreas[0].m_SizeExpo));
-	int expoMultiplier2 = (expoMultiplier << 1);
+	int expoMultiplier2 = (1 << area.m_SizeExpo);
+	int expoMultiplier = (1 << (area.m_SizeExpo - 1));
 
-	Vector3i minPos = subAreas[0].m_MinPos;
+	Vector3i minPos = area.m_MinPos;
 
 	// first do the xy plane at z = 0
 	Sample edgeMid15 = (cornerSamples[0] + cornerSamples[4]) * 0.5f;
@@ -511,11 +620,11 @@ void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier, 0, 0), edgeMid15));
 	grid.insert(std::make_pair(minPos + Vector3i(0, expoMultiplier, 0), edgeMid13));
 	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier, 0), faceMid1));
-	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), edgeMid57));
-	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), edgeMid37));
+	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), edgeMid57));
+	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), edgeMid37));
 
 	// then the xy plane at z = 2
-	minPos = minPos + Vector3i(0, 0, 2 * expoMultiplier);
+	minPos = minPos + Vector3i(0, 0, expoMultiplier2);
 	Sample edgeMid26 = (cornerSamples[1] + cornerSamples[5]) * 0.5f;
 	Sample edgeMid24 = (cornerSamples[1] + cornerSamples[3]) * 0.5f;
 	Sample edgeMid68 = (cornerSamples[5] + cornerSamples[7]) * 0.5f;
@@ -524,11 +633,11 @@ void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier, 0, 0), edgeMid26));
 	grid.insert(std::make_pair(minPos + Vector3i(0, expoMultiplier, 0), edgeMid24));
 	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier, 0), faceMid2));
-	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), edgeMid68));
-	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), edgeMid48));
+	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, expoMultiplier, 0), edgeMid68));
+	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier2, 0), edgeMid48));
 
 	// 4 edges at z = 1
-	minPos = subAreas[0].m_MinPos + Vector3i(0, 0, expoMultiplier);
+	minPos = area.m_MinPos + Vector3i(0, 0, expoMultiplier);
 	grid.insert(std::make_pair(minPos, (cornerSamples[0] + cornerSamples[1]) * 0.5f));
 	grid.insert(std::make_pair(minPos + Vector3i(0, expoMultiplier2, 0), (cornerSamples[2] + cornerSamples[3]) * 0.5f));
 	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier2, 0, 0), (cornerSamples[4] + cornerSamples[5]) * 0.5f));
@@ -543,32 +652,20 @@ void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 	// and finally, the mid point
 	grid.insert(std::make_pair(minPos + Vector3i(expoMultiplier, expoMultiplier, 0), (faceMid1 + faceMid2) * 0.5f));
 
-	/*Area subArea = subAreas[0];
-	Sample currentSample = cornerSamples[0];
-	for (int x = 0; x < 3; x++)
-	{
-	for (int y = 0; y < 3; y++)
-	{
-	subArea.m_MinPos.y += expoMultiplier, 0;
-	currentSample +=
-	}
-	}
-	subArea.m_MinPos = subArea.m_MinPos + Vector3i(1, 0, 0) * expoMultiplier;
-	for (int x = 0; x < 3; x++)
-
 	// interpolate 3x3x3 signed distance subgrid
-	Vector3i subGridVecs[27];
+	/*Vector3i subGridVecs[27];
 	Vector3i::grid3(subGridVecs);
 	for (int i = 0; i < 27; i++)
 	{
-	float weights[3];
-	for (int d = 0; d < 3; d++)
-	weights[d] = subGridVecs[i][d] * 0.5f;
-	Area subArea = subAreas[0];
-	subArea.m_MinPos = subArea.m_MinPos + subGridVecs[i] * (1 << (subArea.m_SizeExpo));
-	auto tryInsert = m_SDFValues.insert(std::make_pair(subArea.getCorner(0), 0.0f));
-	if (tryInsert.second)
-	tryInsert.first->second = MathMisc::trilinearInterpolation(cornerSamples, weights);
+		float weights[3];
+		for (int d = 0; d < 3; d++)
+			weights[d] = subGridVecs[i][d] * 0.5f;
+		Area subArea = subAreas[0];
+		subArea.m_MinPos = subArea.m_MinPos + subGridVecs[i] * (1 << (subArea.m_SizeExpo));
+		bool created;
+		Sample& sample = grid.lookupOrCreate(subArea.getCorner(0), created);
+		if (created)
+			sample = MathMisc::trilinearInterpolation(cornerSamples, weights);
 	}*/
 }
 
@@ -642,6 +739,24 @@ void OctreeSDF::intersect(SignedDistanceField3D* otherSDF)
 			m_SDFValues[i2->first] = i2->second;
 		}
 	}	
+}
+
+void OctreeSDF::intersect2(SignedDistanceField3D* otherSDF)
+{
+	otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
+	SignedDistanceGrid newSDF;
+	m_RootNode = intersect2(m_RootNode, m_RootArea, *otherSDF, newSDF);
+	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
+	{
+		for (auto i2 = i->begin(); i2 != i->end(); i2++)
+		{
+			Ogre::Vector3 globalPos = m_RootArea.m_MinRealPos + m_CellSize * i2->first.toOgreVec();
+			Sample thisSample = m_SDFValues[i2->first];
+			Sample otherSample = otherSDF->getSample(globalPos);
+			if (otherSample.signedDistance < thisSample.signedDistance)
+				m_SDFValues[i2->first] = otherSample;
+		}
+	}
 }
 
 void OctreeSDF::intersectAlignedOctree(OctreeSDF* otherOctree)

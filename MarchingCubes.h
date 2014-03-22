@@ -67,7 +67,7 @@ class MarchingCubes {
 		unsigned char word = 0;
 		for (int i = 0; i < 8; i++)
 		{
-			if (cube.cornerSamples[i].signedDistance >= 0)
+			if (cube.cornerSamples[i].signedDistance >= 0.0f)
 				word |= (1<<i);
 		}
 		Vector3i offset = cube.posMin.doubleVec()+Vector3i(1,1,1);

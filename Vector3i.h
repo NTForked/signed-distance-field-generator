@@ -34,6 +34,13 @@ public:
 
 	typedef Ogre::Vector3 FloatVecType;
 
+	void set(int x, int y, int z)
+	{
+		this->x = x;
+		this->y = y;
+		this->z = z;
+	}
+
 	inline Vector3i& operator = ( const Vector3i& rkVector )
 	{
 		x = rkVector.x;
@@ -342,7 +349,7 @@ protected:
 public:
 	Vector3iHashGrid()
 	{
-		m_Buckets.resize(100000);
+		rehash(50000);
 	}
 	void rehash(unsigned int size)
 	{
@@ -355,6 +362,10 @@ public:
 			{
 				m_Buckets[keyIndex(i2->first)].push_back(*i2);
 			}
+		}
+		for (auto i = m_Buckets.begin(); i != m_Buckets.end(); i++)
+		{
+			i->reserve(8);
 		}
 	}
 	unsigned int keyIndex(const Vector3i& v) const
@@ -443,6 +454,22 @@ public:
 	T& lookupOrCreate(const Vector3i& key)
 	{
 		return lookupOrCreate(keyIndex(key), key);
+	}
+
+	bool hasKey(unsigned int index, const Vector3i& key) const
+	{
+		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
+		{
+			if (i->first == key)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+	bool hasKey(const Vector3i& key) const
+	{
+		return hasKey(keyIndex(key));
 	}
 
 	inline T& operator[](const Vector3i& key)

@@ -56,10 +56,12 @@ void testCubeSplit()
 	auto octreeSDF = OctreeSDF::sampleSDF(&sdf, 7);
 	Profiler::printJobDuration("Cube creation", timestamp);
 	timestamp = Profiler::timestamp();
-	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.25f), Ogre::Vector3(1, 0, 0)));
+	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.1f, Ogre::Quaternion(Ogre::Radian(Ogre::Math::PI*0.25f), Ogre::Vector3(1, 0, 0)), Ogre::Vector3(0, 0, 0));
+	// auto planeOctree = OctreeSDF::sampleSDF(fractalNoiseSDF.get(), octreeSDF->getAABB(), 7);
 	Profiler::printJobDuration("Plane creation", timestamp);
 	timestamp = Profiler::timestamp();
 	octreeSDF->subtract(fractalNoiseSDF.get());
+	// octreeSDF->subtractAlignedOctree(planeOctree.get());
 	Profiler::printJobDuration("Plane subtraction", timestamp);
 	SDFManager::exportSampledSDFAsMesh("CubeSDF", octreeSDF);
 }
@@ -206,9 +208,9 @@ void exampleInsideOutsideTest()
 
 int main()
 {
-	// testCubeSplit();
+	testCubeSplit();
 	// testFractalNoisePlane();
-	splitBuddha2();
+	// splitBuddha2();
 	//splitBuddha();
 	while (true) {}
 	return 0;
