@@ -328,6 +328,154 @@ public:
 	}
 };
 
+// boost::unordered_map: 0.775 seconds without assertions
+template<class T>
+class Vector3iHashGrid
+{
+protected:
+	T m_Dummy;
+	std::vector<std::vector<std::pair<Vector3i, T> > > m_Buckets;
+	static const size_t PRIME1 = 73856093;
+	static const size_t PRIME2 = 19349663;
+	static const size_t PRIME3 = 83492791;
+
+public:
+	Vector3iHashGrid()
+	{
+		m_Buckets.resize(100000);
+	}
+	void rehash(unsigned int size)
+	{
+		std::vector<std::vector<std::pair<Vector3i, T> > > oldBuckets = m_Buckets;
+		m_Buckets.clear();
+		m_Buckets.resize(size);
+		for (auto i = oldBuckets.begin(); i != oldBuckets.end(); i++)
+		{
+			for (auto i2 = i->begin(); i2 != i->end(); i2++)
+			{
+				m_Buckets[keyIndex(i2->first)].push_back(*i2);
+			}
+		}
+	}
+	unsigned int keyIndex(const Vector3i& v) const
+	{
+		return ((PRIME1*v.x) ^ (PRIME2*v.y) ^ (PRIME3*v.z)) % m_Buckets.size();
+	}
+
+	bool insert(unsigned int index, const std::pair<Vector3i, T>& keyValue)
+	{
+		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
+		{
+			if (i->first == keyValue.first)
+				return false;
+		}
+		m_Buckets[index].push_back(keyValue);
+		return true;
+	}
+	bool insert(const std::pair<Vector3i, T>& keyValue)
+	{
+		return insert(keyIndex(keyValue.first), keyValue);
+	}
+
+	void insertUnsafe(unsigned int index, const std::pair<Vector3i, T>& keyValue)
+	{
+		m_Buckets[index].push_back(keyValue);
+	}
+	void insertUnsafe(const std::pair<Vector3i, T>& keyValue)
+	{
+		insertUnsafe(keyIndex(keyValue.first), keyValue);
+	}
+
+	T& lookup(unsigned int index, const Vector3i& key)
+	{
+		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
+		{
+			if (i->first == key)
+			{
+				return i->second;
+			}
+		}
+		vAssert(false);
+		return m_Dummy;
+	}
+	const T& lookup(unsigned int index, const Vector3i& key) const
+	{
+		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
+		{
+			if (i->first == key)
+			{
+				return i->second;
+			}
+		}
+		vAssert(false);
+		return m_Dummy;
+	}
+	T& lookupOrCreate(unsigned int index, const Vector3i& key, bool& created)
+	{
+		created = false;
+		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
+		{
+			if (i->first == key)
+			{
+				return i->second;
+			}
+		}
+		created = true;
+		m_Buckets[index].push_back(std::make_pair(key, T()));
+		return m_Buckets[index].back().second;
+	}
+	T& lookupOrCreate(unsigned int index, const Vector3i& key)
+	{
+		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
+		{
+			if (i->first == key)
+			{
+				return i->second;
+			}
+		}
+		m_Buckets[index].push_back(std::make_pair(key, T()));
+		return m_Buckets[index].back().second;
+	}
+	T& lookupOrCreate(const Vector3i& key, bool& created)
+	{
+		return lookupOrCreate(keyIndex(key), key, created);
+	}
+	T& lookupOrCreate(const Vector3i& key)
+	{
+		return lookupOrCreate(keyIndex(key), key);
+	}
+
+	inline T& operator[](const Vector3i& key)
+	{
+		bool dummy;
+		return lookupOrCreate(keyIndex(key), key, dummy);
+	}
+	inline const T& operator[](const Vector3i& key) const
+	{
+		return lookup(keyIndex(key), key);
+	}
+
+	void remove(const Vector3i& key)
+	{
+		int index = keyIndex(key);
+		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
+		{
+			if (i->first == key)
+			{
+				m_Buckets[index].erase(i);
+				return;
+			}
+		}
+	}
+
+	typedef typename std::vector<typename std::vector<typename std::pair<typename Vector3i, typename T> > >::iterator iterator;
+	typedef typename std::vector<typename std::vector<typename std::pair<typename Vector3i, typename T> > >::const_iterator const_iterator;
+	iterator begin() { return m_Buckets.begin(); }
+	const_iterator begin() const { return m_Buckets.begin(); }
+	iterator end() { return m_Buckets.end(); }
+	const_iterator end() const { return m_Buckets.end(); }
+};
+
 namespace std
 {
 	template<>
@@ -347,5 +495,4 @@ namespace std
 			return ((PRIME1*v.x) ^ (PRIME2*v.y) ^ (PRIME3*v.z));
 		}
 	};
-
 }

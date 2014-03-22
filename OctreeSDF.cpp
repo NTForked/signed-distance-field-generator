@@ -26,9 +26,7 @@ OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, const Signed
 	for (int i = 0; i < 8; i++)
 	{
 		Vector3i globalPos = area.getCorner(i);
-		auto find = sdfValues.find(globalPos);
-		vAssert(find != sdfValues.end())
-		clonedSDFValues[globalPos] = find->second;
+		clonedSDFValues[globalPos] = sdfValues[globalPos];
 	}
 	if (!node) return nullptr;
 	Node* cloned = allocNode();
@@ -42,19 +40,16 @@ OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, const Signed
 OctreeSDF::Sample OctreeSDF::lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
 {
 	auto vecs = area.getCornerVecs(corner);
-	auto tryInsert = sdfValues.insert(std::make_pair(vecs.first, Sample(0.0f)));
-	if (tryInsert.second)
-	{
-		tryInsert.first->second = implicitSDF.getSample(vecs.second);
-	}
-	return tryInsert.first->second;
+	bool created;
+	Sample& sample = sdfValues.lookupOrCreate(vecs.first, created);
+	if (created)
+		sample = implicitSDF.getSample(vecs.second);
+	return sample;
 }
 
 OctreeSDF::Sample OctreeSDF::lookupSample(int corner, const Area& area, const SignedDistanceGrid& sdfValues)
 {
-	auto find = sdfValues.find(area.getCorner(corner));
-	vAssert(find != sdfValues.end())
-		return find->second;
+	return sdfValues[area.getCorner(corner)];
 }
 
 OctreeSDF::Sample OctreeSDF::lookupSample(int corner, const Area& area) const
@@ -301,17 +296,18 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 	{
 		auto vecs = area.getCornerVecs(i);
 		Vector3i globalPos = vecs.first;
-		auto find1 = m_SDFValues.find(globalPos);
-		auto find2 = otherSDF.find(globalPos);
-		vAssert(find1 != m_SDFValues.end());
-		vAssert(find2 != otherSDF.end());
-		thisSignedDistances[i] = find1->second.signedDistance;
-		otherSignedDistances[i] = find2->second.signedDistance;
+		const Sample& thisSample = m_SDFValues[globalPos];
+		const Sample& otherSample = otherSDF[globalPos];
+		thisSignedDistances[i] = m_SDFValues[globalPos].signedDistance;
+		otherSignedDistances[i] = otherSDF[globalPos].signedDistance;
 
 		if (otherSignedDistances[i] < thisSignedDistances[i])
-			newSDF[globalPos] = find2->second;
-		else newSDF[globalPos] = find1->second;
+			newSDF[globalPos] = otherSample;
+		else newSDF[globalPos] = thisSample;
 	}
+
+	// if we reached the bottom level we can stop here
+	if (area.m_SizeExpo == 0) return node;
 
 	float thisLowerBound, thisUpperBound;
 	getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
@@ -352,7 +348,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 	}
 	else
 	{	// it's a leaf in the octree
-		if (area.m_SizeExpo > 0 && otherNode)
+		if (otherNode)
 		{
 			// need to subdivide this node
 			node = allocNode();
@@ -374,17 +370,21 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const Signed
 	for (int i = 0; i < 8; i++)
 	{
 		auto vecs = area.getCornerVecs(i);
-		Sample otherSample = lookupOrComputeSample(i, area, otherSDF, otherSDFCache);
 		Vector3i globalPos = vecs.first;
-		auto find = m_SDFValues.find(globalPos);
-		vAssert(find != m_SDFValues.end())
-			otherSignedDistances[i] = otherSample.signedDistance;
-		thisSignedDistances[i] = find->second.signedDistance;
+		int hash = m_SDFValues.keyIndex(globalPos);
+		Sample otherSample = otherSDF.getSample(area.getCornerVecs(i).second);
+		// Sample otherSample = lookupOrComputeSample(i, area, otherSDF, otherSDFCache);
+		const Sample& thisSample = m_SDFValues.lookup(hash, globalPos);
+		otherSignedDistances[i] = otherSample.signedDistance;
+		thisSignedDistances[i] = thisSample.signedDistance;
 
 		if (otherSignedDistances[i] < thisSignedDistances[i])
-			newSDF[globalPos] = otherSample;
-		else newSDF[globalPos] = find->second;
+			newSDF.lookupOrCreate(hash, globalPos) = otherSample;
+		else newSDF.lookupOrCreate(hash, globalPos) = thisSample;
 	}
+
+	// if we reached the bottom level we can stop here
+	if (area.m_SizeExpo == 0) return node;
 
 	float thisLowerBound, thisUpperBound;
 	getLowerAndUpperBound(node, area, thisSignedDistances, thisLowerBound, thisUpperBound);
@@ -417,7 +417,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const Signed
 	}
 	else
 	{	// it's a leaf in the octree
-		if (area.m_SizeExpo > 0 && containsSurface)
+		if (containsSurface)
 		{
 			// need to subdivide this node
 			node = allocNode();
@@ -445,15 +445,17 @@ OctreeSDF::Node* OctreeSDF::merge(Node* node, const Area& area, const SignedDist
 		auto vecs = area.getCornerVecs(i);
 		Sample otherSample = lookupOrComputeSample(i, area, otherSDF, otherSDFCache);
 		Vector3i globalPos = vecs.first;
-		auto find = m_SDFValues.find(globalPos);
-		vAssert(find != m_SDFValues.end())
-			otherSignedDistances[i] = otherSample.signedDistance;
-		thisSignedDistances[i] = find->second.signedDistance;
+		const Sample& thisSample = m_SDFValues[globalPos];
+		otherSignedDistances[i] = otherSample.signedDistance;
+		thisSignedDistances[i] = thisSample.signedDistance;
 
 		if (otherSignedDistances[i] > thisSignedDistances[i])
 			newSDF[globalPos] = otherSample;
-		else newSDF[globalPos] = find->second;
+		else newSDF[globalPos] = thisSample;
 	}
+
+	// if we reached the bottom level we can stop here
+	if (area.m_SizeExpo == 0) return node;
 
 	// compute a lower and upper bound for this node and the other sdf
 	float otherLowerBound, otherUpperBound;
@@ -476,8 +478,7 @@ OctreeSDF::Node* OctreeSDF::merge(Node* node, const Area& area, const SignedDist
 	}
 	if (node)
 	{	// need to recurse to node children
-		vAssert(area.m_SizeExpo > 0)
-			Area subAreas[8];
+		Area subAreas[8];
 		area.getSubAreas(subAreas);
 		for (int i = 0; i < 8; i++)
 			node->m_Children[i] = merge(node->m_Children[i], subAreas[i], otherSDF, newSDF, otherSDFCache);
@@ -574,7 +575,7 @@ void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth)
 {
 	AABB aabb = otherSDF->getAABB();
-	Ogre::Vector3 epsilonVec(0.1f, 0.1f, 0.1f);
+	Ogre::Vector3 epsilonVec(0.000001f, 0.000001f, 0.000001f);
 	aabb.min -= epsilonVec;
 	aabb.max += epsilonVec;
 	return sampleSDF(otherSDF, aabb, maxDepth);
@@ -635,16 +636,26 @@ void OctreeSDF::intersect(SignedDistanceField3D* otherSDF)
 	SignedDistanceGrid newSDF;
 	m_RootNode = intersect(m_RootNode, m_RootArea, *otherSDF, newSDF, SignedDistanceGrid());
 	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
-		m_SDFValues[i->first] = i->second;
+	{
+		for (auto i2 = i->begin(); i2 != i->end(); i2++)
+		{
+			m_SDFValues[i2->first] = i2->second;
+		}
+	}	
 }
 
 void OctreeSDF::intersectAlignedOctree(OctreeSDF* otherOctree)
 {
 	SignedDistanceGrid newSDF;
 	m_RootNode = intersect(m_RootNode, otherOctree->m_RootNode, m_RootArea, otherOctree->m_SDFValues, newSDF);
-	std::cout << newSDF.size() << " new values" << std::endl;
+	// std::cout << newSDF.size() << " new values" << std::endl;
 	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
-		m_SDFValues[i->first] = i->second;
+	{
+		for (auto i2 = i->begin(); i2 != i->end(); i2++)
+		{
+			m_SDFValues[i2->first] = i2->second;
+		}
+	}
 }
 
 void OctreeSDF::subtractAlignedOctree(OctreeSDF* otherOctree)
@@ -702,13 +713,23 @@ void OctreeSDF::merge(SignedDistanceField3D* otherSDF)
 	SignedDistanceGrid newSDF;
 	m_RootNode = merge(m_RootNode, m_RootArea, *otherSDF, newSDF, SignedDistanceGrid());
 	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
-		m_SDFValues[i->first] = i->second;
+	{
+		for (auto i2 = i->begin(); i2 != i->end(); i2++)
+		{
+			m_SDFValues[i2->first] = i2->second;
+		}
+	}
 }
 
 void OctreeSDF::invert()
 {
 	for (auto i = m_SDFValues.begin(); i != m_SDFValues.end(); i++)
-		i->second.signedDistance *= -1.0f;
+	{
+		for (auto i2 = i->begin(); i2 != i->end(); i2++)
+		{
+			i2->second.signedDistance *= -1.0f;
+		}
+	}
 }
 
 OctreeSDF::OctreeSDF(const OctreeSDF& other)
@@ -757,16 +778,19 @@ void OctreeSDF::cleanupSDF()
 	// mark and sweep style garbage collection
 	std::cout << "Cleaning up SDF..." << std::endl;
 	std::unordered_set<Vector3i> deletionCandidates;
-	for (auto i = m_SDFValues.begin(); i != m_SDFValues.end(); ++i)
+	for (auto i = m_SDFValues.begin(); i != m_SDFValues.end(); i++)
 	{
-		deletionCandidates.insert(i->first);
+		for (auto i2 = i->begin(); i2 != i->end(); i2++)
+		{
+			deletionCandidates.insert(i2->first);
+		}
 	}
 	removeReferencedSDFEntries(m_RootNode, m_RootArea, &deletionCandidates);
 
 	int numRemoved = 0;
 	for (auto i = deletionCandidates.begin(); i != deletionCandidates.end(); ++i)
 	{
-		m_SDFValues.erase(m_SDFValues.find(*i));
+		m_SDFValues.remove(*i);
 		numRemoved++;
 	}
 	std::cout << numRemoved << " entries removed " << std::endl;

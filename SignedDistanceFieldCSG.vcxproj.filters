@@ -68,6 +68,7 @@
     <ClInclude Include="BVHScene.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="AABBSDF.h" />
+    <ClInclude Include="VoronoiFracture.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

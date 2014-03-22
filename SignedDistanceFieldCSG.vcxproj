@@ -197,6 +197,7 @@
     <ClInclude Include="Vector3i.h" />
     <ClInclude Include="VertexMerger.h" />
     <ClInclude Include="UniformGridSDF.h" />
+    <ClInclude Include="VoronoiFracture.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

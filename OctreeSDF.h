@@ -50,7 +50,7 @@ protected:
 	}
 	__forceinline void deallocNode(Node* node);
 
-	typedef std::unordered_map<Vector3i, Sample> SignedDistanceGrid;
+	typedef Vector3iHashGrid<Sample> SignedDistanceGrid;
 
 	SignedDistanceGrid m_SDFValues;
 	Node* m_RootNode;
