@@ -66,6 +66,11 @@ protected:
 		}
 		return true;
 	}
+
+	bool signsAreEqual(float val1, float val2) const
+	{
+		return (val1 >= 0.0f && val2 >= 0.0f) || (val1 < 0.0f && val2 < 0.0f);
+	}
 public:
 	/// Retrieves the sample at the given point (exact for implicit SDFs, interpolated for sampled SDFs).
 	virtual Sample getSample(const Ogre::Vector3& point) const = 0;
@@ -78,10 +83,11 @@ public:
 
 	virtual void getLowerAndUpperBound(const Area& area, bool containsSurface, const float* signedCornerDistances, float& lowerBound, float& upperBound) const
 	{
-		if (containsSurface)
+		area.getLowerAndUpperBound(signedCornerDistances, lowerBound, upperBound);
+		/*if (containsSurface)
 			area.getLowerAndUpperBound(signedCornerDistances, lowerBound, upperBound);
 		else
-			area.getLowerAndUpperBoundOptimistic(signedCornerDistances, lowerBound, upperBound);
+			area.getLowerAndUpperBoundOptimistic(signedCornerDistances, lowerBound, upperBound);*/
 	}
 
 	/// Retrieves the axis aligned bounding box of the sdf.

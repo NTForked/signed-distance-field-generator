@@ -145,7 +145,8 @@ struct MathMisc
 		}
 	}
 
-	__forceinline static bool intervalDoesNotOverlap(float i1Min, float i1Max, float i2Min, float i2Max)
+	template<class T>
+	__forceinline static bool intervalDoesNotOverlap(T i1Min, T i1Max, T i2Min, T i2Max)
 	{
 		return (i1Min > i2Max) || (i2Min > i1Max);
 	}

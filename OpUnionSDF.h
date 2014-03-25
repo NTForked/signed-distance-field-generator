@@ -26,7 +26,7 @@ public:
 	}
 	Sample getSample(const Ogre::Vector3& point) const override
 	{
-		Sample maxSample(std::numeric_limits<float>::min());
+		Sample maxSample(std::numeric_limits<float>::lowest());
 		for (auto i = m_SDFs.begin(); i != m_SDFs.end(); ++i)
 		{
 			Sample sample = (*i)->getSample(point);

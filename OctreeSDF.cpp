@@ -84,16 +84,13 @@ OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceFie
 		{
 			signedDistances[i] = lookupOrComputeSample(i, area, implicitSDF, sdfValues).signedDistance;
 		}
-		bool mono = allSignsAreEqual(signedDistances);
-		// if (area.m_SizeExpo <= 0 || mono)
+		/*bool mono = allSignsAreEqual(signedDistances);
+		if (mono)
 		{
-			if (mono)
-			{
-				if (signedDistances[0] > 0.0f) nodeTypeMask = 1;
-				else nodeTypeMask = 2;
-			}
-			return nullptr;	// leaf
-		}
+			if (signedDistances[0] > 0.0f) nodeTypeMask = 1;
+			else nodeTypeMask = 2;
+		}*/
+		return nullptr;	// leaf
 	}
 
 	// create inner node
@@ -105,31 +102,34 @@ OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceFie
 	{
 		int childMask;
 		node->m_Children[i] = createNode(subAreas[i], implicitSDF, sdfValues, childMask);
-		childrenMask |= childMask;
+		// childrenMask |= childMask;
 	}
-	if (childrenMask != 3)
+	/*if (childrenMask != 3)
 	{
 		nodeTypeMask = childrenMask;
 		deallocNode(node);
 		node = nullptr;
-	}
+	}*/
 	return node;
 }
 
 // Computes a lower and upper bound inside the area given the 8 corner signed distances.
 void OctreeSDF::getLowerAndUpperBound(Node* node, const Area& area, float* signedDistances, float& lowerBound, float& upperBound) const
 {
-	if (node) area.getLowerAndUpperBound(signedDistances, lowerBound, upperBound);
+	area.getLowerAndUpperBound(signedDistances, lowerBound, upperBound);
+	/*if (node)
+		area.getLowerAndUpperBound(signedDistances, lowerBound, upperBound);
 	else
-	{	// if it's a leaf we can do even better and just return min and max of the corner values.
-		lowerBound = std::numeric_limits<float>::max();
-		upperBound = std::numeric_limits<float>::min();
-		for (int i = 0; i < 8; i++)
-		{
-			lowerBound = std::min(lowerBound, signedDistances[i]);
-			upperBound = std::max(upperBound, signedDistances[i]);
-		}
-	}
+	{	// if it's a leaf we can do a little better
+		area.getLowerAndUpperBoundOptimistic(signedDistances, lowerBound, upperBound);
+		float halfSize = area.m_RealSize * 0.5f;
+		// maxOffset = dist to face mid
+		float maxOffset = std::sqrtf(2 * halfSize*halfSize);
+		lowerBound -= maxOffset;
+		upperBound += maxOffset;
+		// lowerBound -= area.m_RealSize * 0.5f;
+		// upperBound += area.m_RealSize * 0.5f;
+	}*/
 }
 
 void OctreeSDF::countNodes(Node* node, const Area& area, int& counter)
@@ -245,13 +245,20 @@ void OctreeSDF::getCubesToMarch(Node* node, const Area& area, vector<Cube>& cube
 	{	// leaf
 		Cube cube;
 		cube.posMin = area.m_MinPos;
+		float signedDistances[8];
 		for (int i = 0; i < 8; i++)
 		{
 			cube.cornerSamples[i] = lookupSample(i, area);
+			signedDistances[i] = cube.cornerSamples[i].signedDistance;
 		}
-		if (allSignsAreEqual(cube.cornerSamples)) return;
+		float lowerBound, upperBound;
+		getLowerAndUpperBound(node, area, signedDistances, lowerBound, upperBound);
+		if (signsAreEqual(lowerBound, upperBound)) return;
 		if (area.m_SizeExpo <= 0)
-			cubes.push_back(cube);
+		{
+			if (!allSignsAreEqual(cube.cornerSamples))
+				cubes.push_back(cube);
+		}
 		else
 		{
 			interpolateLeaf(area);
@@ -262,6 +269,7 @@ void OctreeSDF::getCubesToMarch(Node* node, const Area& area, vector<Cube>& cube
 		}
 	}
 }
+
 OctreeSDF::Sample OctreeSDF::getSample(Node* node, const Area& area, const Ogre::Vector3& point) const
 {
 	if (!node)
@@ -293,6 +301,28 @@ OctreeSDF::Sample OctreeSDF::getSample(Node* node, const Area& area, const Ogre:
 	// std::cout << -std::sqrtf(area.toAABB().squaredDistance(point)) << std::endl;
 	return Sample(-std::sqrtf(area.toAABB().squaredDistance(point)));
 	// return Sample(-0.001f);
+}
+
+void OctreeSDF::ensureSDFValuesExist(Node* node, const Area& area, const Vector3i& corner1, const Vector3i& corner2)
+{
+	if (area.m_SizeExpo <= 0 || !area.containsPoint(corner1) || !area.containsPoint(corner2)) return;
+	Area subAreas[8];
+	area.getSubAreas(subAreas);
+	if (!node)
+	{
+		interpolateLeaf(area);
+		for (int i = 0; i < 8; i++)
+		{
+			ensureSDFValuesExist(nullptr, subAreas[i], corner1, corner2);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < 8; i++)
+		{
+			ensureSDFValuesExist(node->m_Children[i], subAreas[i], corner1, corner2);
+		}
+	}
 }
 
 OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& area, SignedDistanceGrid& otherSDF, SignedDistanceGrid& newSDF)
@@ -379,15 +409,14 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const Signed
 	{
 		auto vecs = area.getCornerVecs(i);
 		Vector3i globalPos = vecs.first;
-		int hash = m_SDFValues.keyIndex(globalPos);
 		Sample otherSample = otherSDF.getSample(area.getCornerVecs(i).second);
 		// Sample otherSample = lookupOrComputeSample(i, area, otherSDF, otherSDFCache);
-		const Sample& thisSample = m_SDFValues.lookup(hash, globalPos);
+		const Sample& thisSample = m_SDFValues.lookup(globalPos);
 		otherSignedDistances[i] = otherSample.signedDistance;
 		thisSignedDistances[i] = thisSample.signedDistance;
 
 		if (otherSignedDistances[i] < thisSignedDistances[i])
-			newSDF.lookupOrCreate(hash, globalPos) = otherSample;
+			newSDF.lookupOrCreate(globalPos) = otherSample;
 		// else newSDF.lookupOrCreate(hash, globalPos) = thisSample;
 	}
 
@@ -536,7 +565,7 @@ bool OctreeSDF::approximatesWell(const SignedDistanceField3D& implicitSDF, Signe
 		// if (realSample.signedDistance > 0 && i->second < 0) return false;
 		// if (realSample.signedDistance < 0 && i->second > 0) return false;
 		float diff = realSample.signedDistance - i->second;
-		if (fabs(diff) > 0.1f) return false;
+		if (fabs(diff) > 0.004f) return false;
 	}
 	//std::cout << "MUH" << std::endl;
 	return true;
@@ -594,6 +623,33 @@ std::vector<std::pair<Vector3i, float> > OctreeSDF::getControlPoints(const Area&
 
 	return samples;
 }
+
+/*bool OctreeSDF::couldContainSurface(const Area& area, SignedDistanceGrid& grid)
+{
+	int edgeIndices[] = {
+		0, 1,
+		0, 2,
+		0, 4,
+		1, 3,
+		1, 5,
+		2, 3,
+		2, 6,
+		3, 7,
+		4, 5,
+		4, 6,
+		5, 7,
+		6, 7 };
+	for (int e = 0; e < 24; e += 2)
+	{
+		int corner1 = edgeIndices[e];
+		int corner2 = edgeIndices[e + 1];
+		// if (!signsAreEqual(i->cornerSamples[corner1].signedDistance, i->cornerSamples[corner2].signedDistance))
+		{
+			Vector3i offset1 = Vector3i::fromBitMask(corner1);
+			Vector3i offset2 = Vector3i::fromBitMask(corner2);
+		}
+	}
+}*/
 
 void OctreeSDF::interpolateLeaf(const Area& area, SignedDistanceGrid& grid)
 {
@@ -686,6 +742,7 @@ std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF,
 	octreeSDF->m_CellSize = cubeSize / (1 << maxDepth);
 	otherSDF->prepareSampling(aabb, octreeSDF->m_CellSize);
 	octreeSDF->m_RootArea = Area(Vector3i(0, 0, 0), maxDepth, aabb.getMin(), cubeSize);
+	octreeSDF->m_SDFValues.rehash((1 << maxDepth) * (1 << maxDepth) * 2);	// heuristic, leaves should scale with the surface (quadratic)
 	octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, *otherSDF, octreeSDF->m_SDFValues);
 	return octreeSDF;
 }
@@ -700,11 +757,102 @@ AABB OctreeSDF::getAABB() const
 	return m_RootArea.toAABB();
 }
 
+void OctreeSDF::addCubesContainingEdge(const Vector3i& corner1, const Vector3i& corner2, Vector3iHashGrid<Cube>& cubes)
+{
+	Vector3i offset = corner2 - corner1;
+	Vector3i otherMinCubes[3];
+	if (offset.x)
+	{
+		otherMinCubes[0] = corner1 - Vector3i(0, 0, 1);
+		otherMinCubes[1] = corner1 - Vector3i(0, 1, 0);
+		otherMinCubes[2] = corner1 - Vector3i(0, 1, 1);
+	}
+	else if (offset.y)
+	{
+		otherMinCubes[0] = corner1 - Vector3i(0, 0, 1);
+		otherMinCubes[1] = corner1 - Vector3i(1, 0, 0);
+		otherMinCubes[2] = corner1 - Vector3i(1, 0, 1);
+	}
+	else if (offset.z)
+	{
+		otherMinCubes[0] = corner1 - Vector3i(0, 1, 0);
+		otherMinCubes[1] = corner1 - Vector3i(1, 0, 0);
+		otherMinCubes[2] = corner1 - Vector3i(1, 1, 0);
+	}
+	if (cubes.hasKey(otherMinCubes[0])
+		&& cubes.hasKey(otherMinCubes[1])
+		&& cubes.hasKey(otherMinCubes[2]))
+		return;
+	for (int i = 0; i < 3; i++)
+	{
+		if (!m_RootArea.containsPoint(otherMinCubes[i]) || !m_RootArea.containsPoint(otherMinCubes[i] + Vector3i(1, 1, 1)))
+			continue;
+		bool created;
+		Cube& cube = cubes.lookupOrCreate(otherMinCubes[i], created);
+		if (created)
+		{
+			cube.posMin = otherMinCubes[i];
+			for (int x = 0; x < 8; x++)
+			{
+				if (!m_SDFValues.find(cube.posMin + Vector3i::fromBitMask(x), cube.cornerSamples[x]))
+				{
+					ensureSDFValuesExist(m_RootNode, m_RootArea, corner1, corner2);
+					cube.cornerSamples[x] = m_SDFValues[cube.posMin + Vector3i::fromBitMask(x)];
+				}
+			}
+		}
+	}
+}
+
 vector<OctreeSDF::Cube> OctreeSDF::getCubesToMarch()
 {
 	vector<Cube> cubes;
 	std::stack<Node*> nodes;
 	getCubesToMarch(m_RootNode, m_RootArea, cubes);
+
+	/*Vector3iHashGrid<Cube> cubeSet;
+	cubeSet.rehash(cubes.size() * 2);
+	for (auto i = cubes.begin(); i != cubes.end(); ++i)
+	{
+		cubeSet.insert(std::make_pair(i->posMin, *i));
+	}
+
+	// second pass: for all edges with a sign change, add the 4 neighbor cubes
+	int edgeIndices[] = {
+		0, 1,
+		0, 2,
+		0, 4,
+		1, 3,
+		1, 5,
+		2, 3,
+		2, 6,
+		3, 7,
+		4, 5,
+		4, 6,
+		5, 7,
+		6, 7 };
+	for (auto i = cubes.begin(); i != cubes.end(); ++i)
+	{
+		for (int e = 0; e < 24; e+=2)
+		{
+			int corner1 = edgeIndices[e];
+			int corner2 = edgeIndices[e + 1];
+			// if (!signsAreEqual(i->cornerSamples[corner1].signedDistance, i->cornerSamples[corner2].signedDistance))
+			{
+				Vector3i offset1 = Vector3i::fromBitMask(corner1);
+				Vector3i offset2 = Vector3i::fromBitMask(corner2);
+				addCubesContainingEdge(i->posMin + offset1, i->posMin + offset2, cubeSet);
+			}
+		}
+	}
+	cubes.clear();
+	for (auto i = cubeSet.begin(); i != cubeSet.end(); i++)
+	{
+		for (auto i2 = i->begin(); i2 != i->end(); i2++)
+		{
+			cubes.push_back(i2->second);
+		}
+	}*/
 	return cubes;
 }
 

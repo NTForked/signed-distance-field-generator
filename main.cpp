@@ -32,6 +32,7 @@ void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 	auto ts = Profiler::timestamp();
 	TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
 	auto octreeSDF = OctreeSDF::sampleSDF(&meshSDF, maxDepth);
+	std::cout << "Buddha SDF has " << octreeSDF->countNodes() << " nodes." << std::endl;
 	Profiler::printJobDuration("SDF import " + fileName, ts);
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_" + fileName, octreeSDF);
 }
@@ -208,10 +209,11 @@ void exampleInsideOutsideTest()
 
 int main()
 {
-	testCubeSplit();
+	// testMeshImport();
+	// testCubeSplit();
 	// testFractalNoisePlane();
 	// splitBuddha2();
-	//splitBuddha();
+	splitBuddha();
 	while (true) {}
 	return 0;
 }

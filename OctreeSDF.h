@@ -92,6 +92,9 @@ protected:
 
 	Sample getSample(Node* node, const Area& area, const Ogre::Vector3& point) const;
 
+	/// Ensures that sdf values for the 4 cubes containing the given edge between corner1 and corner2 exist.
+	void ensureSDFValuesExist(Node* node, const Area& area, const Vector3i& corner1, const Vector3i& corner2);
+
 	/// Intersects aligned octree nodes.
 	Node* intersect(Node* node, Node* otherNode, const Area& area, SignedDistanceGrid& otherSDF, SignedDistanceGrid& newSDF);
 
@@ -107,10 +110,14 @@ protected:
 	static void interpolateLeaf(const Area& area, SignedDistanceGrid& grid);
 	void interpolateLeaf(const Area& area) { interpolateLeaf(area, m_SDFValues); }
 
+	/// Retrieves a pessimistic guess whether a leaf area could contain the surface.
+	// bool couldContainSurface(const Area& area, SignedDistanceGrid& grid);
+
 	std::vector<std::pair<Vector3i, float> > getControlPoints(const Area& area, float* cornerSignedDistances);
 
 	bool approximatesWell(const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, const std::vector<std::pair<Vector3i, float> >& controlPoints);
 
+	void addCubesContainingEdge(const Vector3i& corner1, const Vector3i& corner2, Vector3iHashGrid<Cube>& cubes);
 	void getCubesToMarch(Node* node, const Area& area, vector<Cube>& cubes);
 
 	BVHScene m_TriangleCache;

@@ -308,6 +308,11 @@ public:
 		return std::max<int>(std::max<int>(abs(x), abs(y)), abs(z));
 	}
 
+	static Vector3i fromBitMask(int bitmask)
+	{
+		return Vector3i((bitmask & 4) != 0, (bitmask & 2) != 0, bitmask & 1);
+	}
+
 	std::string toString() const
 	{
 		std::string str;
@@ -397,8 +402,23 @@ public:
 		insertUnsafe(keyIndex(keyValue.first), keyValue);
 	}
 
-	T& lookup(unsigned int index, const Vector3i& key)
+	bool find(const Vector3i& key, T& value)
 	{
+		int index = keyIndex(key);
+		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
+		{
+			if (i->first == key)
+			{
+				value = i->second;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	T& lookup(const Vector3i& key)
+	{
+		int index = keyIndex(key);
 		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
 		{
 			if (i->first == key)
@@ -409,8 +429,9 @@ public:
 		vAssert(false);
 		return m_Dummy;
 	}
-	const T& lookup(unsigned int index, const Vector3i& key) const
+	const T& lookup(const Vector3i& key) const
 	{
+		int index = keyIndex(key);
 		for (auto i = m_Buckets[index].begin(); i != m_Buckets[index].end(); ++i)
 		{
 			if (i->first == key)
@@ -469,7 +490,7 @@ public:
 	}
 	bool hasKey(const Vector3i& key) const
 	{
-		return hasKey(keyIndex(key));
+		return hasKey(keyIndex(key), key);
 	}
 
 	inline T& operator[](const Vector3i& key)
@@ -479,7 +500,7 @@ public:
 	}
 	inline const T& operator[](const Vector3i& key) const
 	{
-		return lookup(keyIndex(key), key);
+		return lookup(key);
 	}
 
 	void remove(const Vector3i& key)
