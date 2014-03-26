@@ -225,7 +225,7 @@ public:
 		Profiler::printJobDuration("Sign cache computation", timeStamp);
 	}
 
-	/// Chekc whether a point lies inside
+	/// Check whether a point lies inside
 	bool isInside(const Ogre::Vector3& point) const
 	{
 		bool inside = false;

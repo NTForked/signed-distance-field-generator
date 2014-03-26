@@ -70,6 +70,10 @@ void testCubeSplit()
 
 void splitBuddha()
 {
+	/*Ogre::Quaternion rotation(Ogre::Radian(Ogre::Math::PI*0.25f), Ogre::Vector3(1, 0, 0));
+	Ogre::Matrix4 transform(rotation);
+	auto part1 = SDFManager::sampleOctreeSDF(std::make_shared<TransformSDF>(SDFManager::createSDFFromMesh("buddha2.obj"), rotation), 8);
+	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_BuddhaSplit1", part1);*/
 	auto part1 = SDFManager::sampleOctreeSDF(SDFManager::createSDFFromMesh("buddha2.obj"), 8);
 	auto part2 = part1->clone();
 	std::cout << "Buddha SDF has " << part1->countNodes() << " nodes." << std::endl;
@@ -130,8 +134,8 @@ void splitBuddha2()
 
 void testFractalNoisePlane()
 {
-	Ogre::Quaternion rotation(Ogre::Radian(Ogre::Math::PI*0.25f), Ogre::Vector3(1, 0, 0));
-	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.15f);	// , rotation);
+	Ogre::Quaternion rotation(Ogre::Radian(Ogre::Math::PI*0.5f), Ogre::Vector3(1, 0, 0));
+	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.15f, rotation);
 	auto octreeSDF = SDFManager::sampleOctreeSDF(std::static_pointer_cast<SignedDistanceField3D>(fractalNoiseSDF), 8);
 	std::cout << "Fractal noise SDF has " << octreeSDF->countNodes() << " nodes." << std::endl;
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_FractalNoise", octreeSDF);
@@ -210,10 +214,10 @@ void exampleInsideOutsideTest()
 int main()
 {
 	// testMeshImport();
-	// testCubeSplit();
+	testCubeSplit();
 	// testFractalNoisePlane();
 	// splitBuddha2();
-	splitBuddha();
+	// splitBuddha();
 	while (true) {}
 	return 0;
 }

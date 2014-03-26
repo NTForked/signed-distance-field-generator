@@ -66,6 +66,8 @@ protected:
 
 	Node* cloneNode(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues);
 
+	void cloneSDF(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues);
+
 	static Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
 
 	static Sample lookupOrComputeSample(const Vector3i& globalPos, const Ogre::Vector3& realPos, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
@@ -115,7 +117,7 @@ protected:
 
 	std::vector<std::pair<Vector3i, float> > getControlPoints(const Area& area, float* cornerSignedDistances);
 
-	bool approximatesWell(const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, const std::vector<std::pair<Vector3i, float> >& controlPoints);
+	bool approximatesWell(const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, const std::vector<std::pair<Vector3i, float> >& controlPoints, float tolerance);
 
 	void addCubesContainingEdge(const Vector3i& corner1, const Vector3i& corner2, Vector3iHashGrid<Cube>& cubes);
 	void getCubesToMarch(Node* node, const Area& area, vector<Cube>& cubes);

@@ -37,6 +37,22 @@ OctreeSDF::Node* OctreeSDF::cloneNode(Node* node, const Area& area, const Signed
 	return cloned;
 }
 
+void OctreeSDF::cloneSDF(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues)
+{
+	Area subAreas[8];
+	area.getSubAreas(subAreas);
+	for (int i = 0; i < 8; i++)
+	{
+		Vector3i globalPos = area.getCorner(i);
+		clonedSDFValues[globalPos] = sdfValues[globalPos];
+	}
+	if (!node) return;
+	for (int i = 0; i < 8; i++)
+	{
+		cloneSDF(node->m_Children[i], subAreas[i], sdfValues, clonedSDFValues);
+	}
+}
+
 OctreeSDF::Sample OctreeSDF::lookupOrComputeSample(const Vector3i& globalPos, const Ogre::Vector3& realPos, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
 {
 	bool created;
@@ -75,15 +91,18 @@ OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceFie
 
 OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, int& nodeTypeMask)
 {
-	nodeTypeMask = 3;
-	if (area.m_SizeExpo <= 0 ||
-		!implicitSDF.cubeNeedsSubdivision(area))
+	float signedDistances[8];
+	for (int i = 0; i < 8; i++)
 	{
-		float signedDistances[8];
-		for (int i = 0; i < 8; i++)
-		{
-			signedDistances[i] = lookupOrComputeSample(i, area, implicitSDF, sdfValues).signedDistance;
-		}
+		signedDistances[i] = lookupOrComputeSample(i, area, implicitSDF, sdfValues).signedDistance;
+	}
+	if (area.m_SizeExpo <= 0) return nullptr;
+	// auto controlPoints = getControlPoints(area, signedDistances);
+	// float halfSize = area.m_RealSize * 0.5f;
+	// vAssert(approximatesWell(implicitSDF, sdfValues, controlPoints, std::sqrtf(3) * halfSize + 2 * m_CellSize))
+	nodeTypeMask = 3;
+	if (!implicitSDF.cubeNeedsSubdivision(area))
+	{
 		/*bool mono = allSignsAreEqual(signedDistances);
 		if (mono)
 		{
@@ -116,20 +135,22 @@ OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceFie
 // Computes a lower and upper bound inside the area given the 8 corner signed distances.
 void OctreeSDF::getLowerAndUpperBound(Node* node, const Area& area, float* signedDistances, float& lowerBound, float& upperBound) const
 {
-	area.getLowerAndUpperBound(signedDistances, lowerBound, upperBound);
-	/*if (node)
+	// area.getLowerAndUpperBound(signedDistances, lowerBound, upperBound);
+	if (node)
+	{
 		area.getLowerAndUpperBound(signedDistances, lowerBound, upperBound);
+	}
 	else
 	{	// if it's a leaf we can do a little better
-		area.getLowerAndUpperBoundOptimistic(signedDistances, lowerBound, upperBound);
+		area.getMinimumAndMaximumCorner(signedDistances, lowerBound, upperBound);
 		float halfSize = area.m_RealSize * 0.5f;
 		// maxOffset = dist to face mid
-		float maxOffset = std::sqrtf(2 * halfSize*halfSize);
+		float maxOffset = std::sqrtf(2) * halfSize;
 		lowerBound -= maxOffset;
 		upperBound += maxOffset;
-		// lowerBound -= area.m_RealSize * 0.5f;
-		// upperBound += area.m_RealSize * 0.5f;
-	}*/
+	}
+	// lowerBound -= 2.0f * m_CellSize;
+	// upperBound += 2.0f * m_CellSize;
 }
 
 void OctreeSDF::countNodes(Node* node, const Area& area, int& counter)
@@ -363,6 +384,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 	}
 	else if (otherLowerBound > thisUpperBound)
 	{	// no change for this node
+		// cloneSDF(node, area, m_SDFValues, newSDF);
 		return node;
 	}
 
@@ -433,6 +455,8 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const Area& area, const Signed
 	float otherLowerBound, otherUpperBound;
 	bool containsSurface = otherSDF.cubeNeedsSubdivision(area);
 	otherSDF.getLowerAndUpperBound(area, containsSurface, otherSignedDistances, otherLowerBound, otherUpperBound);
+	// otherLowerBound -= 2.0f * m_CellSize;
+	// otherUpperBound += 2.0f * m_CellSize;
 
 	if (otherUpperBound < thisLowerBound)
 	{	// this node is replaced with the other sdf
@@ -557,7 +581,7 @@ OctreeSDF::Node* OctreeSDF::merge(Node* node, const Area& area, const SignedDist
 	return node;
 }
 
-bool OctreeSDF::approximatesWell(const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, const std::vector<std::pair<Vector3i, float> >& controlPoints)
+bool OctreeSDF::approximatesWell(const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, const std::vector<std::pair<Vector3i, float> >& controlPoints, float tolerance)
 {
 	for (auto i = controlPoints.begin(); i != controlPoints.end(); ++i)
 	{
@@ -565,7 +589,14 @@ bool OctreeSDF::approximatesWell(const SignedDistanceField3D& implicitSDF, Signe
 		// if (realSample.signedDistance > 0 && i->second < 0) return false;
 		// if (realSample.signedDistance < 0 && i->second > 0) return false;
 		float diff = realSample.signedDistance - i->second;
-		if (fabs(diff) > 0.004f) return false;
+		if (fabs(diff) > tolerance)
+		{
+			std::cout << m_CellSize << std::endl;
+			std::cout << fabs(diff) << " > " << tolerance << std::endl;
+			std::cout << realSample.signedDistance << " vs. " << i->second << std::endl;
+			std::cout << i->first.x << " " << i->first.y << " " << i->first.z << std::endl;
+			return false;
+		}
 	}
 	//std::cout << "MUH" << std::endl;
 	return true;
@@ -886,7 +917,8 @@ void OctreeSDF::intersect(SignedDistanceField3D* otherSDF)
 		{
 			m_SDFValues[i2->first] = i2->second;
 		}
-	}	
+	}
+	cleanupSDF();
 }
 
 void OctreeSDF::intersect2(SignedDistanceField3D* otherSDF)
@@ -919,8 +951,10 @@ void OctreeSDF::intersectAlignedOctree(OctreeSDF* otherOctree)
 			m_SDFValues[i2->first] = i2->second;
 		}
 	}
+	cleanupSDF();
 }
 
+#include "SDFManager.h"
 void OctreeSDF::subtractAlignedOctree(OctreeSDF* otherOctree)
 {
 	auto clone = otherOctree->clone();

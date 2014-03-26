@@ -58,11 +58,14 @@ public:
 
 		// scale, move and project on xz plane
 		Ogre::Vector3 scaled = (point - m_SurfaceAABB.min) * m_InverseCellSize;
-		int x = (int)(scaled.x);
-		int y = (int)(scaled.y);
+		int x = (int)(scaled.x + 0.5f);
+		int y = (int)(scaled.y + 0.5f);
 		float surfaceZ = lookupSafe(x, y, m_HeightMap, m_HeightMapSize);
 		sample.signedDistance = surfaceZ - point.z;
-		if (sample.signedDistance < 0) sample.normal *= -1;
+		if (sample.signedDistance < 0)
+		{
+			sample.normal *= -1;
+		}
 		return sample;
 	}
 

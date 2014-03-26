@@ -57,15 +57,15 @@ struct Area
 			minDist = std::min(minDist, signedDistances[i]);
 			maxDist = std::max(maxDist, signedDistances[i]);
 		}
-		float halfSize = m_RealSize *0.5f;
+		float halfSize = m_RealSize * 0.5f;
 		// maxOffset = dist to mid
-		float maxOffset = std::sqrtf(3 * halfSize*halfSize);
+		float maxOffset = std::sqrtf(3) * halfSize;
 		lowerBound = minDist - maxOffset;
 		upperBound = maxDist + maxOffset;
 	}
 
 	// Simply returns the minimum / maximum corner.
-	void getLowerAndUpperBoundOptimistic(const float* signedDistances, float& lowerBound, float& upperBound) const
+	void getMinimumAndMaximumCorner(const float* signedDistances, float& lowerBound, float& upperBound) const
 	{
 		lowerBound = std::numeric_limits<float>::max();
 		upperBound = std::numeric_limits<float>::lowest();
