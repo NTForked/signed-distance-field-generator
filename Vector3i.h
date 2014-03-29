@@ -102,6 +102,14 @@ public:
 			z * rhs.z);
 	}
 
+	inline Vector3i operator % (int value) const
+	{
+		return Vector3i(
+			x % value,
+			y % value,
+			z % value);
+	}
+
 	inline bool operator < ( const Vector3i& rhs ) const
 	{
 		if(x < rhs.x && y <= rhs.y && z <= rhs.z) return true;

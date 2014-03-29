@@ -69,6 +69,8 @@
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="AABBSDF.h" />
     <ClInclude Include="VoronoiFracture.h" />
+    <ClInclude Include="Vector3iHashGridRefCounted.h" />
+    <ClInclude Include="BlockBasedSparseArray.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

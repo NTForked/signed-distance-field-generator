@@ -11,6 +11,7 @@
 #include "OpInvertSDF.h"
 #include "Area.h"
 #include "BVHScene.h"
+// #include "Vector3iHashGridRefCounted.h"
 
 // #define USE_BOOST_POOL
 
