@@ -67,7 +67,7 @@ class MarchingCubes {
 		unsigned char word = 0;
 		for (int i = 0; i < 8; i++)
 		{
-			if (cube.cornerSamples[i].signedDistance >= 0.0f)
+			if (cube.cornerSamples[i]->signedDistance >= 0.0f)
 				word |= (1<<i);
 		}
 		Vector3i offset = cube.posMin.doubleVec()+Vector3i(1,1,1);
@@ -77,16 +77,16 @@ class MarchingCubes {
 			// c1 * (1-w) + c2 * w = 0
 			// w = c1 / (c1 - c2)
 			VertexIndexed indexed;
-			indexed.vertex.normal = cube.cornerSamples[0].normal;
-			indexed.vertex.uv = cube.cornerSamples[0].uv;
+			indexed.vertex.normal = cube.cornerSamples[0]->normal;
+			indexed.vertex.uv = cube.cornerSamples[0]->uv;
 			indexed.index = vertexMap.size();
 			Vector3i vertex1(triangles[i].p1+offset);
 			auto tryInsert = vertexMap.insert(std::make_pair(vertex1, indexed));
 			if (tryInsert.second)
 			{
 				auto nodes = TLT::getSingleton().edgeMidsToNodes[triangles[i].p1];
-				float w = cube.cornerSamples[nodes.first].signedDistance
-					/ (cube.cornerSamples[nodes.first].signedDistance - cube.cornerSamples[nodes.second].signedDistance);
+				float w = cube.cornerSamples[nodes.first]->signedDistance
+					/ (cube.cornerSamples[nodes.first]->signedDistance - cube.cornerSamples[nodes.second]->signedDistance);
 				vAssert(w >= 0 && w <= 1);
 				tryInsert.first->second.vertex.position = cubeVecs[nodes.first] * (1-w) + cubeVecs[nodes.second] * w;
 			}
@@ -99,8 +99,8 @@ class MarchingCubes {
 			if (tryInsert.second)
 			{
 				auto nodes = TLT::getSingleton().edgeMidsToNodes[triangles[i].p2];
-				float w = cube.cornerSamples[nodes.first].signedDistance
-					/ (cube.cornerSamples[nodes.first].signedDistance - cube.cornerSamples[nodes.second].signedDistance);
+				float w = cube.cornerSamples[nodes.first]->signedDistance
+					/ (cube.cornerSamples[nodes.first]->signedDistance - cube.cornerSamples[nodes.second]->signedDistance);
 				vAssert(w >= 0 && w <= 1);
 				tryInsert.first->second.vertex.position = cubeVecs[nodes.first] * (1 - w) + cubeVecs[nodes.second] * w;
 			}
@@ -113,8 +113,8 @@ class MarchingCubes {
 			if (tryInsert.second)
 			{
 				auto nodes = TLT::getSingleton().edgeMidsToNodes[triangles[i].p3];
-				float w = cube.cornerSamples[nodes.first].signedDistance
-					/ (cube.cornerSamples[nodes.first].signedDistance - cube.cornerSamples[nodes.second].signedDistance);
+				float w = cube.cornerSamples[nodes.first]->signedDistance
+					/ (cube.cornerSamples[nodes.first]->signedDistance - cube.cornerSamples[nodes.second]->signedDistance);
 				vAssert(w >= 0 && w <= 1);
 				tryInsert.first->second.vertex.position = cubeVecs[nodes.first] * (1 - w) + cubeVecs[nodes.second] * w;
 			}

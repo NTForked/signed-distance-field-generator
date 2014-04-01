@@ -29,89 +29,184 @@ The actual signed distances are stored in a spatial hashmap because octree nodes
 class OctreeSDF : public SampledSignedDistanceField3D
 {
 protected:
-	struct Node
+	class GridNode;
+public:
+	static const int LEAF_EXPO = 2;
+	static const int LEAF_SIZE_1D = (1 << LEAF_EXPO) + 1;
+	static const int LEAF_SIZE_2D = LEAF_SIZE_1D * LEAF_SIZE_1D;
+	static const int LEAF_SIZE_3D = LEAF_SIZE_2D * LEAF_SIZE_1D;
+	static const int LEAF_SIZE_1D_INNER = LEAF_SIZE_1D - 1;
+	static const int LEAF_SIZE_2D_INNER = LEAF_SIZE_1D_INNER * LEAF_SIZE_1D_INNER;
+	static const int LEAF_SIZE_3D_INNER = LEAF_SIZE_2D_INNER * LEAF_SIZE_1D_INNER;
+
+	/*struct SharedLeafFace
 	{
-		Node* m_Children[8];
-		Node()
+		SharedLeafFace(const Ogre::Vector3& pos, float stepSize, int dim1, int dim2, const SignedDistanceField3D& implicitSDF);
+		SharedLeafFace() : useCount(0) {}
+		Sample samples[LEAF_SIZE_2D];
+		int useCount;
+
+		Sample& at(int x, int y) { return samples[x * LEAF_SIZE_2D + y]; }
+	};*/
+	struct SharedSample
+	{
+		SharedSample(const Sample& s) : useCount(0), sample(s) {}
+		// ~SharedSample() { std::cout << "MUUH" << std::endl; }
+		Sample sample;
+		int useCount;
+	};
+	struct SharedSamples
+	{
+		SharedSamples() : sample(nullptr), gridNode(nullptr) {}
+		SharedSamples(SharedSample* sample) : sample(sample), gridNode(nullptr) {}
+		SharedSample* sample;
+		GridNode* gridNode;		// grid node with sample position as min pos
+		/*SharedLeafFace* faceXY;
+		SharedLeafFace* faceXZ;
+		SharedLeafFace* faceYZ;*/
+	};
+	typedef Vector3iHashGrid<SharedSamples*> SignedDistanceGrid;
+protected:
+	class Node
+	{
+	public:
+		enum Type
 		{
-			for (int i = 0; i < 8; i++)
-				m_Children[i] = nullptr;
-		}
+			INNER = 0,
+			EMPTY = 1,
+			GRID = 2
+		};
+	protected:
+		Type m_NodeType;
+	public:
+		virtual ~Node() {}
+
+		virtual void countNodes(int& counter) const = 0;
+
+		virtual void countLeaves(int& counter) const {}
+
+		virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) {}
+
+		virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const { return Sample(); }
+
+		virtual void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) = 0;
+
+		virtual void invert() = 0;
+
+		virtual Node* clone() const = 0;
+
+		inline Type getNodeType() { return m_NodeType; }
 	};
 
-	// Node allocation and deallocation methods
-	__forceinline Node* allocNode()
+	class InnerNode : public Node
 	{
-#ifdef USE_BOOST_POOL
-		Node* node = m_NodePool.malloc();
-#else
-		Node* node = new Node();
-#endif
-		return node;
-	}
-	__forceinline void deallocNode(Node* node);
+	public:
+		Node* m_Children[8];
+		InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
+		~InnerNode();
+		InnerNode(const InnerNode& rhs);
 
-	typedef Vector3iHashGrid<Sample> SignedDistanceGrid;
+		virtual void countNodes(int& counter) const override;
+
+		virtual void countLeaves(int& counter) const override;
+
+		void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) override;
+
+		virtual void invert();
+
+		virtual Node* clone() const override { return new InnerNode(*this); }
+
+		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
+
+		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
+	};
+
+	class EmptyNode : public Node
+	{
+	public:
+		// EmptyNode() {}
+		EmptyNode(Sample* cornerSamples);
+		~EmptyNode();
+
+		Sample m_CornerSamples[8];
+
+		virtual void countNodes(int& counter) const override { counter++; }
+
+		void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) override;
+
+		virtual Node* clone() const override { return new EmptyNode(*this); }
+
+		virtual void invert();
+
+		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
+
+		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
+	};
+
+	class GridNode : public Node
+	{
+	public:
+		GridNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
+		~GridNode();
+		// SharedLeafFace* m_Faces[6];
+		Sample m_Samples[LEAF_SIZE_3D];
+
+		Sample& at(int x, int y, int z) { return m_Samples[x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z]; }
+
+		virtual void countNodes(int& counter) const override { counter++; }
+
+		virtual void countLeaves(int& counter) const override { counter++; }
+
+		void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) override;
+
+		virtual Node* clone() const override { return new GridNode(*this); }
+
+		virtual void invert();
+
+		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
+
+		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
+	};
 
 	SignedDistanceGrid m_SDFValues;
 	Node* m_RootNode;
-
-#ifdef USE_BOOST_POOL
-	boost::object_pool<Node> m_NodePool;
-#endif
 
 	float m_CellSize;
 
 	/// The octree covers an axis aligned cube.
 	Area m_RootArea;
 
-	Node* cloneNode(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues);
-
-	void cloneSDF(Node* node, const Area& area, const SignedDistanceGrid& sdfValues, SignedDistanceGrid& clonedSDFValues);
-
-	static Sample lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
-
-	static Sample lookupOrComputeSample(const Vector3i& globalPos, const Ogre::Vector3& realPos, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
-
-	static Sample lookupSample(int corner, const Area& area, const SignedDistanceGrid& sdfValues);
-
-	Sample lookupSample(int corner, const Area& area) const;
-
-	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
-
-	/// Top down octree constructor given a SDF.
-	Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, int& nodeTypeMask);
-
-	// Computes a lower and upper bound inside the area given the 8 corner signed distances.
-	void getLowerAndUpperBound(Node* node, const Area& area, float* signedDistances, float& lowerBound, float& upperBound) const;
-
-	void countNodes(Node* node, const Area& area, int& counter);
-
-	void sumPositionsAndMass(Node* node, const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass);
-
-	void removeReferencedSDFEntries(const Node* node, const Area& area, std::unordered_set<Vector3i>* deletionCandidates) const;
+	float m_GridLeafStepSize;
 
 	Node* simplifyNode(Node* node, const Area& area, int& nodeTypeMask);
 
-	Sample getSample(Node* node, const Area& area, const Ogre::Vector3& point) const;
-
-	/// Ensures that sdf values for the 4 cubes containing the given edge between corner1 and corner2 exist.
-	void ensureSDFValuesExist(Node* node, const Area& area, const Vector3i& corner1, const Vector3i& corner2);
-
 	/// Intersects aligned octree nodes.
-	Node* intersect(Node* node, Node* otherNode, const Area& area, SignedDistanceGrid& otherSDF, SignedDistanceGrid& newSDF);
+	Node* intersect(Node* node, Node* otherNode, const Area& area);
+
+	Node* subtract(Node* node, Node* otherNode, const Area& area);
+
+	Node* merge(Node* node, Node* otherNode, const Area& area);
 
 	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
-	Node* intersect(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
+	// Node* intersect(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
 
-	Node* intersect2(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF);
+	/// Merges an sdf with the node and returns the new node. The new sdf values are written to newSDF.
+	// Node* merge(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
 
-	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
-	Node* merge(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
+	static SharedSamples* lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
+
+	static SharedSamples* lookupOrComputeSample(const Vector3i& globalPos, const Ogre::Vector3& realPos, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
+
+	/*static SharedLeafFace* lookupOrComputeXYFace(const Vector3i& globalPos, const Ogre::Vector3& realPos, float stepSize, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
+	static SharedLeafFace* lookupOrComputeXZFace(const Vector3i& globalPos, const Ogre::Vector3& realPos, float stepSize, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
+	static SharedLeafFace* lookupOrComputeYZFace(const Vector3i& globalPos, const Ogre::Vector3& realPos, float stepSize, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);*/
+
+	static Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
 
 	/// Interpolates signed distance for the 3x3x3 subgrid of a leaf.
 	static void interpolateLeaf(const Area& area, SignedDistanceGrid& grid);
 	void interpolateLeaf(const Area& area) { interpolateLeaf(area, m_SDFValues); }
+	static void insertIfMissing(const Vector3i& key, const Sample& sample, OctreeSDF::SignedDistanceGrid& grid);
 
 	/// Retrieves a pessimistic guess whether a leaf area could contain the surface.
 	// bool couldContainSurface(const Area& area, SignedDistanceGrid& grid);
@@ -119,9 +214,6 @@ protected:
 	std::vector<std::pair<Vector3i, float> > getControlPoints(const Area& area, float* cornerSignedDistances);
 
 	bool approximatesWell(const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, const std::vector<std::pair<Vector3i, float> >& controlPoints, float tolerance);
-
-	void addCubesContainingEdge(const Vector3i& corner1, const Vector3i& corner2, Vector3iHashGrid<Cube>& cubes);
-	void getCubesToMarch(Node* node, const Area& area, vector<Cube>& cubes);
 
 	BVHScene m_TriangleCache;
 public:
@@ -152,13 +244,14 @@ public:
 	/// Intersects the octree with a signed distance field. For intersections with other octrees, use intersectAlignedOctree if possible.
 	void intersect(SignedDistanceField3D* otherSDF);
 
-	void intersect2(SignedDistanceField3D* otherSDF);
-
 	/// Intersects the octree with another aligned octree (underlying grids must match).
 	void intersectAlignedOctree(OctreeSDF* otherOctree);
 
 	/// Subtracts another aligned octree from this octree.
 	void subtractAlignedOctree(OctreeSDF* otherOctree);
+
+	/// Merges another aligned octree into this octree.
+	void mergeAlignedOctree(OctreeSDF* otherOctree);
 
 	/// Resizes the octree so that it covers the given aabb.
 	void resize(const AABB& aabb);
@@ -175,14 +268,14 @@ public:
 	/// Counts the number of nodes in the octree.
 	int countNodes();
 
+	/// Counts the number of leaves in the octree.
+	int countLeaves();
+
 	/// Computes the center of mass, also returns the total mass which is computed along the way.
 	Ogre::Vector3 getCenterOfMass(float& totalMass);
 
 	/// Computes the center of mass.
 	Ogre::Vector3 getCenterOfMass();
-
-	/// Removes not referenced sdf values, call this when you have memory problems.
-	void cleanupSDF();
 
 	/// Removes nodes that are not required.
 	void simplify();

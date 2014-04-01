@@ -197,6 +197,8 @@ private:
 	RaycastCache* m_RaycastCache2;
 	RaycastCache* m_RaycastCache3;
 
+	mutable const Surface* m_LastClosestTri;
+
 public:
 	~TriangleMeshSDF_Robust()
 	{
@@ -208,7 +210,7 @@ public:
 		}
 	}
 	TriangleMeshSDF_Robust(std::shared_ptr<TransformedMesh> mesh) :
-		TriangleMeshSDF(mesh), m_RaycastCache1(nullptr) {}
+		TriangleMeshSDF(mesh), m_RaycastCache1(nullptr), m_LastClosestTri(nullptr) {}
 	void prepareSampling(const AABB& aabb, float cellSize) override
 	{
 		if (m_RaycastCache1)
@@ -240,7 +242,9 @@ public:
 	Sample getSample(const Ogre::Vector3& point) const override
 	{
 		BVH<Surface>::ClosestLeafResult result;
-		const Surface* tri = m_RootNode.getBVH()->getClosestLeaf(point, result);
+		if (m_LastClosestTri)
+			m_LastClosestTri->getClosestLeaf(point, result);
+		m_LastClosestTri = m_RootNode.getBVH()->getClosestLeaf(point, result);
 		if (!isInside(point)) result.closestDistance *= -1;
 		return Sample(result.closestDistance);
 	};

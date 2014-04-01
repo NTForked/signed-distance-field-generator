@@ -37,7 +37,7 @@ public:
 		return false;
 	}
 
-	bool cubeNeedsSubdivision(const Area& area) const override
+	/*bool cubeNeedsSubdivision(const Area& area) const override
 	{
 		if (!intersectsSurface(area.toAABB()))
 			return false;
@@ -51,7 +51,7 @@ public:
 		return false;
 
 		// project mid on the cube surface and check the approximation error
-	}
+	}*/
 
 	virtual AABB getAABB() const override
 	{

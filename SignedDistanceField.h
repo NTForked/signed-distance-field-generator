@@ -16,7 +16,7 @@ typedef unsigned int MaterialID;
 
 class SignedDistanceField3D
 {
-protected:
+public:
 	// If you want to store additional data in the signed distance grid, this is the right place to add it.
 	struct Sample
 	{
@@ -45,7 +45,7 @@ protected:
 	};
 
 	// Convenient helper methods for subclasses.
-	bool allSignsAreEqual(const float* signedDistances) const
+	static bool allSignsAreEqual(const float* signedDistances)
 	{
 		bool positive = (signedDistances[0] >= 0.0f);
 		for (int i = 1; i < 8; i++)
@@ -56,24 +56,26 @@ protected:
 		return true;
 	}
 
-	bool allSignsAreEqual(const Sample* samples) const
+	static bool allSignsAreEqual(const Sample** samples)
 	{
-		bool positive = (samples[0].signedDistance >= 0.0f);
+		bool positive = (samples[0]->signedDistance >= 0.0f);
 		for (int i = 1; i < 8; i++)
 		{
-			if ((samples[i].signedDistance >= 0.0f) != positive)
+			if ((samples[i]->signedDistance >= 0.0f) != positive)
 				return false;
 		}
 		return true;
 	}
 
-	bool signsAreEqual(float val1, float val2) const
+	static bool signsAreEqual(float val1, float val2)
 	{
 		return (val1 >= 0.0f && val2 >= 0.0f) || (val1 < 0.0f && val2 < 0.0f);
 	}
-public:
+
 	/// Retrieves the sample at the given point (exact for implicit SDFs, interpolated for sampled SDFs).
 	virtual Sample getSample(const Ogre::Vector3& point) const = 0;
+
+	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const { sample = getSample(point); }
 
 	/// Retrieves whether the given AABB intersects the surface (zero contour of the sdf).
 	virtual bool intersectsSurface(const AABB& aabb) const = 0;
@@ -104,7 +106,7 @@ public:
 	struct Cube
 	{
 		Vector3i posMin;
-		Sample cornerSamples[8];
+		Sample* cornerSamples[8];
 	};
 	virtual std::vector<Cube> getCubesToMarch() = 0;
 

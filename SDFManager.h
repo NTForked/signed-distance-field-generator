@@ -72,7 +72,7 @@ public:
 	static std::shared_ptr<SignedDistanceField3D> createFractalNoiseSDF(float size,
 		float roughness,
 		float zRange,
-		const Ogre::Quaternion& rotation = Ogre::Quaternion::IDENTITY,
+		const Ogre::Quaternion& rotation,
 		const Ogre::Vector3& position = Ogre::Vector3(0,0,0))
 	{
 		auto fractalNoiseSDF = std::make_shared<FractalNoisePlaneSDF>(size, roughness, zRange);
@@ -81,10 +81,19 @@ public:
 		return std::make_shared<TransformSDF>(fractalNoiseSDF, transform);
 	}
 
+	static std::shared_ptr<SignedDistanceField3D> createFractalNoiseSDF(float size,
+		float roughness,
+		float zRange)
+	{
+		return std::make_shared<FractalNoisePlaneSDF>(size, roughness, zRange);
+	}
+
 	/// Exports a sampled signed distance field as a triangle mesh in .obj format.
 	static void exportSampledSDFAsMesh(const std::string& objFileName, std::shared_ptr<SampledSignedDistanceField3D> sdf)
 	{
+		auto ts = Profiler::timestamp();
 		auto marched = MarchingCubes::marchSDF(*sdf, sdf->getInverseCellSize());
+		Profiler::printJobDuration("Marching Cubes", ts);
 		std::cout << "[Marching cubes] Computing normals ..." << std::endl;
 		marched->computeTriangleNormals();
 		marched->computeVertexNormals();

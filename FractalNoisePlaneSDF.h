@@ -51,9 +51,15 @@ public:
 		return surfaceZ;
 	}
 
-	Sample getSample(const Ogre::Vector3& point) const override
+	virtual Sample getSample(const Ogre::Vector3& point) const override
 	{
 		Sample sample;
+		getSample(point, sample);
+		return sample;
+	}
+
+	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
+	{
 		sample.normal = Ogre::Vector3(0, 0, 1);
 
 		// scale, move and project on xz plane
@@ -66,7 +72,6 @@ public:
 		{
 			sample.normal *= -1;
 		}
-		return sample;
 	}
 
 	static int roundToNextPowerOfTwo(int n, int& expo)
@@ -83,6 +88,7 @@ public:
 
 	bool intersectsSurface(const AABB& aabb) const override
 	{
+		// return aabb.intersectsAABB(m_SurfaceAABB);
 		return m_TriangleCache.getBVH()->intersectsAABB(aabb);
 	}
 

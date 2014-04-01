@@ -158,7 +158,7 @@ public:
 	vector<Cube> getCubesToMarch()
 	{
 		vector<Cube> cubes;
-		for (unsigned int x = 0; x < xNumCells-1; x++)
+		/*for (unsigned int x = 0; x < xNumCells-1; x++)
 		{
 			for (unsigned int y = 0; y < yNumCells-1; y++)
 			{
@@ -180,7 +180,7 @@ public:
 					}
 				}
 			}
-		}
+		}*/
 		return cubes;
 	}
 

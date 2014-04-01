@@ -11,10 +11,10 @@ class Sphere
 {
 public:
 	Ogre::Vector3 center;
-	float radius;
+	float radius, radiusSquared;
 
-	Sphere() : center(Ogre::Vector3(0, 0, 0)), radius(1.0f) {}
-	Sphere(const Ogre::Vector3& center, float radius) : center(center), radius(radius) {}
+	Sphere() : center(Ogre::Vector3(0, 0, 0)), radius(1.0f), radiusSquared(1.0f) {}
+	Sphere(const Ogre::Vector3& center, float radius) : center(center), radius(radius), radiusSquared(radius*radius) {}
 	virtual ~Sphere() {}
 
 	__forceinline bool intersectsSphere(const Ogre::Vector3& otherCenter, float otherRadius) const
@@ -25,18 +25,18 @@ public:
 
 	__forceinline bool containsPoint(const Ogre::Vector3& point) const
 	{
-		return center.squaredDistance(point) <= radius*radius;
+		return center.squaredDistance(point) <= radiusSquared;
 	}
 
 	__forceinline bool rayIntersect(const Ray& ray, float tNear, float tFar) const
 	{
 		Ray::Intersection intersection;
-		return ray.intersectSphere(intersection, center, radius*radius, tNear, tFar);
+		return ray.intersectSphere(intersection, center, radiusSquared, tNear, tFar);
 	}
 	__forceinline bool rayIntersect(const Ray& ray) const
 	{
 		Ray::Intersection intersection;
-		return ray.intersectSphere(intersection, center, radius*radius);
+		return ray.intersectSphere(intersection, center, radiusSquared);
 	}
 
 	__forceinline Ogre::Vector3 getCenter() const
@@ -56,7 +56,7 @@ public:
 
 	bool intersectsAABB(const AABB& aabb) const
 	{
-		return MathMisc::aabbPointSquaredDistance(aabb.min, aabb.max, center) < radius*radius;
+		return MathMisc::aabbPointSquaredDistance(aabb.min, aabb.max, center) < radiusSquared;
 	}
 };
 
@@ -70,9 +70,14 @@ public:
 		Sample s;
 		float distToCenter = std::sqrtf(center.squaredDistance(point));
 		s.signedDistance = radius - distToCenter;
-		if (s.signedDistance)
-			s.normal = (point - center) / distToCenter;
+		// if (distToCenter != 0.0f)
+		//	s.normal = (point - center) / distToCenter;
 		return s;
+	}
+
+	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
+	{
+		sample.signedDistance = radiusSquared - center.squaredDistance(point);
 	}
 
 	virtual bool intersectsSurface(const AABB& aabb) const override
