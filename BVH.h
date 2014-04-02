@@ -83,6 +83,9 @@ public:
 	/// Retrieves whether the AABB intersects any surfaces.
 	virtual bool intersectsAABB(const AABB& aabb) const = 0;
 
+	/// Retrieves all leaves inside the aabb.
+	virtual void getLeaves(const AABB& aabb, std::vector<const LeafType*>& leaves) const {}
+
 	virtual unsigned int getHeight() const { return 1; }
 	virtual float getHeightAvg() const { return 1.0f; }
 };
@@ -171,6 +174,15 @@ public:
 			if ((*i)->intersectsAABB(aabb)) return true;
 		}
 		return false;
+	}
+
+	virtual void getLeaves(const AABB& aabb, std::vector<const LeafType*>& leaves) const override
+	{
+		for (auto i = mChildren.begin(); i != mChildren.end(); ++i)
+		{
+			if ((*i)->intersectsAABB(aabb))
+				leaves.push_back(*i);
+		}
 	}
 };
 
@@ -452,6 +464,13 @@ public:
 		bool leftHit = mChildren[0]->intersectsAABB(aabb);
 		if (leftHit) return true;
 		return  mChildren[1]->intersectsAABB(aabb);
+	}
+
+	virtual void getLeaves(const AABB& aabb, std::vector<const LeafType*>& leaves) const override
+	{
+		if (!mBoundingVolume.intersectsAABB(aabb)) return;
+		mChildren[0]->getLeaves(aabb, leaves);
+		mChildren[1]->getLeaves(aabb, leaves);
 	}
 
 	virtual unsigned int getHeight() const override { return 1 + std::max(mChildren[0]->getHeight(), mChildren[1]->getHeight()); }

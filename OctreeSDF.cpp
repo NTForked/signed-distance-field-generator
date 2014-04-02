@@ -142,6 +142,7 @@ OctreeSDF::GridNode::GridNode(const Area& area, const SignedDistanceField3D& imp
 		m_Faces[i]->useCount++;*/
 
 	// compute inner grid
+	implicitSDF.getSamples(area, m_Samples);
 	Ogre::Vector3 currentPos = area.m_MinRealPos;
 	for (unsigned int x = 0; x < LEAF_SIZE_1D; x++)
 	{
@@ -194,6 +195,13 @@ void OctreeSDF::InnerNode::countLeaves(int& counter) const
 {
 	for (int i = 0; i < 8; i++)
 		m_Children[i]->countLeaves(counter);
+}
+
+void OctreeSDF::InnerNode::countMemory(int& counter) const
+{
+	counter += sizeof(*this);
+	for (int i = 0; i < 8; i++)
+		m_Children[i]->countMemory(counter);
 }
 
 void OctreeSDF::GridNode::getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes)
@@ -417,7 +425,7 @@ vector<OctreeSDF::Cube> OctreeSDF::getCubesToMarch()
 {
 	auto ts = Profiler::timestamp();
 	vector<Cube> cubes;
-	cubes.reserve(300000);
+	cubes.reserve(countLeaves() * LEAF_SIZE_2D_INNER * 2);		// reasonable upper bound
 	std::stack<Node*> nodes;
 	m_RootNode->getCubesToMarch(m_RootArea, m_SDFValues, cubes);
 	Profiler::printJobDuration("getCubesToMarch", ts);
@@ -568,6 +576,13 @@ int OctreeSDF::countLeaves()
 {
 	int counter = 0;
 	m_RootNode->countLeaves(counter);
+	return counter;
+}
+
+int OctreeSDF::countMemory()
+{
+	int counter = 0;
+	m_RootNode->countMemory(counter);
 	return counter;
 }
 

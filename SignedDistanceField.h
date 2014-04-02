@@ -30,7 +30,7 @@ public:
 		MaterialID materialID;
 
 		Ogre::Vector3 normal;
-		Ogre::Vector3 correctionVector;
+		// Ogre::Vector3 correctionVector;
 		Ogre::Vector2 uv;
 
 		// Operators required for trilinear interpolation, obviously this can not handle the materialID correctly.
@@ -76,6 +76,8 @@ public:
 	virtual Sample getSample(const Ogre::Vector3& point) const = 0;
 
 	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const { sample = getSample(point); }
+
+	virtual void getSamples(const Area& area, Sample* samples) const {}
 
 	/// Retrieves whether the given AABB intersects the surface (zero contour of the sdf).
 	virtual bool intersectsSurface(const AABB& aabb) const = 0;

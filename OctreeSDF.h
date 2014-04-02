@@ -85,6 +85,8 @@ protected:
 
 		virtual void countLeaves(int& counter) const {}
 
+		virtual void countMemory(int& memoryCounter) const {}
+
 		virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) {}
 
 		virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const { return Sample(); }
@@ -110,6 +112,8 @@ protected:
 
 		virtual void countLeaves(int& counter) const override;
 
+		virtual void countMemory(int& memoryCounter) const override;
+
 		void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) override;
 
 		virtual void invert();
@@ -131,6 +135,8 @@ protected:
 		Sample m_CornerSamples[8];
 
 		virtual void countNodes(int& counter) const override { counter++; }
+
+		virtual void countMemory(int& memoryCounter) const override { memoryCounter += sizeof(*this); }
 
 		void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) override;
 
@@ -156,6 +162,8 @@ protected:
 		virtual void countNodes(int& counter) const override { counter++; }
 
 		virtual void countLeaves(int& counter) const override { counter++; }
+
+		virtual void countMemory(int& memoryCounter) const override { memoryCounter += sizeof(*this); }
 
 		void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) override;
 
@@ -270,6 +278,9 @@ public:
 
 	/// Counts the number of leaves in the octree.
 	int countLeaves();
+
+	/// Counts the number of bytes the octree occupies.
+	int countMemory();
 
 	/// Computes the center of mass, also returns the total mass which is computed along the way.
 	Ogre::Vector3 getCenterOfMass(float& totalMass);

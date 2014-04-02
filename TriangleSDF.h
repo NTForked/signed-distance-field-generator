@@ -248,4 +248,13 @@ public:
 		if (!isInside(point)) result.closestDistance *= -1;
 		return Sample(result.closestDistance);
 	};
+
+	virtual void getSamples(const Area& area, Sample* samples) const override
+	{
+		/*AABB aabb = area.toAABB();
+		aabb.addEpsilon(area.m_RealSize * 0.5f);
+		std::vector<const Surface*> leaves;
+		m_RootNode.getBVH()->getLeaves(aabb, leaves);
+		std::cout << leaves.size() << std::endl;*/
+	}
 };
