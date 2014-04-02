@@ -5,24 +5,6 @@
 #include "MarchingCubes.h"
 #include "Mesh.h"
 
-
-OctreeSDF::SharedSamples* OctreeSDF::lookupOrComputeSample(const Vector3i& globalPos, const Ogre::Vector3& realPos, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
-{
-	if (!sdfValues.hasKey(globalPos))
-	{
-		SharedSamples* samples = new SharedSamples(new SharedSample(implicitSDF.getSample(realPos)));
-		sdfValues.insert(std::make_pair(globalPos, samples));
-		return samples;
-	}
-	return sdfValues.lookup(globalPos);
-}
-
-OctreeSDF::SharedSamples* OctreeSDF::lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
-{
-	auto vecs = area.getCornerVecs(corner);
-	return lookupOrComputeSample(vecs.first, vecs.second, implicitSDF, sdfValues);
-}
-
 /*OctreeSDF::SharedLeafFace::SharedLeafFace(const Ogre::Vector3& pos, float stepSize, int dim1, int dim2, const SignedDistanceField3D& implicitSDF)
 {
 	Ogre::Vector3 currentPos = pos;
@@ -75,7 +57,7 @@ OctreeSDF::SharedLeafFace* OctreeSDF::lookupOrComputeYZFace(const Vector3i& glob
 Node constructors
 *******************************************************************************************/
 
-OctreeSDF::InnerNode::InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
+OctreeSDF::InnerNode::InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF)
 {
 	m_NodeType = INNER;
 	/*for (int i = 0; i < 8; i++)
@@ -88,7 +70,7 @@ OctreeSDF::InnerNode::InnerNode(const Area& area, const SignedDistanceField3D& i
 	area.getSubAreas(subAreas);
 	for (int i = 0; i < 8; i++)
 	{
-		m_Children[i] = OctreeSDF::createNode(subAreas[i], implicitSDF, sdfValues);
+		m_Children[i] = OctreeSDF::createNode(subAreas[i], implicitSDF);
 	}
 }
 
@@ -128,7 +110,7 @@ OctreeSDF::EmptyNode::~EmptyNode()
 	}*/
 }
 
-OctreeSDF::GridNode::GridNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
+OctreeSDF::GridNode::GridNode(const Area& area, const SignedDistanceField3D& implicitSDF)
 {
 	m_NodeType = GRID;
 	float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
@@ -168,18 +150,18 @@ OctreeSDF::GridNode::~GridNode()
 		m_Faces[i]->useCount--;*/
 }
 
-OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues)
+OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceField3D& implicitSDF)
 {
 	bool needsSubdivision = implicitSDF.cubeNeedsSubdivision(area);
 	if (area.m_SizeExpo <= LEAF_EXPO && needsSubdivision)
-		return new GridNode(area, implicitSDF, sdfValues);
+		return new GridNode(area, implicitSDF);
 
 	Sample cornerSamples[8];
 	for (int i = 0; i < 8; i++)
 		implicitSDF.getSample(area.getCornerVecs(i).second, cornerSamples[i]);
 
 	if (needsSubdivision)	
-		return new InnerNode(area, implicitSDF, sdfValues);
+		return new InnerNode(area, implicitSDF);
 
 	return new EmptyNode(cornerSamples);
 }
@@ -204,7 +186,7 @@ void OctreeSDF::InnerNode::countMemory(int& counter) const
 		m_Children[i]->countMemory(counter);
 }
 
-void OctreeSDF::GridNode::getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes)
+void OctreeSDF::GridNode::getCubesToMarch(const Area& area, vector<Cube>& cubes)
 {
 	for (unsigned int x = 0; x < LEAF_SIZE_1D - 1; x++)
 	{
@@ -231,15 +213,15 @@ void OctreeSDF::GridNode::getCubesToMarch(const Area& area, SignedDistanceGrid& 
 	}
 }
 
-void OctreeSDF::InnerNode::getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes)
+void OctreeSDF::InnerNode::getCubesToMarch(const Area& area, vector<Cube>& cubes)
 {
 	Area subAreas[8];
 	area.getSubAreas(subAreas);
 	for (int i = 0; i < 8; i++)
-		m_Children[i]->getCubesToMarch(subAreas[i], sdfValues, cubes);
+		m_Children[i]->getCubesToMarch(subAreas[i], cubes);
 }
 
-void OctreeSDF::EmptyNode::getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes)
+void OctreeSDF::EmptyNode::getCubesToMarch(const Area& area, vector<Cube>& cubes)
 {
 }
 
@@ -261,7 +243,92 @@ void OctreeSDF::GridNode::invert()
 		m_Samples[i].signedDistance *= -1.0f;
 }
 
-OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& area)
+OctreeSDF::Node* OctreeSDF::intersect(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area)
+{
+	bool needsSubdivision = implicitSDF.cubeNeedsSubdivision(area);
+	if (node->getNodeType() == Node::INNER && needsSubdivision)
+	{
+		InnerNode* innerNode = (InnerNode*)node;
+		Area subAreas[8];
+		area.getSubAreas(subAreas);
+		for (int i = 0; i < 8; i++)
+			innerNode->m_Children[i] = intersect(innerNode->m_Children[i], implicitSDF, subAreas[i]);
+		return node;
+	}
+	if (!needsSubdivision)
+	{
+		if (implicitSDF.getSample(area.getCornerVecs(0).second).signedDistance >= 0)
+			return node;
+		delete node;
+		return createNode(area, implicitSDF);
+	}
+	if (node->getNodeType() == Node::EMPTY)
+	{
+		EmptyNode* emptyNode = (EmptyNode*)node;
+		if (emptyNode->m_CornerSamples[0].signedDistance < 0)
+			return node;
+		delete node;
+		return createNode(area, implicitSDF);
+
+	}
+
+	GridNode* gridNode = (GridNode*)node;
+	GridNode otherGridNode(area, implicitSDF);
+	for (int i = 0; i < LEAF_SIZE_3D; i++)
+	{
+		if (otherGridNode.m_Samples[i].signedDistance < gridNode->m_Samples[i].signedDistance)
+			gridNode->m_Samples[i] = otherGridNode.m_Samples[i];
+	}
+	return node;
+}
+
+OctreeSDF::Node* OctreeSDF::subtract(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area)
+{
+	bool needsSubdivision = implicitSDF.cubeNeedsSubdivision(area);
+	if (node->getNodeType() == Node::INNER && needsSubdivision)
+	{
+		InnerNode* innerNode = (InnerNode*)node;
+		Area subAreas[8];
+		area.getSubAreas(subAreas);
+		for (int i = 0; i < 8; i++)
+			innerNode->m_Children[i] = subtract(innerNode->m_Children[i], implicitSDF, subAreas[i]);
+		return node;
+	}
+	if (!needsSubdivision)
+	{
+		if (implicitSDF.getSample(area.getCornerVecs(0).second).signedDistance < 0)
+			return node;
+		delete node;
+		Node* newNode = createNode(area, implicitSDF);
+		newNode->invert();
+		return newNode;
+	}
+	if (node->getNodeType() == Node::EMPTY)
+	{
+		EmptyNode* emptyNode = (EmptyNode*)node;
+		if (emptyNode->m_CornerSamples[0].signedDistance < 0)
+			return node;
+		delete node;
+		Node* newNode = createNode(area, implicitSDF);
+		newNode->invert();
+		return newNode;
+
+	}
+
+	GridNode* gridNode = (GridNode*)node;
+	GridNode otherGridNode(area, implicitSDF);
+	for (int i = 0; i < LEAF_SIZE_3D; i++)
+	{
+		if (-otherGridNode.m_Samples[i].signedDistance < gridNode->m_Samples[i].signedDistance)
+		{
+			gridNode->m_Samples[i] = otherGridNode.m_Samples[i];
+			gridNode->m_Samples[i].signedDistance *= -1.0f;
+		}
+	}
+	return node;
+}
+
+OctreeSDF::Node* OctreeSDF::intersectAlignedNode(Node* node, Node* otherNode, const Area& area)
 {
 	if (node->getNodeType() == Node::INNER && otherNode->getNodeType() == Node::INNER)
 	{
@@ -270,7 +337,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 		Area subAreas[8];
 		area.getSubAreas(subAreas);
 		for (int i = 0; i < 8; i++)
-			innerNode->m_Children[i] = intersect(innerNode->m_Children[i], otherInnerNode->m_Children[i], subAreas[i]);
+			innerNode->m_Children[i] = intersectAlignedNode(innerNode->m_Children[i], otherInnerNode->m_Children[i], subAreas[i]);
 		return node;
 	}
 	if (otherNode->getNodeType() == Node::EMPTY)
@@ -301,7 +368,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, Node* otherNode, const Area& a
 	return node;
 }
 
-OctreeSDF::Node* OctreeSDF::subtract(Node* node, Node* otherNode, const Area& area)
+OctreeSDF::Node* OctreeSDF::subtractAlignedNode(Node* node, Node* otherNode, const Area& area)
 {
 	if (node->getNodeType() == Node::INNER && otherNode->getNodeType() == Node::INNER)
 	{
@@ -310,7 +377,7 @@ OctreeSDF::Node* OctreeSDF::subtract(Node* node, Node* otherNode, const Area& ar
 		Area subAreas[8];
 		area.getSubAreas(subAreas);
 		for (int i = 0; i < 8; i++)
-			innerNode->m_Children[i] = subtract(innerNode->m_Children[i], otherInnerNode->m_Children[i], subAreas[i]);
+			innerNode->m_Children[i] = subtractAlignedNode(innerNode->m_Children[i], otherInnerNode->m_Children[i], subAreas[i]);
 		return node;
 	}
 	if (otherNode->getNodeType() == Node::EMPTY)
@@ -348,7 +415,7 @@ OctreeSDF::Node* OctreeSDF::subtract(Node* node, Node* otherNode, const Area& ar
 	return node;
 }
 
-OctreeSDF::Node* OctreeSDF::merge(Node* node, Node* otherNode, const Area& area)
+OctreeSDF::Node* OctreeSDF::mergeAlignedNode(Node* node, Node* otherNode, const Area& area)
 {
 	if (node->getNodeType() == Node::INNER && otherNode->getNodeType() == Node::INNER)
 	{
@@ -357,7 +424,7 @@ OctreeSDF::Node* OctreeSDF::merge(Node* node, Node* otherNode, const Area& area)
 		Area subAreas[8];
 		area.getSubAreas(subAreas);
 		for (int i = 0; i < 8; i++)
-			innerNode->m_Children[i] = merge(innerNode->m_Children[i], otherInnerNode->m_Children[i], subAreas[i]);
+			innerNode->m_Children[i] = mergeAlignedNode(innerNode->m_Children[i], otherInnerNode->m_Children[i], subAreas[i]);
 		return node;
 	}
 	if (otherNode->getNodeType() == Node::EMPTY)
@@ -405,8 +472,7 @@ std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF,
 	octreeSDF->m_CellSize = cubeSize / (1 << maxDepth);
 	otherSDF->prepareSampling(aabb, octreeSDF->m_CellSize);
 	octreeSDF->m_RootArea = Area(Vector3i(0, 0, 0), maxDepth, aabb.getMin(), cubeSize);
-	octreeSDF->m_SDFValues.rehash((1 << maxDepth) * (1 << maxDepth) * 2);	// heuristic, leaves should scale with the surface (quadratic)
-	octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, *otherSDF, octreeSDF->m_SDFValues);
+	octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, *otherSDF);
 	return octreeSDF;
 }
 
@@ -427,7 +493,7 @@ vector<OctreeSDF::Cube> OctreeSDF::getCubesToMarch()
 	vector<Cube> cubes;
 	cubes.reserve(countLeaves() * LEAF_SIZE_2D_INNER * 2);		// reasonable upper bound
 	std::stack<Node*> nodes;
-	m_RootNode->getCubesToMarch(m_RootArea, m_SDFValues, cubes);
+	m_RootNode->getCubesToMarch(m_RootArea, cubes);
 	Profiler::printJobDuration("getCubesToMarch", ts);
 	return cubes;
 }
@@ -446,37 +512,33 @@ bool OctreeSDF::intersectsSurface(const AABB& aabb) const
 
 void OctreeSDF::subtract(SignedDistanceField3D* otherSDF)
 {
-	OpInvertSDF invertedSDF(otherSDF);
-	intersect(&invertedSDF);
+	otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
+	auto ts = Profiler::timestamp();
+	m_RootNode = subtract(m_RootNode, *otherSDF, m_RootArea);
+	Profiler::printJobDuration("Subtraction", ts);
 }
 
 void OctreeSDF::intersect(SignedDistanceField3D* otherSDF)
 {
-	/*otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
-	SignedDistanceGrid newSDF;
-	m_RootNode = intersect(m_RootNode, m_RootArea, *otherSDF, newSDF, SignedDistanceGrid());
-	for (auto i = newSDF.begin(); i != newSDF.end(); i++)
-	{
-		for (auto i2 = i->begin(); i2 != i->end(); i2++)
-		{
-			m_SDFValues[i2->first] = i2->second;
-		}
-	}*/
+	otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
+	auto ts = Profiler::timestamp();
+	m_RootNode = intersect(m_RootNode, *otherSDF, m_RootArea);
+	Profiler::printJobDuration("Intersection", ts);
 }
 
 void OctreeSDF::intersectAlignedOctree(OctreeSDF* otherOctree)
 {
-	m_RootNode = intersect(m_RootNode, otherOctree->m_RootNode, m_RootArea);
+	m_RootNode = intersectAlignedNode(m_RootNode, otherOctree->m_RootNode, m_RootArea);
 }
 
 void OctreeSDF::subtractAlignedOctree(OctreeSDF* otherOctree)
 {
-	m_RootNode = subtract(m_RootNode, otherOctree->m_RootNode, m_RootArea);
+	m_RootNode = subtractAlignedNode(m_RootNode, otherOctree->m_RootNode, m_RootArea);
 }
 
 void OctreeSDF::mergeAlignedOctree(OctreeSDF* otherOctree)
 {
-	m_RootNode = merge(m_RootNode, otherOctree->m_RootNode, m_RootArea);
+	m_RootNode = mergeAlignedNode(m_RootNode, otherOctree->m_RootNode, m_RootArea);
 }
 
 void OctreeSDF::resize(const AABB& aabb)
@@ -531,17 +593,6 @@ void OctreeSDF::merge(SignedDistanceField3D* otherSDF)
 		for (auto i2 = i->begin(); i2 != i->end(); i2++)
 		{
 			m_SDFValues[i2->first] = i2->second;
-		}
-	}*/
-}
-
-void OctreeSDF::invert()
-{
-/*	for (auto i = m_SDFValues.begin(); i != m_SDFValues.end(); i++)
-	{
-		for (auto i2 = i->begin(); i2 != i->end(); i2++)
-		{
-			i2->second.signedDistance *= -1.0f;
 		}
 	}*/
 }

@@ -91,9 +91,7 @@ public:
 	/// Exports a sampled signed distance field as a triangle mesh in .obj format.
 	static void exportSampledSDFAsMesh(const std::string& objFileName, std::shared_ptr<SampledSignedDistanceField3D> sdf)
 	{
-		auto ts = Profiler::timestamp();
 		auto marched = MarchingCubes::marchSDF(*sdf, sdf->getInverseCellSize());
-		Profiler::printJobDuration("Marching Cubes", ts);
 		std::cout << "[Marching cubes] Computing normals ..." << std::endl;
 		marched->computeTriangleNormals();
 		marched->computeVertexNormals();

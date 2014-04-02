@@ -65,7 +65,7 @@ public:
 		SharedLeafFace* faceXZ;
 		SharedLeafFace* faceYZ;*/
 	};
-	typedef Vector3iHashGrid<SharedSamples*> SignedDistanceGrid;
+	// typedef Vector3iHashGrid<SharedSamples*> SignedDistanceGrid;
 protected:
 	class Node
 	{
@@ -91,7 +91,7 @@ protected:
 
 		virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const { return Sample(); }
 
-		virtual void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) = 0;
+		virtual void getCubesToMarch(const Area& area, vector<Cube>& cubes) = 0;
 
 		virtual void invert() = 0;
 
@@ -104,7 +104,7 @@ protected:
 	{
 	public:
 		Node* m_Children[8];
-		InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
+		InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF);
 		~InnerNode();
 		InnerNode(const InnerNode& rhs);
 
@@ -114,7 +114,7 @@ protected:
 
 		virtual void countMemory(int& memoryCounter) const override;
 
-		void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) override;
+		void getCubesToMarch(const Area& area, vector<Cube>& cubes) override;
 
 		virtual void invert();
 
@@ -138,7 +138,7 @@ protected:
 
 		virtual void countMemory(int& memoryCounter) const override { memoryCounter += sizeof(*this); }
 
-		void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) override;
+		void getCubesToMarch(const Area& area, vector<Cube>& cubes) override;
 
 		virtual Node* clone() const override { return new EmptyNode(*this); }
 
@@ -152,7 +152,7 @@ protected:
 	class GridNode : public Node
 	{
 	public:
-		GridNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
+		GridNode(const Area& area, const SignedDistanceField3D& implicitSDF);
 		~GridNode();
 		// SharedLeafFace* m_Faces[6];
 		Sample m_Samples[LEAF_SIZE_3D];
@@ -165,7 +165,7 @@ protected:
 
 		virtual void countMemory(int& memoryCounter) const override { memoryCounter += sizeof(*this); }
 
-		void getCubesToMarch(const Area& area, SignedDistanceGrid& sdfValues, vector<Cube>& cubes) override;
+		void getCubesToMarch(const Area& area, vector<Cube>& cubes) override;
 
 		virtual Node* clone() const override { return new GridNode(*this); }
 
@@ -176,7 +176,6 @@ protected:
 		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
 	};
 
-	SignedDistanceGrid m_SDFValues;
 	Node* m_RootNode;
 
 	float m_CellSize;
@@ -189,39 +188,17 @@ protected:
 	Node* simplifyNode(Node* node, const Area& area, int& nodeTypeMask);
 
 	/// Intersects aligned octree nodes.
-	Node* intersect(Node* node, Node* otherNode, const Area& area);
+	Node* intersectAlignedNode(Node* node, Node* otherNode, const Area& area);
 
-	Node* subtract(Node* node, Node* otherNode, const Area& area);
+	Node* subtractAlignedNode(Node* node, Node* otherNode, const Area& area);
 
-	Node* merge(Node* node, Node* otherNode, const Area& area);
+	Node* mergeAlignedNode(Node* node, Node* otherNode, const Area& area);
 
-	/// Intersects an sdf with the node and returns the new node. The new sdf values are written to newSDF.
-	// Node* intersect(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
+	Node* intersect(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area);
 
-	/// Merges an sdf with the node and returns the new node. The new sdf values are written to newSDF.
-	// Node* merge(Node* node, const Area& area, const SignedDistanceField3D& otherSDF, SignedDistanceGrid& newSDF, SignedDistanceGrid& otherSDFCache);
+	Node* subtract(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area);
 
-	static SharedSamples* lookupOrComputeSample(int corner, const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
-
-	static SharedSamples* lookupOrComputeSample(const Vector3i& globalPos, const Ogre::Vector3& realPos, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
-
-	/*static SharedLeafFace* lookupOrComputeXYFace(const Vector3i& globalPos, const Ogre::Vector3& realPos, float stepSize, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
-	static SharedLeafFace* lookupOrComputeXZFace(const Vector3i& globalPos, const Ogre::Vector3& realPos, float stepSize, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
-	static SharedLeafFace* lookupOrComputeYZFace(const Vector3i& globalPos, const Ogre::Vector3& realPos, float stepSize, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);*/
-
-	static Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues);
-
-	/// Interpolates signed distance for the 3x3x3 subgrid of a leaf.
-	static void interpolateLeaf(const Area& area, SignedDistanceGrid& grid);
-	void interpolateLeaf(const Area& area) { interpolateLeaf(area, m_SDFValues); }
-	static void insertIfMissing(const Vector3i& key, const Sample& sample, OctreeSDF::SignedDistanceGrid& grid);
-
-	/// Retrieves a pessimistic guess whether a leaf area could contain the surface.
-	// bool couldContainSurface(const Area& area, SignedDistanceGrid& grid);
-
-	std::vector<std::pair<Vector3i, float> > getControlPoints(const Area& area, float* cornerSignedDistances);
-
-	bool approximatesWell(const SignedDistanceField3D& implicitSDF, SignedDistanceGrid& sdfValues, const std::vector<std::pair<Vector3i, float> >& controlPoints, float tolerance);
+	static Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF);
 
 	BVHScene m_TriangleCache;
 public:

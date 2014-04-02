@@ -27,6 +27,7 @@
 #include "Vertex.h"
 #include "SignedDistanceField.h"
 #include "Mesh.h"
+#include "Profiler.h"
 
 using std::vector;
 
@@ -59,8 +60,9 @@ class MarchingCubes {
 
 	static inline void marchCube(
 		const SampledSignedDistanceField3D::Cube& cube,
-		std::unordered_map<Vector3i, VertexIndexed> &vertexMap,
-		std::vector<unsigned int> &indexBuffer)
+		Vector3iHashGrid<VertexIndexed> &vertexMap,
+		std::vector<unsigned int> &indexBuffer,
+		int& numVertices)
 	{
 		Ogre::Vector3 cubeVecs[8];
 		getCubeVecs(cubeVecs, cube.posMin);
@@ -76,49 +78,51 @@ class MarchingCubes {
 		{
 			// c1 * (1-w) + c2 * w = 0
 			// w = c1 / (c1 - c2)
-			VertexIndexed indexed;
-			indexed.vertex.normal = cube.cornerSamples[0]->normal;
-			indexed.vertex.uv = cube.cornerSamples[0]->uv;
-			indexed.index = vertexMap.size();
 			Vector3i vertex1(triangles[i].p1+offset);
-			auto tryInsert = vertexMap.insert(std::make_pair(vertex1, indexed));
-			if (tryInsert.second)
+			bool created;
+			VertexIndexed& newVertex = vertexMap.lookupOrCreate(vertex1, created);
+			if (created)
 			{
 				auto nodes = TLT::getSingleton().edgeMidsToNodes[triangles[i].p1];
 				float w = cube.cornerSamples[nodes.first]->signedDistance
 					/ (cube.cornerSamples[nodes.first]->signedDistance - cube.cornerSamples[nodes.second]->signedDistance);
 				vAssert(w >= 0 && w <= 1);
-				tryInsert.first->second.vertex.position = cubeVecs[nodes.first] * (1-w) + cubeVecs[nodes.second] * w;
+				newVertex.vertex.position = cubeVecs[nodes.first] * (1 - w) + cubeVecs[nodes.second] * w;
+				newVertex.vertex.normal = cube.cornerSamples[0]->normal;
+				newVertex.vertex.uv = cube.cornerSamples[0]->uv;
+				newVertex.index = numVertices++;
 			}
-			indexBuffer.push_back((unsigned int)tryInsert.first->second.index);
-
-			indexed.index = vertexMap.size();
+			indexBuffer.push_back((unsigned int)newVertex.index);
 
 			Vector3i vertex2(triangles[i].p2+offset);
-			tryInsert = vertexMap.insert(std::make_pair(vertex2, indexed));
-			if (tryInsert.second)
+			VertexIndexed& newVertex2 = vertexMap.lookupOrCreate(vertex2, created);
+			if (created)
 			{
 				auto nodes = TLT::getSingleton().edgeMidsToNodes[triangles[i].p2];
 				float w = cube.cornerSamples[nodes.first]->signedDistance
 					/ (cube.cornerSamples[nodes.first]->signedDistance - cube.cornerSamples[nodes.second]->signedDistance);
 				vAssert(w >= 0 && w <= 1);
-				tryInsert.first->second.vertex.position = cubeVecs[nodes.first] * (1 - w) + cubeVecs[nodes.second] * w;
+				newVertex2.vertex.position = cubeVecs[nodes.first] * (1 - w) + cubeVecs[nodes.second] * w;
+				newVertex2.vertex.normal = cube.cornerSamples[0]->normal;
+				newVertex2.vertex.uv = cube.cornerSamples[0]->uv;
+				newVertex2.index = numVertices++;
 			}
-			indexBuffer.push_back((unsigned int)tryInsert.first->second.index);
-
-			indexed.index = vertexMap.size();
+			indexBuffer.push_back((unsigned int)newVertex2.index);
 
 			Vector3i vertex3(triangles[i].p3+offset);
-			tryInsert = vertexMap.insert(std::make_pair(vertex3, indexed));
-			if (tryInsert.second)
+			VertexIndexed& newVertex3 = vertexMap.lookupOrCreate(vertex3, created);
+			if (created)
 			{
 				auto nodes = TLT::getSingleton().edgeMidsToNodes[triangles[i].p3];
 				float w = cube.cornerSamples[nodes.first]->signedDistance
 					/ (cube.cornerSamples[nodes.first]->signedDistance - cube.cornerSamples[nodes.second]->signedDistance);
 				vAssert(w >= 0 && w <= 1);
-				tryInsert.first->second.vertex.position = cubeVecs[nodes.first] * (1 - w) + cubeVecs[nodes.second] * w;
+				newVertex3.vertex.position = cubeVecs[nodes.first] * (1 - w) + cubeVecs[nodes.second] * w;
+				newVertex3.vertex.normal = cube.cornerSamples[0]->normal;
+				newVertex3.vertex.uv = cube.cornerSamples[0]->uv;
+				newVertex3.index = numVertices++;
 			}
-			indexBuffer.push_back((unsigned int)tryInsert.first->second.index);
+			indexBuffer.push_back((unsigned int)newVertex3.index);
 		}
 	}
 
@@ -153,25 +157,35 @@ public:
 		std::cout << "Fetched " << cubes.size() << " cubes!" << std::endl;
 
 		std::shared_ptr<Mesh> outMesh = std::make_shared<Mesh>();
-		std::unordered_map<Vector3i, VertexIndexed> vertexMap;
+		outMesh->indexBuffer.reserve(cubes.size() * 10);
+		Vector3iHashGrid<VertexIndexed> vertexMap;
+		vertexMap.rehash(cubes.size() * 2);
+		int numVertices = 0;
 		std::cout << "[Marching cubes] Marching..." << std::endl;
+		auto ts = Profiler::timestamp();
 		for (auto ic = cubes.begin(); ic != cubes.end(); ++ic)
 		{
-			marchCube(*ic, vertexMap, outMesh->indexBuffer);
+			marchCube(*ic, vertexMap, outMesh->indexBuffer, numVertices);
 		}
-		std::cout << "[Marching cubes] " << vertexMap.size() << " vertices created." << std::endl;
+		Profiler::printJobDuration("Marching", ts);
+		std::cout << "[Marching cubes] " << numVertices << " vertices created." << std::endl;
 
 		// build vertex buffer
-		outMesh->vertexBuffer.resize(vertexMap.size());
+		ts = Profiler::timestamp();
+		outMesh->vertexBuffer.resize(numVertices);
 		for (auto it = vertexMap.begin(); it != vertexMap.end(); it++)
 		{
-			outMesh->vertexBuffer[it->second.index] = it->second.vertex;
+			for (auto it2 = it->begin(); it2 != it->end(); it2++)
+				outMesh->vertexBuffer[it2->second.index] = it2->second.vertex;
 		}
+		Profiler::printJobDuration("Vertex copying", ts);
 
 		// finally scale with respect to voxelsPerUnit 
+		ts = Profiler::timestamp();
 		float scale = 1.0f / voxelsPerUnit;
 		for (auto it = outMesh->vertexBuffer.begin(); it != outMesh->vertexBuffer.end(); it++)
 			it->position = (it->position * scale) + sdf.getAABB().getMin();
+		Profiler::printJobDuration("Vertex scaling", ts);
 
 		return outMesh;
 	}
