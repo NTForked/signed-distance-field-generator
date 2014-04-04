@@ -142,6 +142,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <CallingConvention>Cdecl</CallingConvention>
       <AdditionalIncludeDirectories>$(BOOST_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -152,6 +153,7 @@
       </StackReserveSize>
       <AdditionalLibraryDirectories>$(BOOST_DIR)\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <Profile>true</Profile>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

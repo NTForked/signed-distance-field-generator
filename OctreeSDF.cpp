@@ -4,6 +4,7 @@
 #include "SignedDistanceField.h"
 #include "MarchingCubes.h"
 #include "Mesh.h"
+#include <bitset>
 
 /*OctreeSDF::SharedLeafFace::SharedLeafFace(const Ogre::Vector3& pos, float stepSize, int dim1, int dim2, const SignedDistanceField3D& implicitSDF)
 {
@@ -186,13 +187,23 @@ void OctreeSDF::InnerNode::countMemory(int& counter) const
 		m_Children[i]->countMemory(counter);
 }
 
-void OctreeSDF::GridNode::getCubesToMarch(const Area& area, vector<Cube>& cubes)
+void OctreeSDF::GridNode::getCubesToMarch(const Area& area, vector<Cube>& cubes) const
 {
+	/*std::bitset<LEAF_SIZE_3D_INNER> cubesWithSignChange;
 	for (unsigned int x = 0; x < LEAF_SIZE_1D - 1; x++)
 	{
 		for (unsigned int y = 0; y < LEAF_SIZE_1D - 1; y++)
 		{
 			for (unsigned int z = 0; z < LEAF_SIZE_1D - 1; z++)
+			{
+			}
+		}
+	}*/
+	for (unsigned int x = 0; x < LEAF_SIZE_1D_INNER; x++)
+	{
+		for (unsigned int y = 0; y < LEAF_SIZE_1D_INNER; y++)
+		{
+			for (unsigned int z = 0; z < LEAF_SIZE_1D_INNER; z++)
 			{
 				Cube cube;
 				cube.cornerSamples[0] = &at(x, y, z);
@@ -213,7 +224,108 @@ void OctreeSDF::GridNode::getCubesToMarch(const Area& area, vector<Cube>& cubes)
 	}
 }
 
-void OctreeSDF::InnerNode::getCubesToMarch(const Area& area, vector<Cube>& cubes)
+// dist1 * w + dist2 * (1-w) = 0
+// => w  = dist2 / (dist2 - dist1)
+static float getInterpolationWeight(float dist1, float dist2)
+{
+	return dist2 / (dist2 - dist1);
+}
+
+void OctreeSDF::GridNode::getSharedVertices(const Area& area, std::vector<Vertex>& vertices, Vector3iHashGrid<unsigned int>& indexMap) const
+{
+	Vector3i minKey = area.m_MinPos.doubleVec();
+	float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
+	for (unsigned int y = 0; y < LEAF_SIZE_1D_INNER; y++)
+	{
+		for (unsigned int z = 0; z < LEAF_SIZE_1D_INNER; z++)
+		{
+			const Sample& s1 = at(0, y, z);
+			const Sample& s2 = at(0, y + 1, z);
+			if (!signsAreEqual(s1.signedDistance, s2.signedDistance))
+			{
+				float w = getInterpolationWeight(s1.signedDistance, s2.signedDistance);
+				vertices.emplace_back();
+				Vertex& v = vertices.back();
+				v.position = area.m_MinRealPos + Ogre::Vector3(0, y * stepSize, z * stepSize);
+				v.position.y = MathMisc::linearInterpolation(v.position.y, v.position.y + stepSize, w);
+				// vAssert(!indexMap.hasKey(minKey + Vector3i(0, 2 * y + 1, 2 * z)));
+				// indexMap.insertUnsafe(std::make_pair(minKey + Vector3i(0, 2 * y + 1, 2 * z), vertices.size()));
+			}
+			const Sample& s3 = at(0, y, z + 1);
+			if (!signsAreEqual(s1.signedDistance, s3.signedDistance))
+			{
+				float w = getInterpolationWeight(s1.signedDistance, s2.signedDistance);
+				vertices.emplace_back();
+				Vertex& v = vertices.back();
+				v.position = area.m_MinRealPos + Ogre::Vector3(0, y * stepSize, z * stepSize);
+				v.position.z = MathMisc::linearInterpolation(v.position.z, v.position.z + stepSize, w);
+				// vAssert(!indexMap.hasKey(minKey + Vector3i(0, 2 * y, 2 * z + 1)));
+				// indexMap.insertUnsafe(std::make_pair(minKey + Vector3i(0, 2 * y, 2 * z + 1), vertices.size()));
+			}
+		}
+	}
+
+	for (unsigned int x = 1; x < LEAF_SIZE_1D_INNER; x++)
+	{
+		for (unsigned int z = 0; z < LEAF_SIZE_1D_INNER; z++)
+		{
+			const Sample& s1 = at(x, 0, z);
+			const Sample& s2 = at(x + 1, 0, z);
+			if (!signsAreEqual(s1.signedDistance, s2.signedDistance))
+			{
+				float w = getInterpolationWeight(s1.signedDistance, s2.signedDistance);
+				// vertices.emplace_back();
+				Vertex& v = vertices.back();
+				v.position = area.m_MinRealPos + Ogre::Vector3(x * stepSize, 0, z * stepSize);
+				v.position.x = MathMisc::linearInterpolation(v.position.x, v.position.x + stepSize, w);
+				// vAssert(!indexMap.hasKey(minKey + Vector3i(2 * x + 1, 0, 2 * z)));
+				// indexMap.insertUnsafe(std::make_pair(minKey + Vector3i(2 * x + 1, 0, 2 * z), vertices.size()));
+			}
+			const Sample& s3 = at(x, 0, z + 1);
+			if (!signsAreEqual(s1.signedDistance, s3.signedDistance))
+			{
+				float w = getInterpolationWeight(s1.signedDistance, s2.signedDistance);
+				// vertices.emplace_back();
+				Vertex& v = vertices.back();
+				v.position = area.m_MinRealPos + Ogre::Vector3(x * stepSize, 0, z * stepSize);
+				v.position.z = MathMisc::linearInterpolation(v.position.z, v.position.z + stepSize, w);
+				// vAssert(!indexMap.hasKey(minKey + Vector3i(2 * x, 0, 2 * z + 1)));
+				// indexMap.insertUnsafe(std::make_pair(minKey + Vector3i(2 * x, 0, 2 * z + 1), vertices.size()));
+			}
+		}
+	}
+	for (unsigned int x = 1; x < LEAF_SIZE_1D_INNER; x++)
+	{
+		for (unsigned int y = 1; y < LEAF_SIZE_1D_INNER; y++)
+		{
+			const Sample& s1 = at(x, y, 0);
+			const Sample& s2 = at(x + 1, y, 0);
+			if (!signsAreEqual(s1.signedDistance, s2.signedDistance))
+			{
+				float w = getInterpolationWeight(s1.signedDistance, s2.signedDistance);
+				// vertices.emplace_back();
+				Vertex& v = vertices.back();
+				v.position = area.m_MinRealPos + Ogre::Vector3(x * stepSize, y * stepSize, 0);
+				v.position.x = MathMisc::linearInterpolation(v.position.x, v.position.x + stepSize, w);
+				// vAssert(!indexMap.hasKey(minKey + Vector3i(2 * x + 1, 2 * y, 0)));
+				// indexMap.insertUnsafe(std::make_pair(minKey + Vector3i(2 * x + 1, 2 * y, 0), vertices.size()));
+			}
+			const Sample& s3 = at(x, y + 1, 0);
+			if (!signsAreEqual(s1.signedDistance, s3.signedDistance))
+			{
+				float w = getInterpolationWeight(s1.signedDistance, s2.signedDistance);
+				// vertices.emplace_back();
+				Vertex& v = vertices.back();
+				v.position = area.m_MinRealPos + Ogre::Vector3(x * stepSize, y * stepSize, 0);
+				v.position.y = MathMisc::linearInterpolation(v.position.y, v.position.y + stepSize, w);
+				// vAssert(!indexMap.hasKey(minKey + Vector3i(2 * x, 2 * y + 1, 0)));
+				// indexMap.insertUnsafe(std::make_pair(minKey + Vector3i(2 * x, 2 * y + 1, 0), vertices.size()));
+			}
+		}
+	}
+}
+
+void OctreeSDF::InnerNode::getCubesToMarch(const Area& area, vector<Cube>& cubes) const
 {
 	Area subAreas[8];
 	area.getSubAreas(subAreas);
@@ -221,8 +333,12 @@ void OctreeSDF::InnerNode::getCubesToMarch(const Area& area, vector<Cube>& cubes
 		m_Children[i]->getCubesToMarch(subAreas[i], cubes);
 }
 
-void OctreeSDF::EmptyNode::getCubesToMarch(const Area& area, vector<Cube>& cubes)
+void OctreeSDF::InnerNode::getSharedVertices(const Area& area, std::vector<Vertex>& vertices, Vector3iHashGrid<unsigned int>& indexMap) const
 {
+	Area subAreas[8];
+	area.getSubAreas(subAreas);
+	for (int i = 0; i < 8; i++)
+		m_Children[i]->getSharedVertices(subAreas[i], vertices, indexMap);
 }
 
 void OctreeSDF::InnerNode::invert()
@@ -489,9 +605,20 @@ AABB OctreeSDF::getAABB() const
 #include "Profiler.h"
 vector<OctreeSDF::Cube> OctreeSDF::getCubesToMarch()
 {
+	int numLeaves = countLeaves();
+	/*std::cout << "Reserving " << numLeaves * LEAF_SIZE_2D_INNER << std::endl;
+	std::vector<Vertex> sharedVertices;
+	sharedVertices.reserve(numLeaves * LEAF_SIZE_2D_INNER);
+	Vector3iHashGrid<unsigned int> indexMap;
+	indexMap.rehash(numLeaves * LEAF_SIZE_2D_INNER);
+	auto ts = Profiler::timestamp();
+	m_RootNode->getSharedVertices(m_RootArea, sharedVertices, indexMap);
+	Profiler::printJobDuration("getSharedVertices", ts);
+	std::cout << "Shared vertices: " << sharedVertices.size() << std::endl;*/
+
 	auto ts = Profiler::timestamp();
 	vector<Cube> cubes;
-	cubes.reserve(countLeaves() * LEAF_SIZE_2D_INNER * 2);		// reasonable upper bound
+	cubes.reserve(numLeaves * LEAF_SIZE_2D_INNER * 2);		// reasonable upper bound
 	std::stack<Node*> nodes;
 	m_RootNode->getCubesToMarch(m_RootArea, cubes);
 	Profiler::printJobDuration("getCubesToMarch", ts);

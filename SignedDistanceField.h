@@ -33,6 +33,8 @@ public:
 		// Ogre::Vector3 correctionVector;
 		Ogre::Vector2 uv;
 
+		float alignmentFiller;
+
 		// Operators required for trilinear interpolation, obviously this can not handle the materialID correctly.
 		inline Sample operator * (float rhs) const
 		{
@@ -108,7 +110,7 @@ public:
 	struct Cube
 	{
 		Vector3i posMin;
-		Sample* cornerSamples[8];
+		const Sample* cornerSamples[8];
 	};
 	virtual std::vector<Cube> getCubesToMarch() = 0;
 

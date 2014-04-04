@@ -196,6 +196,12 @@ struct MathMisc
 		return val*val;
 	}
 
+	template<class T>
+	static inline T linearInterpolation(const T& val1, const T& val2, float weight)
+	{
+		return val1 * weight + val2 * (1.0f - weight);
+	}
+
 	/// Performs trilinear interpolation.
 	template<class T>
 	static inline T  trilinearInterpolation(const T* cornerValues, float* weights)

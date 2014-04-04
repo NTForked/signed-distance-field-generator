@@ -1,13 +1,13 @@
 
 #pragma once
 
+#include "Prerequisites.h"
 #include <unordered_map>
 #include <memory>
 #include <vector>
 #include "SignedDistanceField.h"
 #include "Vector3i.h"
 #include "AABB.h"
-#include "Prerequisites.h"
 #include "OpInvertSDF.h"
 #include "Area.h"
 #include "BVHScene.h"
@@ -91,7 +91,9 @@ protected:
 
 		virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const { return Sample(); }
 
-		virtual void getCubesToMarch(const Area& area, vector<Cube>& cubes) = 0;
+		virtual void getCubesToMarch(const Area& area, vector<Cube>& cubes) const {}
+
+		virtual void getSharedVertices(const Area& area, std::vector<Vertex>& vertices, Vector3iHashGrid<unsigned int>& indexMap) const {}
 
 		virtual void invert() = 0;
 
@@ -114,7 +116,9 @@ protected:
 
 		virtual void countMemory(int& memoryCounter) const override;
 
-		void getCubesToMarch(const Area& area, vector<Cube>& cubes) override;
+		virtual void getCubesToMarch(const Area& area, vector<Cube>& cubes) const override;
+
+		virtual void getSharedVertices(const Area& area, std::vector<Vertex>& vertices, Vector3iHashGrid<unsigned int>& indexMap) const override;
 
 		virtual void invert();
 
@@ -138,8 +142,6 @@ protected:
 
 		virtual void countMemory(int& memoryCounter) const override { memoryCounter += sizeof(*this); }
 
-		void getCubesToMarch(const Area& area, vector<Cube>& cubes) override;
-
 		virtual Node* clone() const override { return new EmptyNode(*this); }
 
 		virtual void invert();
@@ -159,13 +161,17 @@ protected:
 
 		Sample& at(int x, int y, int z) { return m_Samples[x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z]; }
 
+		const __forceinline Sample& at(int x, int y, int z) const { return m_Samples[x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z]; }
+
 		virtual void countNodes(int& counter) const override { counter++; }
 
 		virtual void countLeaves(int& counter) const override { counter++; }
 
 		virtual void countMemory(int& memoryCounter) const override { memoryCounter += sizeof(*this); }
 
-		void getCubesToMarch(const Area& area, vector<Cube>& cubes) override;
+		void getCubesToMarch(const Area& area, vector<Cube>& cubes) const override;
+
+		virtual void getSharedVertices(const Area& area, std::vector<Vertex>& vertices, Vector3iHashGrid<unsigned int>& indexMap) const override;
 
 		virtual Node* clone() const override { return new GridNode(*this); }
 

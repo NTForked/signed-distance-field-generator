@@ -26,6 +26,78 @@
 using std::vector;
 using Ogre::Vector3;
 
+void testVectorPerformance()
+{
+	int size = 500000;
+	auto ts = Profiler::timestamp();
+	std::vector<Vertex> stdVec;
+	stdVec.reserve(size);
+	for (int i = 0; i < size; i++)
+	{
+		Vertex v;
+		v.position = Ogre::Vector3(i, i, i);
+		stdVec.push_back(v);
+	}
+	Profiler::printJobDuration("std::vector pushback benchmark", ts);
+
+	std::vector<Vertex> stdVec2;
+	ts = Profiler::timestamp();
+	stdVec2.reserve(size);
+	for (int i = 0; i < size; i++)
+	{
+		stdVec2.emplace_back();
+		Vertex& vert = stdVec2.back();
+		vert.position = Ogre::Vector3(i, i, i);
+	}
+	Profiler::printJobDuration("std::vector emplace benchmark", ts);
+
+	ts = Profiler::timestamp();
+	for (int i = 0; i < size; i++)
+	{
+		stdVec2[i] = Vertex();
+	}
+	Profiler::printJobDuration("std::vector [] benchmark", ts);
+}
+
+#include "boost/unordered_map.hpp"
+void testVector3iHashGridPerformance()
+{
+	Vector3iHashGrid<Vertex> grid;
+	int size = 30000;
+	grid.rehash(size * 2);
+	auto ts = Profiler::timestamp();
+	for (int i = 0; i < size; i++)
+	{
+		// grid.lookupOrCreate(Vector3i(i, i, i));
+		grid.emplace(Vector3i(i, i, i));
+		// grid.insertUnsafe(std::make_pair(Vector3i(i, i, i), Vertex()));
+	}
+	Profiler::printJobDuration("Vector3iHashGrid emplace benchmark", ts);
+
+	ts = Profiler::timestamp();
+	for (int i = 0; i < size; i++)
+	{
+		grid[Vector3i(i, i, i)].position.x = 0;
+	}
+	Profiler::printJobDuration("Vector3iHashGrid [] benchmark", ts);
+
+	boost::unordered_map<Vector3i, Vertex, std::hash<Vector3i> > boostMap;
+	boostMap.rehash(size * 2);
+	ts = Profiler::timestamp();
+	for (int i = 0; i < size; i++)
+	{
+		boostMap.emplace(Vector3i(i,i,i), Vertex());
+	}
+	Profiler::printJobDuration("boost::unordered_map emplace benchmark", ts);
+
+	ts = Profiler::timestamp();
+	for (int i = 0; i < size; i++)
+	{
+		boostMap[Vector3i(i, i, i)].position.x = 0;
+	}
+	Profiler::printJobDuration("boost::unordered_map [] benchmark", ts);
+}
+
 void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 {
 	std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh(fileName);
@@ -228,12 +300,14 @@ void exampleInsideOutsideTest()
 
 int main()
 {
+	// std::cout << sizeof(SignedDistanceField3D::Sample) << std::endl;
+	testVector3iHashGridPerformance();
 	// testMeshImport();
 	// testCubeSplit();
 	// testSphere();
 	// testFractalNoisePlane();
 	// splitBuddha2();
-	splitBuddha();
+	// splitBuddha();
 	while (true) {}
 	return 0;
 }
