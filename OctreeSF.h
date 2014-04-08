@@ -40,6 +40,12 @@ public:
 	static const int LEAF_SIZE_2D_INNER = LEAF_SIZE_1D_INNER * LEAF_SIZE_1D_INNER;
 	static const int LEAF_SIZE_3D_INNER = LEAF_SIZE_2D_INNER * LEAF_SIZE_1D_INNER;
 
+	struct SharedSurfaceVertex
+	{
+		Vertex vertex;
+		int vertexIndex;
+	};
+
 protected:
 	class Node
 	{
@@ -77,7 +83,7 @@ protected:
 	{
 	public:
 		Node* m_Children[8];
-		InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF);
+		InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~InnerNode();
 		InnerNode(const InnerNode& rhs);
 
@@ -120,21 +126,43 @@ protected:
 	class GridNode : public Node
 	{
 	public:
-		GridNode(const Area& area, const SignedDistanceField3D& implicitSDF);
+		GridNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~GridNode();
 
 		std::bitset<LEAF_SIZE_3D> m_Signs;
-;
+
 		struct SurfaceEdge
 		{
-			SurfaceEdge(int edgeIndex1, int direction, const Vertex& vertex) : edgeIndex1(edgeIndex1), direction(direction), vertex(vertex)
+			SurfaceEdge(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, const Ogre::Vector3& globalPos, const SignedDistanceField3D& sdf, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices) : direction(direction)
 			{
+				edgeIndex1 = indexOf(localMinPos);
 				if (direction == 0) edgeIndex2 = edgeIndex1 + LEAF_SIZE_2D;
 				if (direction == 1) edgeIndex2 = edgeIndex1 + LEAF_SIZE_1D;
 				if (direction == 2) edgeIndex2 = edgeIndex1 + 1;
+
+				bool created;
+				SharedSurfaceVertex*& vertex = sharedVertices[direction].lookupOrCreate(cellMinPos + localMinPos, created);
+				if (created)
+				{
+					vertex = new SharedSurfaceVertex();
+					Sample s = sdf.getSample(globalPos);
+					vertex->vertex.position = s.closestSurfacePos;
+				}
+				sharedVertex = vertex;
 			}
-			Vertex vertex;
-			int vertexIndex;
+
+			void deleteSharedVertex()
+			{
+				if (ownsVertex()) delete sharedVertex;
+			}
+
+			bool ownsVertex() const
+			{
+				return (edgeIndex1 / LEAF_SIZE_2D) < LEAF_SIZE_1D_INNER
+				&& (edgeIndex1 % LEAF_SIZE_2D) / LEAF_SIZE_1D < LEAF_SIZE_1D_INNER
+				&& edgeIndex1 % LEAF_SIZE_1D < LEAF_SIZE_1D_INNER; }
+
+			SharedSurfaceVertex* sharedVertex;
 			unsigned short edgeIndex1;
 			unsigned short edgeIndex2;
 			unsigned char direction;
@@ -188,7 +216,7 @@ protected:
 
 	Node* subtract(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area);
 
-	static Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF);
+	static Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
 	BVHScene m_TriangleCache;
 public:

@@ -23,15 +23,16 @@ public:
 	{
 		Sample() {}
 		Sample(float signedDistance) : signedDistance(signedDistance) {}
-		Sample(float signedDistance, const Ogre::Vector3& normal, const Ogre::Vector2& uv, const MaterialID& materialID)
-			: signedDistance(signedDistance), normal(normal), uv(uv), materialID(materialID) {}
+		Sample(float signedDistance, const Ogre::Vector3& closestSurfacePos) : signedDistance(signedDistance), closestSurfacePos(closestSurfacePos) {}
+		Sample(float signedDistance, const Ogre::Vector3& closestSurfacePos, const Ogre::Vector3& normal, const Ogre::Vector2& uv, const MaterialID& materialID)
+			: signedDistance(signedDistance), closestSurfacePos(closestSurfacePos), normal(normal), uv(uv), materialID(materialID) {}
 
 		float signedDistance;
 
 		MaterialID materialID;
 
 		Ogre::Vector3 normal;
-		// Ogre::Vector3 correctionVector;
+		Ogre::Vector3 closestSurfacePos;
 		Ogre::Vector2 uv;
 
 		// float alignmentFiller;
@@ -39,22 +40,11 @@ public:
 		// Operators required for trilinear interpolation, obviously this can not handle the materialID correctly.
 		inline Sample operator * (float rhs) const
 		{
-			return Sample(signedDistance * rhs, normal * rhs, uv * rhs, materialID);
+			return Sample(signedDistance * rhs, closestSurfacePos, normal * rhs, uv * rhs, materialID);
 		}
 		inline Sample operator + (const Sample& rhs) const
 		{
-			return Sample(signedDistance + rhs.signedDistance, normal + rhs.normal, uv + rhs.uv, materialID);
-		}
-
-		static Sample& insideSingleton()
-		{
-			static Sample s(1.0f);
-			return s;
-		}
-		static Sample& outsideSingleton()
-		{
-			static Sample s(-1.0f);
-			return s;
+			return Sample(signedDistance + rhs.signedDistance, closestSurfacePos + rhs.closestSurfacePos, normal + rhs.normal, uv + rhs.uv, materialID);
 		}
 	};
 

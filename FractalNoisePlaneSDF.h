@@ -67,6 +67,7 @@ public:
 		int x = (int)(scaled.x + 0.5f);
 		int y = (int)(scaled.y + 0.5f);
 		float surfaceZ = lookupSafe(x, y, m_HeightMap, m_HeightMapSize);
+		sample.closestSurfacePos = Ogre::Vector3(point.x, point.y, surfaceZ);
 		sample.signedDistance = surfaceZ - point.z;
 		if (sample.signedDistance < 0)
 		{

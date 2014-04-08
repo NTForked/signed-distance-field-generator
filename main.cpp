@@ -114,8 +114,8 @@ void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 template<class Sampler>
 void testMeshImport()
 {
-	buildSDFAndMarch<Sampler>("bunny.capped.obj", 8);		// 5.441 seconds
-	buildSDFAndMarch<Sampler>("buddha2.obj", 8);				// 17.33 seconds
+	// buildSDFAndMarch<Sampler>("bunny.capped.obj", 8);		// 5.441 seconds
+	buildSDFAndMarch<Sampler>("buddha2.obj", 9);				// 17.33 seconds
 }
 
 void testSphere()
@@ -226,7 +226,7 @@ void testFractalNoisePlane()
 	Ogre::Quaternion rotation(Ogre::Radian(Ogre::Math::PI*0.5f), Ogre::Vector3(1, 0, 0));
 	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.15f);
 	auto ts = Profiler::timestamp();
-	auto octreeSDF = OctreeSF::sampleSDF(std::static_pointer_cast<SignedDistanceField3D>(fractalNoiseSDF).get(), 9);
+	auto octreeSDF = OctreeSF::sampleSDF(std::static_pointer_cast<SignedDistanceField3D>(fractalNoiseSDF).get(), 6);
 	Profiler::printJobDuration("Fractal noise sampling", ts);
 	std::cout << "Fractal noise SDF has " << octreeSDF->countLeaves() << " leaves." << std::endl;
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_FractalNoise", octreeSDF);

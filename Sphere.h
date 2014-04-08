@@ -68,16 +68,23 @@ public:
 	virtual Sample getSample(const Ogre::Vector3& point) const override
 	{
 		Sample s;
-		float distToCenter = std::sqrtf(center.squaredDistance(point));
-		s.signedDistance = radius - distToCenter;
+		getSample(point, s);
+		return s;
 		// if (distToCenter != 0.0f)
 		//	s.normal = (point - center) / distToCenter;
-		return s;
 	}
 
 	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
-		sample.signedDistance = radiusSquared - center.squaredDistance(point);
+		float distToCenter = std::sqrtf(center.squaredDistance(point));
+		sample.signedDistance = radiusSquared - distToCenter;
+		if (distToCenter == 0.0f)
+			sample.closestSurfacePos = center;
+		else
+		{
+			sample.normal = (point - center) / distToCenter;
+			sample.closestSurfacePos = center + sample.normal * sample.signedDistance;
+		}	
 	}
 
 	virtual bool getSign(const Ogre::Vector3& point) const override

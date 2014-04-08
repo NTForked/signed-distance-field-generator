@@ -64,7 +64,7 @@ public:
 		Vector3 rayDir = result.closestPoint - point;
 		if (rayDir.dotProduct(result.normal) < 0.0f) result.closestDistance *= -1;
 		// std::cout << result.closestDistance << std::endl;
-		return Sample(result.closestDistance);
+		return Sample(result.closestDistance, result.closestPoint);
 	};
 };
 
@@ -247,7 +247,7 @@ public:
 			m_LastClosestTri->getClosestLeaf(point, result);
 		m_LastClosestTri = m_RootNode.getBVH()->getClosestLeaf(point, result);
 		if (!getSign(point)) result.closestDistance *= -1;
-		return Sample(result.closestDistance);
+		return Sample(result.closestDistance, result.closestPoint);
 	};
 
 	virtual void getSamples(const Area& area, Sample* samples) const override
