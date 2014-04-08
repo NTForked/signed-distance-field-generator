@@ -90,6 +90,9 @@ void Mesh::computeTriangleNormals()
 	unsigned int triIndex = 0;
 	for (auto i = indexBuffer.begin(); i != indexBuffer.end(); i += 3)
 	{
+		int index1 = *i;
+		int index2 = *(i + 1);
+		int index3 = *(i + 2);
 		Ogre::Vector3 v0 = vertexBuffer[*(i + 1)].position - vertexBuffer[*i].position;
 		Ogre::Vector3 v1 = vertexBuffer[*(i + 2)].position - vertexBuffer[*i].position;
 		triangleNormals[triIndex] = v0.crossProduct(v1);

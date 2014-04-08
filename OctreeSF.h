@@ -44,6 +44,9 @@ public:
 	{
 		Vertex vertex;
 		int vertexIndex;
+		int refCount;
+		bool marked;
+		SharedSurfaceVertex() : marked(false), refCount(0) {}
 	};
 
 protected:
@@ -72,6 +75,8 @@ protected:
 		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) {}
 		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const {}
 
+		virtual void markSharedVertices(bool marked) {}
+
 		virtual void invert() = 0;
 
 		virtual Node* clone() const = 0;
@@ -83,7 +88,7 @@ protected:
 	{
 	public:
 		Node* m_Children[8];
-		InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+		InnerNode(const Area& area, int octreeMaxSize, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~InnerNode();
 		InnerNode(const InnerNode& rhs);
 
@@ -92,6 +97,8 @@ protected:
 		virtual void countLeaves(int& counter) const override;
 
 		virtual void countMemory(int& memoryCounter) const override;
+
+		virtual void markSharedVertices(bool marked) override;
 
 		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) override;
 		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const override;
@@ -126,7 +133,7 @@ protected:
 	class GridNode : public Node
 	{
 	public:
-		GridNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+		GridNode(const Area& area, int octreeMaxSize, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~GridNode();
 
 		std::bitset<LEAF_SIZE_3D> m_Signs;
@@ -149,18 +156,16 @@ protected:
 					vertex->vertex.position = s.closestSurfacePos;
 				}
 				sharedVertex = vertex;
+				sharedVertex->refCount++;
 			}
 
 			void deleteSharedVertex()
 			{
-				if (ownsVertex()) delete sharedVertex;
+				sharedVertex->refCount--;
+				if (!sharedVertex->refCount) delete sharedVertex;
 			}
 
-			bool ownsVertex() const
-			{
-				return (edgeIndex1 / LEAF_SIZE_2D) < LEAF_SIZE_1D_INNER
-				&& (edgeIndex1 % LEAF_SIZE_2D) / LEAF_SIZE_1D < LEAF_SIZE_1D_INNER
-				&& edgeIndex1 % LEAF_SIZE_1D < LEAF_SIZE_1D_INNER; }
+			SurfaceEdge clone() { SurfaceEdge copy(*this); copy.sharedVertex->refCount++; return copy; }
 
 			SharedSurfaceVertex* sharedVertex;
 			unsigned short edgeIndex1;
@@ -182,14 +187,18 @@ protected:
 
 		virtual void countMemory(int& memoryCounter) const override;
 
+		virtual void markSharedVertices(bool marked) override;
+
 		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) override;
 		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const override;
 
-		virtual Node* clone() const override { return new GridNode(*this); }
+		virtual Node* clone() const override;
 
 		virtual void invert();
 
-		void addEdgesAndVerticesWithSignChange(const std::vector<SurfaceEdge>& edgesIn, const std::vector<unsigned short>& cubesIn);
+		void addUniqueEdgesAndVerticesWithSignChange(std::vector<SurfaceEdge>& edgesIn, const std::vector<unsigned short>& cubesIn);
+
+		inline unsigned char getCubeBitMask(int index) const;
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 	};
@@ -216,7 +225,7 @@ protected:
 
 	Node* subtract(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area);
 
-	static Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+	static Node* createNode(const Area& area, int octreeMaxSize, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
 	BVHScene m_TriangleCache;
 public:

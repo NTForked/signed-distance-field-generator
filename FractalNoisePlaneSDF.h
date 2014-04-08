@@ -89,7 +89,10 @@ public:
 
 	bool intersectsSurface(const AABB& aabb) const override
 	{
+		// return !MathMisc::intervalDoesNotOverlap(aabb.min.z, aabb.max.z, -m_ZRange, m_ZRange);
 		// return aabb.intersectsAABB(m_SurfaceAABB);
+		// AABB epsilonAABB = aabb;
+		// epsilonAABB.addEpsilon(0.01f);
 		return m_TriangleCache.getBVH()->intersectsAABB(aabb);
 	}
 

@@ -348,7 +348,7 @@ public:
 
 	typedef int scalarType;
 
-	friend std::ostream& operator<< (std::ostream &out, Vector3i &pos) {
+	friend std::ostream& operator<< (std::ostream &out, const Vector3i &pos) {
 		out << pos.x << " " << pos.y << " " << pos.z;
 		return out;
 	}
