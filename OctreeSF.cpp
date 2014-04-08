@@ -248,10 +248,10 @@ void OctreeSF::GridNode::generateVertices(const Area& area, vector<Vertex>& vert
 #include "TriangleLookupTable.h"
 void OctreeSF::GridNode::generateIndices(const Area& area, vector<unsigned int>& indices) const
 {
-	static const SurfaceEdge* surfaceEdgeMaps[LEAF_SIZE_3D * 3];
+	static const SurfaceEdge* surfaceEdgeMaps[LEAF_SIZE_3D * 3][3];
 	for (auto i = m_SurfaceEdges.begin(); i != m_SurfaceEdges.end(); ++i)
 	{
-		surfaceEdgeMaps[LEAF_SIZE_3D * i->direction + i->edgeIndex1] = &(*i);
+		surfaceEdgeMaps[i->direction][i->edgeIndex1] = &(*i);
 	}
 
 	for (auto i = m_SurfaceCubes.begin(); i != m_SurfaceCubes.end(); ++i)
@@ -264,37 +264,15 @@ void OctreeSF::GridNode::generateIndices(const Area& area, vector<unsigned int>&
 			const TLT::DirectedEdge& p1 = TLT::getSingleton().directedEdges[i2->p1];
 			const TLT::DirectedEdge& p2 = TLT::getSingleton().directedEdges[i2->p2];
 			const TLT::DirectedEdge& p3 = TLT::getSingleton().directedEdges[i2->p3];
-			indices.push_back((int)(surfaceEdgeMaps[LEAF_SIZE_3D * p1.direction
-				+ index
+			indices.push_back((int)(surfaceEdgeMaps[p1.direction][index
 				+ (p1.minCornerIndex & 1)
 				+ ((p1.minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
 				+ ((p1.minCornerIndex & 4) >> 2) * LEAF_SIZE_2D]->sharedVertex->vertexIndex));
-
-			SharedSurfaceVertex* vertex2 = surfaceEdgeMaps[LEAF_SIZE_3D * p2.direction
-				+ index
-				+ (p2.minCornerIndex & 1)
-				+ ((p2.minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
-				+ ((p2.minCornerIndex & 4) >> 2) * LEAF_SIZE_2D]->sharedVertex;
-			indices.push_back((int)(surfaceEdgeMaps[LEAF_SIZE_3D * p2.direction
-				+ index
+			indices.push_back((int)(surfaceEdgeMaps[p2.direction][index
 				+ (p2.minCornerIndex & 1)
 				+ ((p2.minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
 				+ ((p2.minCornerIndex & 4) >> 2) * LEAF_SIZE_2D]->sharedVertex->vertexIndex));
-
-			if (!vertex2->marked)
-			{
-				std::cout << vertex2->vertex.position << std::endl;
-				std::cout << area.m_MinPos << std::endl;
-				std::cout << fromIndex(surfaceEdgeMaps[LEAF_SIZE_3D * p2.direction
-					+ index
-					+ (p2.minCornerIndex & 1)
-					+ ((p2.minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
-					+ ((p2.minCornerIndex & 4) >> 2) * LEAF_SIZE_2D]->edgeIndex1) << std::endl;
-				std::cout << (int)p2.direction << std::endl;
-				vAssert(false);
-			}
-			indices.push_back((int)(surfaceEdgeMaps[LEAF_SIZE_3D * p3.direction
-				+ index
+			indices.push_back((int)(surfaceEdgeMaps[p3.direction][index
 				+ (p3.minCornerIndex & 1)
 				+ ((p3.minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
 				+ ((p3.minCornerIndex & 4) >> 2) * LEAF_SIZE_2D]->sharedVertex->vertexIndex));
@@ -631,10 +609,14 @@ std::shared_ptr<Mesh> OctreeSF::generateMesh()
 	mesh->indexBuffer.reserve(numLeaves * LEAF_SIZE_2D_INNER * 3);
 	auto ts = Profiler::timestamp();
 	m_RootNode->generateVertices(m_RootArea, mesh->vertexBuffer);
+	Profiler::printJobDuration("generateVertices", ts);
 	std::cout << "Num vertices: " << mesh->vertexBuffer.size() << std::endl;
+	ts = Profiler::timestamp();
 	m_RootNode->generateIndices(m_RootArea, mesh->indexBuffer);
+	Profiler::printJobDuration("generateIndices", ts);
+	ts = Profiler::timestamp();
 	m_RootNode->markSharedVertices(false);
-	Profiler::printJobDuration("generateMesh", ts);
+	Profiler::printJobDuration("markSharedVertices", ts);
 	return mesh;
 }
 

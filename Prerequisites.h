@@ -17,7 +17,7 @@
 
 #include <iostream>
 
-#define ENABLE_ASSERTIONS 1
+#define ENABLE_ASSERTIONS 0
 
 // #define USE_BOOST_THREADING
 

@@ -308,11 +308,11 @@ int main()
 	// intersectBuddhaBunny();
 	// std::cout << sizeof(SignedDistanceField3D::Sample) << std::endl;
 	// testVector3iHashGridPerformance();
-	// testMeshImport<OctreeSF>();
+	testMeshImport<OctreeSF>();
 	// testCubeSplit();
 	// testSphere();
 	// testFractalNoisePlane();
-	splitBuddha2<OctreeSF>();
+	// splitBuddha2<OctreeSF>();
 	// splitBuddha();
 	while (true) {}
 	return 0;
