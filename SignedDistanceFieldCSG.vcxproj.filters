@@ -71,6 +71,7 @@
     <ClInclude Include="VoronoiFracture.h" />
     <ClInclude Include="Vector3iHashGridRefCounted.h" />
     <ClInclude Include="BlockBasedSparseArray.h" />
+    <ClInclude Include="OctreeSF.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -91,5 +92,6 @@
     <ClCompile Include="OgreMath\OgreVector3.cpp">
       <Filter>OgreMath</Filter>
     </ClCompile>
+    <ClCompile Include="OctreeSF.cpp" />
   </ItemGroup>
 </Project>

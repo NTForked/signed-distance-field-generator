@@ -80,6 +80,11 @@ public:
 		sample.signedDistance = radiusSquared - center.squaredDistance(point);
 	}
 
+	virtual bool getSign(const Ogre::Vector3& point) const override
+	{
+		return (radiusSquared - center.squaredDistance(point) > 0);
+	}
+
 	virtual bool intersectsSurface(const AABB& aabb) const override
 	{
 		if (!intersectsAABB(aabb))

@@ -150,16 +150,12 @@ public:
 		}
 	}
 
-	static std::shared_ptr<Mesh> marchSDF( SampledSignedDistanceField3D& sdf, float voxelsPerUnit)
+	static std::shared_ptr<Mesh> marchSDF(const vector<SampledSignedDistanceField3D::Cube >& cubes, float voxelsPerUnit, Ogre::Vector3& minPos)
 	{
-		std::cout << "[Marching cubes] Fetching cubes..." << std::endl;
-		vector<SampledSignedDistanceField3D::Cube > cubes = sdf.getCubesToMarch();
-		std::cout << "Fetched " << cubes.size() << " cubes!" << std::endl;
-
 		std::shared_ptr<Mesh> outMesh = std::make_shared<Mesh>();
 		outMesh->indexBuffer.reserve(cubes.size() * 10);
 		Vector3iHashGrid<VertexIndexed> vertexMap;
-		vertexMap.rehash(cubes.size() * 2);
+		vertexMap.rehash((int)cubes.size() * 2);
 		int numVertices = 0;
 		std::cout << "[Marching cubes] Marching..." << std::endl;
 		auto ts = Profiler::timestamp();
@@ -184,7 +180,7 @@ public:
 		ts = Profiler::timestamp();
 		float scale = 1.0f / voxelsPerUnit;
 		for (auto it = outMesh->vertexBuffer.begin(); it != outMesh->vertexBuffer.end(); it++)
-			it->position = (it->position * scale) + sdf.getAABB().getMin();
+			it->position = (it->position * scale) + minPos;
 		Profiler::printJobDuration("Vertex scaling", ts);
 
 		return outMesh;

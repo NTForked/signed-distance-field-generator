@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
+#include <bitset>
 #include "SignedDistanceField.h"
 #include "Vector3i.h"
 #include "AABB.h"
@@ -26,12 +27,12 @@ Samples a signed distance field in an adaptive way.
 For each node (includes inner nodes and leaves) signed distances are stores for the 8 corners. This allows to interpolate signed distances in the node cell using trilinear interpolation.
 The actual signed distances are stored in a spatial hashmap because octree nodes share corners with other nodes.
 */
-class OctreeSDF : public SampledSignedDistanceField3D
+class OctreeSF : public SampledSignedDistanceField3D
 {
 protected:
 	class GridNode;
 public:
-	static const int LEAF_EXPO = 2;
+	static const int LEAF_EXPO = 3;
 	static const int LEAF_SIZE_1D = (1 << LEAF_EXPO) + 1;
 	static const int LEAF_SIZE_2D = LEAF_SIZE_1D * LEAF_SIZE_1D;
 	static const int LEAF_SIZE_3D = LEAF_SIZE_2D * LEAF_SIZE_1D;
@@ -39,33 +40,6 @@ public:
 	static const int LEAF_SIZE_2D_INNER = LEAF_SIZE_1D_INNER * LEAF_SIZE_1D_INNER;
 	static const int LEAF_SIZE_3D_INNER = LEAF_SIZE_2D_INNER * LEAF_SIZE_1D_INNER;
 
-	/*struct SharedLeafFace
-	{
-		SharedLeafFace(const Ogre::Vector3& pos, float stepSize, int dim1, int dim2, const SignedDistanceField3D& implicitSDF);
-		SharedLeafFace() : useCount(0) {}
-		Sample samples[LEAF_SIZE_2D];
-		int useCount;
-
-		Sample& at(int x, int y) { return samples[x * LEAF_SIZE_2D + y]; }
-	};*/
-	struct SharedSample
-	{
-		SharedSample(const Sample& s) : useCount(0), sample(s) {}
-		// ~SharedSample() { std::cout << "MUUH" << std::endl; }
-		Sample sample;
-		int useCount;
-	};
-	struct SharedSamples
-	{
-		SharedSamples() : sample(nullptr), gridNode(nullptr) {}
-		SharedSamples(SharedSample* sample) : sample(sample), gridNode(nullptr) {}
-		SharedSample* sample;
-		GridNode* gridNode;		// grid node with sample position as min pos
-		/*SharedLeafFace* faceXY;
-		SharedLeafFace* faceXZ;
-		SharedLeafFace* faceYZ;*/
-	};
-	// typedef Vector3iHashGrid<SharedSamples*> SignedDistanceGrid;
 protected:
 	class Node
 	{
@@ -89,11 +63,8 @@ protected:
 
 		virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) {}
 
-		virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const { return Sample(); }
-
-		virtual void getCubesToMarch(const Area& area, vector<Cube>& cubes) const {}
-
-		virtual void getSharedVertices(const Area& area, std::vector<Vertex>& vertices, Vector3iHashGrid<unsigned int>& indexMap) const {}
+		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) {}
+		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const {}
 
 		virtual void invert() = 0;
 
@@ -116,27 +87,24 @@ protected:
 
 		virtual void countMemory(int& memoryCounter) const override;
 
-		virtual void getCubesToMarch(const Area& area, vector<Cube>& cubes) const override;
-
-		virtual void getSharedVertices(const Area& area, std::vector<Vertex>& vertices, Vector3iHashGrid<unsigned int>& indexMap) const override;
+		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) override;
+		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const override;
 
 		virtual void invert();
 
 		virtual Node* clone() const override { return new InnerNode(*this); }
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
-
-		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
 	};
 
 	class EmptyNode : public Node
 	{
 	public:
 		// EmptyNode() {}
-		EmptyNode(Sample* cornerSamples);
+		EmptyNode(const Area& area, const SignedDistanceField3D& implicitSDF);
 		~EmptyNode();
 
-		Sample m_CornerSamples[8];
+		bool m_Sign;
 
 		virtual void countNodes(int& counter) const override { counter++; }
 
@@ -147,8 +115,6 @@ protected:
 		virtual void invert();
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
-
-		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
 	};
 
 	class GridNode : public Node
@@ -156,30 +122,48 @@ protected:
 	public:
 		GridNode(const Area& area, const SignedDistanceField3D& implicitSDF);
 		~GridNode();
-		// SharedLeafFace* m_Faces[6];
-		Sample m_Samples[LEAF_SIZE_3D];
 
-		Sample& at(int x, int y, int z) { return m_Samples[x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z]; }
+		std::bitset<LEAF_SIZE_3D> m_Signs;
+;
+		struct SurfaceEdge
+		{
+			SurfaceEdge(int edgeIndex1, int direction, const Vertex& vertex) : edgeIndex1(edgeIndex1), direction(direction), vertex(vertex)
+			{
+				if (direction == 0) edgeIndex2 = edgeIndex1 + LEAF_SIZE_2D;
+				if (direction == 1) edgeIndex2 = edgeIndex1 + LEAF_SIZE_1D;
+				if (direction == 2) edgeIndex2 = edgeIndex1 + 1;
+			}
+			Vertex vertex;
+			int vertexIndex;
+			unsigned short edgeIndex1;
+			unsigned short edgeIndex2;
+			unsigned char direction;
+		};
+		std::vector<unsigned short> m_SurfaceCubes;
+		std::vector<SurfaceEdge> m_SurfaceEdges;
 
-		const __forceinline Sample& at(int x, int y, int z) const { return m_Samples[x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z]; }
+		static inline int indexOf(int x, int y, int z) { return x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z; }
+
+		static inline int indexOf(const Vector3i &v) { return indexOf(v.x, v.y, v.z); }
+
+		static inline Vector3i fromIndex(int index) { return Vector3i(index / LEAF_SIZE_2D, (index % LEAF_SIZE_2D) / LEAF_SIZE_1D, index % LEAF_SIZE_1D); }
 
 		virtual void countNodes(int& counter) const override { counter++; }
 
 		virtual void countLeaves(int& counter) const override { counter++; }
 
-		virtual void countMemory(int& memoryCounter) const override { memoryCounter += sizeof(*this); }
+		virtual void countMemory(int& memoryCounter) const override;
 
-		void getCubesToMarch(const Area& area, vector<Cube>& cubes) const override;
-
-		virtual void getSharedVertices(const Area& area, std::vector<Vertex>& vertices, Vector3iHashGrid<unsigned int>& indexMap) const override;
+		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) override;
+		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const override;
 
 		virtual Node* clone() const override { return new GridNode(*this); }
 
 		virtual void invert();
 
-		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
+		void addEdgesAndVerticesWithSignChange(const std::vector<SurfaceEdge>& edgesIn, const std::vector<unsigned short>& cubesIn);
 
-		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
+		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 	};
 
 	Node* m_RootNode;
@@ -208,21 +192,19 @@ protected:
 
 	BVHScene m_TriangleCache;
 public:
-	~OctreeSDF();
-	OctreeSDF() : m_RootNode(nullptr) {}
-	OctreeSDF(const OctreeSDF& other);
+	~OctreeSF();
+	OctreeSF() : m_RootNode(nullptr) {}
+	OctreeSF(const OctreeSF& other);
 
-	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth);
+	static std::shared_ptr<OctreeSF> sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth);
 
-	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, const AABB& aabb, int maxDepth);
+	static std::shared_ptr<OctreeSF> sampleSDF(SignedDistanceField3D* otherSDF, const AABB& aabb, int maxDepth);
 
 	float getInverseCellSize() override;
 
 	AABB getAABB() const override;
 
-	vector<Cube> getCubesToMarch();
-
-	Sample getSample(const Ogre::Vector3& point) const override;
+	std::shared_ptr<Mesh> generateMesh() override;
 
 	/// Builds the triangle cache using marching cubes required for fast intersectsSurface queries.
 	void generateTriangleCache();
@@ -236,13 +218,13 @@ public:
 	void intersect(SignedDistanceField3D* otherSDF);
 
 	/// Intersects the octree with another aligned octree (underlying grids must match).
-	void intersectAlignedOctree(OctreeSDF* otherOctree);
+	void intersectAlignedOctree(OctreeSF* otherOctree);
 
 	/// Subtracts another aligned octree from this octree.
-	void subtractAlignedOctree(OctreeSDF* otherOctree);
+	void subtractAlignedOctree(OctreeSF* otherOctree);
 
 	/// Merges another aligned octree into this octree.
-	void mergeAlignedOctree(OctreeSDF* otherOctree);
+	void mergeAlignedOctree(OctreeSF* otherOctree);
 
 	/// Resizes the octree so that it covers the given aabb.
 	void resize(const AABB& aabb);
@@ -254,7 +236,7 @@ public:
 	void invert();
 
 	/// Clones the octree and returns the copy.
-	std::shared_ptr<OctreeSDF> clone();
+	std::shared_ptr<OctreeSF> clone();
 
 	/// Counts the number of nodes in the octree.
 	int countNodes();
@@ -271,10 +253,11 @@ public:
 	/// Computes the center of mass.
 	Ogre::Vector3 getCenterOfMass();
 
-	std::shared_ptr<Mesh> generateMesh() override;
-
 	/// Removes nodes that are not required.
 	void simplify();
 
-	int getHeight() { return m_RootArea.m_SizeExpo;  }
+	int getHeight() { return m_RootArea.m_SizeExpo; }
+
+	// NIY by this data structure...
+	virtual Sample getSample(const Ogre::Vector3& point) const override { return Sample(); }
 };

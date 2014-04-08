@@ -91,10 +91,24 @@ private:
 
 
 public:
+	// table is stored in two different formats for convenience
 	std::vector<Triangle<Vector3i>> table[256];
+	std::vector<Triangle<int>> indexTable[256];
 
 	// maps vertices at edge mids to the two neighbor nodes
 	std::unordered_map<Vector3i, std::pair<unsigned char, unsigned char> > edgeMidsToNodes;
+
+	std::unordered_map<Vector3i, int> edgeIndexMap;
+
+	struct DirectedEdge
+	{
+		DirectedEdge() {}
+		DirectedEdge(unsigned char minCornerIndex, unsigned char direction) : minCornerIndex(minCornerIndex), direction(direction) {}
+		unsigned char minCornerIndex;
+		unsigned char direction;
+	};
+
+	DirectedEdge directedEdges[12];
 
 	TLT()
 	{
@@ -112,6 +126,32 @@ public:
 			Vector3i(0,1,1),
 			Vector3i(1,0,1),
 		};
+
+		directedEdges[0] = DirectedEdge(0, 1);
+		directedEdges[1] = DirectedEdge(0, 0);
+		directedEdges[2] = DirectedEdge(2, 0);
+		directedEdges[3] = DirectedEdge(4, 1);
+		directedEdges[4] = DirectedEdge(0, 2);
+		directedEdges[5] = DirectedEdge(2, 2);
+		directedEdges[6] = DirectedEdge(4, 2);
+		directedEdges[7] = DirectedEdge(6, 2);
+		directedEdges[8] = DirectedEdge(1, 1);
+		directedEdges[9] = DirectedEdge(1, 0);
+		directedEdges[10] = DirectedEdge(3, 0);
+		directedEdges[11] = DirectedEdge(5, 1);
+
+		edgeIndexMap.insert(std::make_pair(Vector3i(-1, 0, -1), 0));
+		edgeIndexMap.insert(std::make_pair(Vector3i(0, -1, -1), 1));
+		edgeIndexMap.insert(std::make_pair(Vector3i(0, 1, -1), 2));
+		edgeIndexMap.insert(std::make_pair(Vector3i(1, 0, -1), 3));
+		edgeIndexMap.insert(std::make_pair(Vector3i(-1, -1, 0), 4));
+		edgeIndexMap.insert(std::make_pair(Vector3i(-1, 1, 0), 5));
+		edgeIndexMap.insert(std::make_pair(Vector3i(1, -1, 0), 6));
+		edgeIndexMap.insert(std::make_pair(Vector3i(1, 1, 0), 7));
+		edgeIndexMap.insert(std::make_pair(Vector3i(-1, 0, 1), 8));
+		edgeIndexMap.insert(std::make_pair(Vector3i(0, -1, 1), 9));
+		edgeIndexMap.insert(std::make_pair(Vector3i(0, 1, 1), 10));
+		edgeIndexMap.insert(std::make_pair(Vector3i(1, 0, 1), 11));
 
 		edgeMidsToNodes.insert(std::make_pair(Vector3i(-1,0,-1), std::make_pair(0, 2)));
 		edgeMidsToNodes.insert(std::make_pair(Vector3i(0,-1,-1), std::make_pair(0, 4)));
@@ -210,6 +250,18 @@ public:
 			Triangle<Vector3i>(verts[1], verts[4], verts[0]));
 
 		addBaseConfig(127, Triangle<Vector3i>(verts[10], verts[11], verts[7]));
+
+		for (int i = 0; i < 256; i++)
+		{
+			for (auto it = table[i].begin(); it != table[i].end(); ++it)
+			{
+				Triangle<int> tri(
+					(int)edgeIndexMap[it->p1],
+					(int)edgeIndexMap[it->p2],
+					(int)edgeIndexMap[it->p3]);
+				indexTable[i].push_back(tri);
+			}
+		}
 	}
 
 	friend std::ostream& operator<< (std::ostream &out, TLT &tlt) {

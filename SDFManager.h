@@ -7,6 +7,7 @@
 #include "SignedDistanceField.h"
 #include "Mesh.h"
 #include "OctreeSDF.h"
+#include "OctreeSF.h"
 #include "TriangleSDF.h"
 #include "MarchingCubes.h"
 #include "ExportOBJ.h"
@@ -91,7 +92,7 @@ public:
 	/// Exports a sampled signed distance field as a triangle mesh in .obj format.
 	static void exportSampledSDFAsMesh(const std::string& objFileName, std::shared_ptr<SampledSignedDistanceField3D> sdf)
 	{
-		auto marched = MarchingCubes::marchSDF(*sdf, sdf->getInverseCellSize());
+		auto marched = sdf->generateMesh();
 		std::cout << "[Marching cubes] Computing normals ..." << std::endl;
 		marched->computeTriangleNormals();
 		marched->computeVertexNormals();

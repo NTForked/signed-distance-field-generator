@@ -317,9 +317,14 @@ public:
 		return std::max<int>(std::max<int>(abs(x), abs(y)), abs(z));
 	}
 
-	static Vector3i fromBitMask(int bitmask)
+	static inline Vector3i fromBitMask(int bitmask)
 	{
 		return Vector3i((bitmask & 4) != 0, (bitmask & 2) != 0, bitmask & 1);
+	}
+
+	inline int toBitMask() const
+	{
+		return x * 4 + y * 2 + z;
 	}
 
 	std::string toString() const

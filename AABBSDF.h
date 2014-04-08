@@ -26,6 +26,11 @@ public:
 		return s;
 	}
 
+	virtual bool getSign(const Ogre::Vector3& point) const override
+	{
+		return containsPoint(point);
+	}
+
 	virtual bool intersectsSurface(const AABB& aabb) const override
 	{
 		if (!intersectsAABB(aabb)) return false;

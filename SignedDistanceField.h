@@ -6,6 +6,7 @@
 #include "AABB.h"
 #include "Area.h"
 #include "OgreMath/OgreVector2.h"
+#include "Mesh.h"
 
 /**
 Interface for three-dimensional signed distance fields. Such a signed distance field can be sampled on a grid, but it could also be encoded implicitly.
@@ -33,7 +34,7 @@ public:
 		// Ogre::Vector3 correctionVector;
 		Ogre::Vector2 uv;
 
-		float alignmentFiller;
+		// float alignmentFiller;
 
 		// Operators required for trilinear interpolation, obviously this can not handle the materialID correctly.
 		inline Sample operator * (float rhs) const
@@ -43,6 +44,17 @@ public:
 		inline Sample operator + (const Sample& rhs) const
 		{
 			return Sample(signedDistance + rhs.signedDistance, normal + rhs.normal, uv + rhs.uv, materialID);
+		}
+
+		static Sample& insideSingleton()
+		{
+			static Sample s(1.0f);
+			return s;
+		}
+		static Sample& outsideSingleton()
+		{
+			static Sample s(-1.0f);
+			return s;
 		}
 	};
 
@@ -79,6 +91,8 @@ public:
 
 	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const { sample = getSample(point); }
 
+	virtual bool getSign(const Ogre::Vector3& point) const { return getSample(point).signedDistance >= 0.0f; }
+
 	virtual void getSamples(const Area& area, Sample* samples) const {}
 
 	/// Retrieves whether the given AABB intersects the surface (zero contour of the sdf).
@@ -86,15 +100,6 @@ public:
 
 	/// Implementations may override this to provide high speed implementations for cubic aabbs.
 	virtual bool cubeNeedsSubdivision(const Area& area) const { return intersectsSurface(area.toAABB()); }
-
-	virtual void getLowerAndUpperBound(const Area& area, bool containsSurface, const float* signedCornerDistances, float& lowerBound, float& upperBound) const
-	{
-		area.getLowerAndUpperBound(signedCornerDistances, lowerBound, upperBound);
-		/*if (containsSurface)
-			area.getLowerAndUpperBound(signedCornerDistances, lowerBound, upperBound);
-		else
-			area.getLowerAndUpperBoundOptimistic(signedCornerDistances, lowerBound, upperBound);*/
-	}
 
 	/// Retrieves the axis aligned bounding box of the sdf.
 	virtual AABB getAABB() const = 0;
@@ -112,7 +117,8 @@ public:
 		Vector3i posMin;
 		const Sample* cornerSamples[8];
 	};
-	virtual std::vector<Cube> getCubesToMarch() = 0;
+
+	virtual std::shared_ptr<Mesh> generateMesh() = 0;
 
 	virtual float getInverseCellSize() = 0;
 };

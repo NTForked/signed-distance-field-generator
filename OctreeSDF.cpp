@@ -785,10 +785,15 @@ void OctreeSDF::simplify()
 	// m_RootNode = simplifyNode(m_RootNode, m_RootArea, nodeMask);
 }
 
-void OctreeSDF::generateTriangleCache()
+std::shared_ptr<Mesh> OctreeSDF::generateMesh()
 {
 	std::vector<Cube> cubes = getCubesToMarch();
-	auto mesh = MarchingCubes::marchSDF(*this, getInverseCellSize());
+	return MarchingCubes::marchSDF(cubes, getInverseCellSize(), getAABB().min);
+}
+
+void OctreeSDF::generateTriangleCache()
+{
+	auto mesh = generateMesh();
 	auto transformedMesh = std::make_shared<TransformedMesh>(mesh);
 	std::cout << "Computing cache" << std::endl;
 	mesh->computeTriangleNormals();

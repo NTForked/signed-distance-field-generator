@@ -228,7 +228,7 @@ public:
 	}
 
 	/// Check whether a point lies inside
-	bool isInside(const Ogre::Vector3& point) const
+	virtual bool getSign(const Ogre::Vector3& point) const override
 	{
 		bool inside = false;
 		if (m_AABB.containsPoint(point))
@@ -239,13 +239,14 @@ public:
 		}
 		return inside;
 	}
+
 	Sample getSample(const Ogre::Vector3& point) const override
 	{
 		BVH<Surface>::ClosestLeafResult result;
 		if (m_LastClosestTri)
 			m_LastClosestTri->getClosestLeaf(point, result);
 		m_LastClosestTri = m_RootNode.getBVH()->getClosestLeaf(point, result);
-		if (!isInside(point)) result.closestDistance *= -1;
+		if (!getSign(point)) result.closestDistance *= -1;
 		return Sample(result.closestDistance);
 	};
 
