@@ -3,21 +3,24 @@
 
 #include <iostream>
 #include <string>
-#define NOMINMAX
-#include <Windows.h>
+// #define NOMINMAX
+// #include <Windows.h>
+#include <chrono>
 
 class Profiler
 {
 public:
-	typedef unsigned int Timestamp;
+    typedef std::chrono::system_clock::time_point Timestamp;
 
 	static Timestamp timestamp()
 	{
-		return timeGetTime();
+        return std::chrono::high_resolution_clock::now();
 	}
 
 	static void printJobDuration(std::string jobName, Timestamp timeStampJobStart)
 	{
-		std::cout << jobName << " - Done (took " << (timestamp() - timeStampJobStart) * 0.001f << " seconds)" << std::endl;
+        auto diff = timestamp() - timeStampJobStart;
+        std::chrono::milliseconds milis = std::chrono::duration_cast<std::chrono::milliseconds>(diff);
+        std::cout << jobName << " - Done (took " << (float)milis.count() * 0.001f << " seconds)" << std::endl;
 	}
 };

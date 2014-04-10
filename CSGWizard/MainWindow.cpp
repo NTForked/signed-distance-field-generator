@@ -7,8 +7,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    m_MainGLWidget = new MainGLWidget(this);
-    setCentralWidget(m_MainGLWidget);
+    m_MainGLWidget = new MainGLWindow();
+    setCentralWidget(QWidget::createWindowContainer(m_MainGLWidget));
 }
 
 MainWindow::~MainWindow()

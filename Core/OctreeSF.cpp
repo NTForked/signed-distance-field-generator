@@ -104,7 +104,7 @@ OctreeSF::GridNode::GridNode(const Area& area, int octreeMaxSize, const SignedDi
 	int yEnd = area.m_MaxPos.y < octreeMaxSize ? LEAF_SIZE_1D : LEAF_SIZE_1D_INNER;
 	int zEnd = area.m_MaxPos.z < octreeMaxSize ? LEAF_SIZE_1D : LEAF_SIZE_1D_INNER;
 
-	Sample s1, s2;
+    // Sample s1, s2;
 	currentPos = area.m_MinRealPos;
 	for (int x = xStart; x < xEnd; x++)
 	{
@@ -119,22 +119,22 @@ OctreeSF::GridNode::GridNode(const Area& area, int octreeMaxSize, const SignedDi
 					/*implicitSDF.getSample(currentPos, s1);
 					implicitSDF.getSample(currentPos + Ogre::Vector3(stepSize, 0, 0), s2);
 					vAssert(!signsAreEqual(s1.signedDistance, s2.signedDistance));*/
-					m_SurfaceEdges.emplace_back(area.m_MinPos, iPos, 0, currentPos + Ogre::Vector3(stepSize * 0.5f, 0, 0), implicitSDF, sharedVertices);
+                    m_SurfaceEdges.push_back(SurfaceEdge(area.m_MinPos, iPos, 0, currentPos + Ogre::Vector3(stepSize * 0.5f, 0, 0), implicitSDF, sharedVertices));
+                    // m_SurfaceEdges.emplace_back();
 				}
 				if (y < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[indexOf(x, y + 1, z)])
 				{
 					/*implicitSDF.getSample(currentPos, s1);
 					implicitSDF.getSample(currentPos + Ogre::Vector3(0, stepSize, 0), s2);
 					vAssert(!signsAreEqual(s1.signedDistance, s2.signedDistance));*/
-					m_SurfaceEdges.emplace_back(area.m_MinPos, iPos, 1, currentPos + Ogre::Vector3(0, stepSize * 0.5f, 0), implicitSDF, sharedVertices);
-					// m_SurfaceEdges.emplace_back(index, indexOf(x, y + 1, z), currentPos);
+                    m_SurfaceEdges.push_back(SurfaceEdge(area.m_MinPos, iPos, 1, currentPos + Ogre::Vector3(0, stepSize * 0.5f, 0), implicitSDF, sharedVertices));
 				}
 				if (z < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[indexOf(x, y, z + 1)])
 				{
 					/*implicitSDF.getSample(currentPos, s1);
 					implicitSDF.getSample(currentPos + Ogre::Vector3(0, 0, stepSize), s2);
 					vAssert(!signsAreEqual(s1.signedDistance, s2.signedDistance));*/
-					m_SurfaceEdges.emplace_back(area.m_MinPos, iPos, 2, currentPos + Ogre::Vector3(0, 0, stepSize * 0.5f), implicitSDF, sharedVertices);
+                    m_SurfaceEdges.push_back(SurfaceEdge(area.m_MinPos, iPos, 2, currentPos + Ogre::Vector3(0, 0, stepSize * 0.5f), implicitSDF, sharedVertices));
 				}
 				currentPos.z += stepSize;
 			}

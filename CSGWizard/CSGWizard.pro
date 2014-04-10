@@ -23,9 +23,10 @@ SOURCES += main.cpp\
     ../Core/OgreMath/OgreMatrix4.cpp \
     ../Core/OgreMath/OgreMatrix3.cpp \
     ../Core/OgreMath/OgreMath.cpp \
-    MainGLWidget.cpp \
     GLMesh.cpp \
-    ShaderManager.cpp
+    ShaderManager.cpp \
+    GLWindow.cpp \
+    MainGLWindow.cpp
 
 HEADERS  += MainWindow.h \
     ../Core/VoronoiFracture.h \
@@ -75,8 +76,9 @@ HEADERS  += MainWindow.h \
     ../Core/OgreMath/OgreMatrix3.h \
     ../Core/OgreMath/OgreMath.h \
     ../Core/OgreMath/asm_math.h \
-    MainGLWidget.h \
     GLMesh.h \
-    ShaderManager.h
+    ShaderManager.h \
+    GLWindow.h \
+    MainGLWindow.h
 
 FORMS    += MainWindow.ui
