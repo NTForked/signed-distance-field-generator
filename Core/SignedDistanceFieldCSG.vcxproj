@@ -166,6 +166,7 @@
     <ClInclude Include="FractalNoisePlaneSDF.h" />
     <ClInclude Include="FracturePattern.h" />
     <ClInclude Include="OctreeSF.h" />
+    <ClInclude Include="OctreeSF2.h" />
     <ClInclude Include="Vector3iHashGridRefCounted.h" />
     <ClInclude Include="TransformSDF.h" />
     <ClInclude Include="Vertex.h" />
@@ -209,6 +210,7 @@
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="OctreeSDF.cpp" />
     <ClCompile Include="OctreeSF.cpp" />
+    <ClCompile Include="OctreeSF2.cpp" />
     <ClCompile Include="OgreMath\OgreMath.cpp" />
     <ClCompile Include="OgreMath\OgreMatrix3.cpp" />
     <ClCompile Include="OgreMath\OgreMatrix4.cpp" />

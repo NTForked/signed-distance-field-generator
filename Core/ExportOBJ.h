@@ -29,7 +29,7 @@ class ExportOBJ
 public:
 	static void writeMesh(const std::string &fileName, const std::vector<Vertex > &vertexBuffer, const std::vector<unsigned int> &indexBuffer)
 	{
-		std::ofstream objFile(fileName + ".obj", std::ios_base::out|std::ios_base::trunc);
+		std::ofstream objFile(fileName, std::ios_base::out|std::ios_base::trunc);
 
 		for (unsigned int i = 0; i < vertexBuffer.size(); i++)
 			objFile << "v " << vertexBuffer[i].position.x << " " << vertexBuffer[i].position.z << " " << -vertexBuffer[i].position.y << std::endl;

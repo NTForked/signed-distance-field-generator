@@ -23,6 +23,7 @@
 #include "FracturePattern.h"
 #include "AABBSDF.h"
 #include "OctreeSF.h"
+#include "OctreeSF2.h"
 
 using std::vector;
 using Ogre::Vector3;
@@ -102,20 +103,20 @@ void testVector3iHashGridPerformance()
 template<class Sampler>
 void buildSDFAndMarch(const std::string& fileName, int maxDepth)
 {
-	std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh(fileName);
+	std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/" + fileName + ".obj");
 	auto ts = Profiler::timestamp();
 	TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
 	auto octreeSDF = Sampler::sampleSDF(&meshSDF, maxDepth);
 	Profiler::printJobDuration("SDF import " + fileName, ts);
 	std::cout << fileName << " SDF has " << octreeSDF->countLeaves() << " leaves and occupies " << octreeSDF->countMemory() / 1000 << " kb." << std::endl;
-	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_" + fileName, octreeSDF);
+	SDFManager::exportSampledSDFAsMesh("../Tests/meshImportTest_" + fileName + ".obj", octreeSDF);
 }
 
 template<class Sampler>
 void testMeshImport()
 {
-	// buildSDFAndMarch<Sampler>("bunny.capped.obj", 8);		// 5.441 seconds
-	buildSDFAndMarch<Sampler>("buddha2.obj", 9);				// 17.33 seconds
+	buildSDFAndMarch<Sampler>("bunny.capped", 8);		// 5.441 seconds
+	//buildSDFAndMarch<Sampler>("buddha2", 9);				// 17.33 seconds
 }
 
 void testSphere()

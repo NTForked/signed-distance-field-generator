@@ -143,9 +143,8 @@ protected:
 			SurfaceEdge(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, const Ogre::Vector3& globalPos, const SignedDistanceField3D& sdf, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices) : direction(direction)
 			{
 				edgeIndex1 = indexOf(localMinPos);
-				if (direction == 0) edgeIndex2 = edgeIndex1 + LEAF_SIZE_2D;
-				if (direction == 1) edgeIndex2 = edgeIndex1 + LEAF_SIZE_1D;
-				if (direction == 2) edgeIndex2 = edgeIndex1 + 1;
+				static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
+				edgeIndex2 = edgeIndex1 + EDGE_OFFSETS[direction];
 
 				bool created;
 				SharedSurfaceVertex*& vertex = sharedVertices[direction].lookupOrCreate(cellMinPos + localMinPos, created);

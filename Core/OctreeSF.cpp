@@ -248,7 +248,7 @@ void OctreeSF::GridNode::generateVertices(const Area& area, vector<Vertex>& vert
 #include "TriangleLookupTable.h"
 void OctreeSF::GridNode::generateIndices(const Area& area, vector<unsigned int>& indices) const
 {
-	static const SurfaceEdge* surfaceEdgeMaps[LEAF_SIZE_3D * 3][3];
+	static const SurfaceEdge* surfaceEdgeMaps[3][LEAF_SIZE_3D * 3];
 	for (auto i = m_SurfaceEdges.begin(); i != m_SurfaceEdges.end(); ++i)
 	{
 		surfaceEdgeMaps[i->direction][i->edgeIndex1] = &(*i);
@@ -603,20 +603,23 @@ AABB OctreeSF::getAABB() const
 #include "Profiler.h"
 std::shared_ptr<Mesh> OctreeSF::generateMesh()
 {
+	auto tsTotal = Profiler::timestamp();
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
 	int numLeaves = countLeaves();
 	mesh->vertexBuffer.reserve(numLeaves * LEAF_SIZE_2D_INNER * 2);	// reasonable upper bound
-	mesh->indexBuffer.reserve(numLeaves * LEAF_SIZE_2D_INNER * 3);
-	auto ts = Profiler::timestamp();
+	mesh->indexBuffer.reserve(numLeaves * LEAF_SIZE_2D_INNER * 8);
+	// auto ts = Profiler::timestamp();
 	m_RootNode->generateVertices(m_RootArea, mesh->vertexBuffer);
-	Profiler::printJobDuration("generateVertices", ts);
-	std::cout << "Num vertices: " << mesh->vertexBuffer.size() << std::endl;
-	ts = Profiler::timestamp();
+	// Profiler::printJobDuration("generateVertices", ts);
+	// std::cout << "Num vertices: " << mesh->vertexBuffer.size() << ", reserved was " << numLeaves * LEAF_SIZE_2D_INNER * 2 << std::endl;
+	// ts = Profiler::timestamp();
 	m_RootNode->generateIndices(m_RootArea, mesh->indexBuffer);
-	Profiler::printJobDuration("generateIndices", ts);
-	ts = Profiler::timestamp();
+	// std::cout << "Num indices: " << mesh->indexBuffer.size() << ", reserved was " << numLeaves * LEAF_SIZE_2D_INNER * 8 << std::endl;
+	// Profiler::printJobDuration("generateIndices", ts);
+	// ts = Profiler::timestamp();
 	m_RootNode->markSharedVertices(false);
-	Profiler::printJobDuration("markSharedVertices", ts);
+	// Profiler::printJobDuration("markSharedVertices", ts);
+	Profiler::printJobDuration("generateMesh", tsTotal);
 	return mesh;
 }
 
