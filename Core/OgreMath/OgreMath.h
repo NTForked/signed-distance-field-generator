@@ -246,21 +246,15 @@ namespace Ogre
         /** Cosine function.
             @param
                 fValue Angle in radians
-            @param
-                useTables If true, uses lookup tables rather than
-                calculation - faster but less accurate.
         */
-        static inline Real Cos (const Radian& fValue, bool useTables = false) {
+        static inline Real Cos (const Radian& fValue) {
 			return Real(cos(fValue.valueRadians()));
 		}
         /** Cosine function.
             @param
                 fValue Angle in radians
-            @param
-                useTables If true, uses lookup tables rather than
-                calculation - faster but less accurate.
         */
-        static inline Real Cos (Real fValue, bool useTables = false) {
+        static inline Real Cos (Real fValue) {
 			return Real(cos(fValue));
 		}
 
@@ -292,21 +286,15 @@ namespace Ogre
         /** Sine function.
             @param
                 fValue Angle in radians
-            @param
-                useTables If true, uses lookup tables rather than
-                calculation - faster but less accurate.
         */
-        static inline Real Sin (const Radian& fValue, bool useTables = false) {
+        static inline Real Sin (const Radian& fValue) {
 			return Real(sin(fValue.valueRadians()));
 		}
         /** Sine function.
             @param
                 fValue Angle in radians
-            @param
-                useTables If true, uses lookup tables rather than
-                calculation - faster but less accurate.
         */
-        static inline Real Sin (Real fValue, bool useTables = false) {
+        static inline Real Sin (Real fValue) {
 			return Real(sin(fValue));
 		}
 
@@ -332,21 +320,15 @@ namespace Ogre
         /** Tangent function.
             @param
                 fValue Angle in radians
-            @param
-                useTables If true, uses lookup tables rather than
-                calculation - faster but less accurate.
         */
-		static inline Real Tan (const Radian& fValue, bool useTables = false) {
+        static inline Real Tan (const Radian& fValue) {
 			return Real(tan(fValue.valueRadians()));
 		}
         /** Tangent function.
             @param
                 fValue Angle in radians
-            @param
-                useTables If true, uses lookup tables rather than
-                calculation - faster but less accurate.
         */
-		static inline Real Tan (Real fValue, bool useTables = false) {
+        static inline Real Tan (Real fValue) {
 			return Real(tan(fValue));
 		}
 

@@ -72,7 +72,7 @@ protected:
 
 		virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) {}
 
-		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) {}
+        virtual void generateVertices(vector<Vertex>&) {}
 		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const {}
 
 		virtual void markSharedVertices(bool marked) {}
@@ -100,7 +100,7 @@ protected:
 
 		virtual void markSharedVertices(bool marked) override;
 
-		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) override;
+        virtual void generateVertices(vector<Vertex>& positions) override;
 		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const override;
 
 		virtual void invert();
@@ -188,7 +188,7 @@ protected:
 
 		virtual void markSharedVertices(bool marked) override;
 
-		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) override;
+        virtual void generateVertices(vector<Vertex>& positions) override;
 		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const override;
 
 		virtual Node* clone() const override;
@@ -293,6 +293,8 @@ public:
 	void simplify();
 
 	int getHeight() { return m_RootArea.m_SizeExpo; }
+
+    void generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsigned int>& indices);
 
 	// NIY by this data structure...
 	virtual Sample getSample(const Ogre::Vector3& point) const override { return Sample(); }

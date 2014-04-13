@@ -32,7 +32,7 @@ public:
 		std::ofstream objFile(fileName, std::ios_base::out|std::ios_base::trunc);
 
 		for (unsigned int i = 0; i < vertexBuffer.size(); i++)
-			objFile << "v " << vertexBuffer[i].position.x << " " << vertexBuffer[i].position.z << " " << -vertexBuffer[i].position.y << std::endl;
+            objFile << "v " << vertexBuffer[i].position.x << " " << vertexBuffer[i].position.y << " " << vertexBuffer[i].position.z << std::endl;
 
 		objFile << "s 1" << std::endl;
 

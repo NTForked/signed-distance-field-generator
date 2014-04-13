@@ -105,6 +105,8 @@ void Mesh::computeVertexNormals()
 {
 	assert(triangleNormals.size() == indexBuffer.size() / 3);
 
+    std::cout << triangleNormals.size() << " normals, " << vertexBuffer.size() << " vertices." << std::endl;
+
 	for (auto i = vertexBuffer.begin(); i != vertexBuffer.end(); i++)
 		i->normal = Ogre::Vector3(0, 0, 0);
 

@@ -51,11 +51,11 @@ public:
 					lineStream >> v.x;
 					while (lineStream.peek() != ' ') lineStream.seekg(1, std::ios::cur);
 					lineStream.seekg(1, std::ios::cur);
-					lineStream >> v.z;
+                    lineStream >> v.y;
 					while (lineStream.peek() != ' ') lineStream.seekg(1, std::ios::cur);
 					lineStream.seekg(1, std::ios::cur);
-					lineStream >> v.y;
-					v.y = -v.y;
+                    lineStream >> v.z;
+                    // v.y = -v.y;
 					if (!isNormal) vertexPositions.push_back(v);
 					else vertexNormals.push_back(v);
 				}

@@ -11,7 +11,6 @@ class GLWindow : public QWindow
 {
     Q_OBJECT
 protected:
-    QOpenGLFunctions_4_3_Core* m_Funcs;
     QOpenGLContext* m_Context;
     QOpenGLVertexArrayObject* m_VAO;
 
@@ -25,7 +24,6 @@ protected:
     void renderAndSwap();
 
     virtual void render() {}
-
     virtual void initializeGL() {}
 
 public:

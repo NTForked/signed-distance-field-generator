@@ -231,7 +231,7 @@ void OctreeSF::GridNode::markSharedVertices(bool marked)
 	}
 }
 
-void OctreeSF::GridNode::generateVertices(const Area& area, vector<Vertex>& vertices)
+void OctreeSF::GridNode::generateVertices(vector<Vertex>& vertices)
 {
 	// vertices.reserve(vertices.size() + m_SurfaceEdges.size());
 	for (auto i = m_SurfaceEdges.begin(); i != m_SurfaceEdges.end(); ++i)
@@ -240,7 +240,7 @@ void OctreeSF::GridNode::generateVertices(const Area& area, vector<Vertex>& vert
 		{
 			i->sharedVertex->vertexIndex = vertices.size();
 			i->sharedVertex->marked = true;
-			vertices.push_back(i->sharedVertex->vertex);
+            vertices.push_back(i->sharedVertex->vertex);
 		}
 	}
 }
@@ -280,12 +280,10 @@ void OctreeSF::GridNode::generateIndices(const Area& area, vector<unsigned int>&
 	}
 }
 
-void OctreeSF::InnerNode::generateVertices(const Area& area, vector<Vertex>& vertices)
+void OctreeSF::InnerNode::generateVertices(vector<Vertex>& vertices)
 {
-	Area subAreas[8];
-	area.getSubAreas(subAreas);
 	for (int i = 0; i < 8; i++)
-		m_Children[i]->generateVertices(subAreas[i], vertices);
+        m_Children[i]->generateVertices(vertices);
 }
 void OctreeSF::InnerNode::generateIndices(const Area& area, vector<unsigned int>& indices) const
 {
@@ -600,26 +598,27 @@ AABB OctreeSF::getAABB() const
 	return m_RootArea.toAABB();
 }
 
+void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsigned int>& indices)
+{
+    auto tsTotal = Profiler::timestamp();
+    int numLeaves = countLeaves();
+    vertices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 2);	// reasonable upper bound
+    m_RootNode->generateVertices(vertices);
+
+    indices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 8);
+    m_RootNode->generateIndices(m_RootArea, indices);
+
+    m_RootNode->markSharedVertices(false);
+    Profiler::printJobDuration("generateVerticesAndIndices", tsTotal);
+}
+
 #include "Profiler.h"
 std::shared_ptr<Mesh> OctreeSF::generateMesh()
 {
-	auto tsTotal = Profiler::timestamp();
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
-	int numLeaves = countLeaves();
-	mesh->vertexBuffer.reserve(numLeaves * LEAF_SIZE_2D_INNER * 2);	// reasonable upper bound
-	mesh->indexBuffer.reserve(numLeaves * LEAF_SIZE_2D_INNER * 8);
-	// auto ts = Profiler::timestamp();
-	m_RootNode->generateVertices(m_RootArea, mesh->vertexBuffer);
-	// Profiler::printJobDuration("generateVertices", ts);
-	// std::cout << "Num vertices: " << mesh->vertexBuffer.size() << ", reserved was " << numLeaves * LEAF_SIZE_2D_INNER * 2 << std::endl;
-	// ts = Profiler::timestamp();
-	m_RootNode->generateIndices(m_RootArea, mesh->indexBuffer);
-	// std::cout << "Num indices: " << mesh->indexBuffer.size() << ", reserved was " << numLeaves * LEAF_SIZE_2D_INNER * 8 << std::endl;
-	// Profiler::printJobDuration("generateIndices", ts);
-	// ts = Profiler::timestamp();
-	m_RootNode->markSharedVertices(false);
-	// Profiler::printJobDuration("markSharedVertices", ts);
-	Profiler::printJobDuration("generateMesh", tsTotal);
+    generateVerticesAndIndices(mesh->vertexBuffer, mesh->indexBuffer);
+    mesh->computeTriangleNormals();
+    mesh->computeVertexNormals();
 	return mesh;
 }
 

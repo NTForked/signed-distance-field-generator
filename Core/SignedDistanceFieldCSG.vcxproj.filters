@@ -75,7 +75,6 @@
     <ClInclude Include="OctreeSF2.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="OgreMath\OgreMatrix4.cpp">
       <Filter>OgreMath</Filter>
@@ -95,5 +94,6 @@
     </ClCompile>
     <ClCompile Include="OctreeSF.cpp" />
     <ClCompile Include="OctreeSF2.cpp" />
+    <ClCompile Include="Tests.cpp" />
   </ItemGroup>
 </Project>

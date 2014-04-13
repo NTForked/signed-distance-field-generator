@@ -1,5 +1,5 @@
 #include "GLWindow.h"
-#include "ShaderManager.h"
+#include "GLManager.h"
 #include <QOpenGLFunctions_4_3_Core>
 #include <QCoreApplication>
 
@@ -28,14 +28,13 @@ GLWindow::GLWindow(QOpenGLContext* shareContext, QScreen* screen) :
     // Make the context current on this window
     m_Context->makeCurrent(this);
 
-    // Obtain a functions object and resolve all entry points
-    // m_funcs is declared as: QOpenGLFunctions_4_3_Core* m_funcs
-    m_Funcs = dynamic_cast<QOpenGLFunctions_4_3_Core*>(m_Context->versionFunctions());
-    if ( !m_Funcs ) {
+    QOpenGLFunctions_4_3_Core* funcs = dynamic_cast<QOpenGLFunctions_4_3_Core*>(m_Context->versionFunctions());
+    if ( !funcs ) {
         qWarning("Could not obtain OpenGL versions object");
         exit( 1 );
     }
-    m_Funcs->initializeOpenGLFunctions();
+    funcs->initializeOpenGLFunctions();
+    GLManager::getSingleton().setGLFunctions(funcs);
 
     m_VAO = new QOpenGLVertexArrayObject(this);
     m_VAO->create();
@@ -73,7 +72,6 @@ bool GLWindow::event(QEvent *event)
 void GLWindow::renderAndSwap()
 {
     m_Context->makeCurrent(this);
-    m_Funcs->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     render();
     m_Context->swapBuffers(this);
 }

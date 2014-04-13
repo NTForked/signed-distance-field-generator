@@ -12,7 +12,7 @@ TARGET = CSGWizard
 TEMPLATE = app
 
 
-SOURCES += main.cpp\
+SOURCES += main.cpp \
         MainWindow.cpp \
     ../Core/OctreeSF2.cpp \
     ../Core/OctreeSF.cpp \
@@ -24,9 +24,10 @@ SOURCES += main.cpp\
     ../Core/OgreMath/OgreMatrix3.cpp \
     ../Core/OgreMath/OgreMath.cpp \
     GLMesh.cpp \
-    ShaderManager.cpp \
     GLWindow.cpp \
-    MainGLWindow.cpp
+    MainGLWindow.cpp \
+    GLManager.cpp \
+    Camera.cpp
 
 HEADERS  += MainWindow.h \
     ../Core/VoronoiFracture.h \
@@ -77,8 +78,9 @@ HEADERS  += MainWindow.h \
     ../Core/OgreMath/OgreMath.h \
     ../Core/OgreMath/asm_math.h \
     GLMesh.h \
-    ShaderManager.h \
     GLWindow.h \
-    MainGLWindow.h
+    MainGLWindow.h \
+    GLManager.h \
+    Camera.h
 
 FORMS    += MainWindow.ui
