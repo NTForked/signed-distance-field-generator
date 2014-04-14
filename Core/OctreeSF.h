@@ -32,7 +32,7 @@ class OctreeSF : public SampledSignedDistanceField3D
 protected:
 	class GridNode;
 public:
-	static const int LEAF_EXPO = 3;
+    static const int LEAF_EXPO = 3;
 	static const int LEAF_SIZE_1D = (1 << LEAF_EXPO) + 1;
 	static const int LEAF_SIZE_2D = LEAF_SIZE_1D * LEAF_SIZE_1D;
 	static const int LEAF_SIZE_3D = LEAF_SIZE_2D * LEAF_SIZE_1D;
@@ -43,8 +43,9 @@ public:
 	struct SharedSurfaceVertex
 	{
 		Vertex vertex;
+        float signedDistance;
 		int vertexIndex;
-		int refCount;
+        unsigned short refCount;
 		bool marked;
 		SharedSurfaceVertex() : marked(false), refCount(0) {}
 	};
@@ -66,20 +67,22 @@ protected:
 
 		virtual void countNodes(int& counter) const = 0;
 
-		virtual void countLeaves(int& counter) const {}
+        virtual void countLeaves(int&) const {}
 
-		virtual void countMemory(int& memoryCounter) const {}
+        virtual void countMemory(int&) const {}
 
-		virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) {}
+        virtual void sumPositionsAndMass(const Area&, Ogre::Vector3&, float&) {}
 
         virtual void generateVertices(vector<Vertex>&) {}
-		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const {}
+        virtual void generateIndices(const Area&, vector<unsigned int>&) const {}
 
-		virtual void markSharedVertices(bool marked) {}
+        virtual void markSharedVertices(bool) {}
 
 		virtual void invert() = 0;
 
 		virtual Node* clone() const = 0;
+
+        virtual bool rayIntersectUpdate(const Area&, const Ray&, Ray::Intersection&) { return false; }
 
 		inline Type getNodeType() { return m_NodeType; }
 	};
@@ -88,7 +91,7 @@ protected:
 	{
 	public:
 		Node* m_Children[8];
-		InnerNode(const Area& area, int octreeMaxSize, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~InnerNode();
 		InnerNode(const InnerNode& rhs);
 
@@ -106,6 +109,8 @@ protected:
 		virtual void invert();
 
 		virtual Node* clone() const override { return new InnerNode(*this); }
+
+        virtual bool rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection) override;
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 	};
@@ -133,7 +138,7 @@ protected:
 	class GridNode : public Node
 	{
 	public:
-		GridNode(const Area& area, int octreeMaxSize, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        GridNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~GridNode();
 
 		std::bitset<LEAF_SIZE_3D> m_Signs;
@@ -151,8 +156,10 @@ protected:
 				if (created)
 				{
 					vertex = new SharedSurfaceVertex();
-					Sample s = sdf.getSample(globalPos);
+                    Sample s;
+                    sdf.getSample(globalPos, s);
 					vertex->vertex.position = s.closestSurfacePos;
+                    vertex->signedDistance = s.signedDistance;
 				}
 				sharedVertex = vertex;
 				sharedVertex->refCount++;
@@ -199,6 +206,8 @@ protected:
 
 		inline unsigned char getCubeBitMask(int index) const;
 
+        virtual bool rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection) override;
+
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 	};
 
@@ -220,11 +229,11 @@ protected:
 
 	Node* mergeAlignedNode(Node* node, Node* otherNode, const Area& area);
 
-	Node* intersect(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area);
+    Node* intersect(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
-	Node* subtract(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area);
+    Node* merge(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
-	static Node* createNode(const Area& area, int octreeMaxSize, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+    static Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
 	BVHScene m_TriangleCache;
 public:
@@ -296,6 +305,8 @@ public:
 
     void generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsigned int>& indices);
 
+    bool rayIntersectClosest(const Ray& ray, Ray::Intersection& intersection);
+
 	// NIY by this data structure...
-	virtual Sample getSample(const Ogre::Vector3& point) const override { return Sample(); }
+    virtual Sample getSample(const Ogre::Vector3&) const override { return Sample(); }
 };

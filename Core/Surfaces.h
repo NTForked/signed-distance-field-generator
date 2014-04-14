@@ -23,7 +23,7 @@ public:
 	virtual ~Surface() {}
 
 	/// Retrieves the aabb of the Surface.
-	__forceinline void getBoundingVolume(AABB& aabb) { aabb = m_AABB; }
+    __forceinline const AABB& getBoundingVolume() const { return m_AABB; }
 
 	// __forceinline void getBoundingVolume(SphereBV& sphereBV) { sphereBV = m_SphereBV; }
 
@@ -39,9 +39,11 @@ private:
 	unsigned int mTriangleIndex, mIndex1, mIndex2, mIndex3;
 
 public:
-	TriangleSurface(TransformedMesh *mesh, unsigned int triangleIndex)
-		: mMesh(mesh), mTriangleIndex(triangleIndex), mIndex1(mesh->getMesh()->indexBuffer[triangleIndex*3]), mIndex2(mesh->getMesh()->indexBuffer[triangleIndex*3+1]), mIndex3(mesh->getMesh()->indexBuffer[triangleIndex*3+2])
-		{ mType = PRIMITIVE; }
+    TriangleSurface(TransformedMesh *mesh, unsigned int triangleIndex)
+        : mMesh(mesh), mTriangleIndex(triangleIndex), mIndex1(mesh->getMesh()->indexBuffer[triangleIndex*3]), mIndex2(mesh->getMesh()->indexBuffer[triangleIndex*3+1]), mIndex3(mesh->getMesh()->indexBuffer[triangleIndex*3+2])
+    {
+        mType = PRIMITIVE;
+    }
 	~TriangleSurface() {}
 	const Surface* rayIntersectClosest(Ray::Intersection &intersection, const Ray &ray) const override
 	{
@@ -133,17 +135,21 @@ public:
 
 	void updateBoundingVolume()
 	{
-		m_ExtremalPoints.clear();
-		m_ExtremalPoints.push_back(mMesh->vertexBufferVS[mIndex1].position);
-		m_ExtremalPoints.push_back(mMesh->vertexBufferVS[mIndex2].position);
-		m_ExtremalPoints.push_back(mMesh->vertexBufferVS[mIndex3].position);
-		m_AABB = AABB(m_ExtremalPoints);
+        std::vector<Ogre::Vector3> points;
+        points.resize(3);
+        points[0] = mMesh->vertexBufferVS[mIndex1].position;
+        points[1] = mMesh->vertexBufferVS[mIndex2].position;
+        points[2] = mMesh->vertexBufferVS[mIndex3].position;
+        m_AABB = AABB(points);
+        m_ExtremalPoints.clear();
+        m_ExtremalPoints.push_back(m_AABB.min);
+        m_ExtremalPoints.push_back(m_AABB.max);
 		// m_SphereBV = SphereBV(m_ExtremalPoints);
 	}
 
 	bool intersectsAABB(const AABB& aabb) const override
 	{
-		return aabb.intersectsTriangle(mMesh->vertexBufferVS[mIndex1].position, mMesh->vertexBufferVS[mIndex2].position, mMesh->vertexBufferVS[mIndex3].position, mMesh->triangleDataVS[mTriangleIndex].normal);
-		// return m_AABB.intersectsAABB(aabb);
+        return aabb.intersectsTriangle(mMesh->vertexBufferVS[mIndex1].position, mMesh->vertexBufferVS[mIndex2].position, mMesh->vertexBufferVS[mIndex3].position, mMesh->triangleDataVS[mTriangleIndex].normal);
+        // return m_AABB.intersectsAABB(aabb);
 	}
 };

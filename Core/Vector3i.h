@@ -368,7 +368,7 @@ protected:
 public:
 	Vector3iHashGrid()
 	{
-		rehash(50000);
+        rehash(5000);
 	}
 	void rehash(unsigned int size)
 	{
@@ -382,10 +382,11 @@ public:
 				m_Buckets[keyIndex(i2->first)].push_back(*i2);
 			}
 		}
-		for (auto i = m_Buckets.begin(); i != m_Buckets.end(); i++)
+        // std::cout << "Rehash!" << std::endl;
+        for (auto i = m_Buckets.begin(); i != m_Buckets.end(); i++)
 		{
-			i->reserve(8);
-		}
+            i->reserve(8);
+        }
 	}
 
 	inline int computeZCurveIndex(const Vector3i& key) const

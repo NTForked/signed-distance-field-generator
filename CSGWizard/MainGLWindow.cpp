@@ -24,10 +24,12 @@ void MainGLWindow::initializeGL()
 
     GLManager::getSingleton().getGLFunctions()->glEnable(GL_DEPTH_TEST);
 
-    std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/bunny_highres.obj");
+    std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/buddha2.obj");
     TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
-    auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
+    // SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
+    auto octree = OctreeSF::sampleSDF(&meshSDF, 9);
     m_Mesh = std::make_shared<GLMesh>(octree);
+    m_CollisionGeometry.addMesh(std::make_shared<TransformedMesh>(m_Mesh->getMesh()));
 }
 
 void MainGLWindow::wheelEvent(QWheelEvent* event)
@@ -38,9 +40,68 @@ void MainGLWindow::wheelEvent(QWheelEvent* event)
     updateCameraPos();
 }
 
+float screenToNDC(float x)
+{
+    return 2 * x - 1;
+}
+
+void MainGLWindow::mousePressEvent(QMouseEvent* event)
+{
+    if (event->buttons() & Qt::LeftButton)
+    {
+        m_RaycastOctree = m_Mesh->getOctree()->clone();
+
+        if (raycast(event, m_LastIntersectionPos))
+        {
+            SphereSDF sphere(m_LastIntersectionPos, 0.004f);
+            m_Mesh->getOctree()->subtract(&sphere);
+            m_Mesh->updateMesh();
+            requestRedraw();
+        }
+    }
+}
+
+bool MainGLWindow::raycast(QMouseEvent* event, Ogre::Vector3& rayIntersection)
+{
+    float xNDC = screenToNDC((float)event->pos().x() / width());
+    float yNDC = screenToNDC((float)(height() - event->pos().y()) / height());
+    Ray cameraRay = m_Camera.getCameraRay(xNDC, yNDC);
+    Ray::Intersection hit;
+    if (m_RaycastOctree->rayIntersectClosest(cameraRay, hit))
+    {
+        rayIntersection = cameraRay.origin + cameraRay.direction * hit.t;
+        return true;
+    }
+    return false;
+}
+
+void MainGLWindow::mouseReleaseEvent(QMouseEvent* event)
+{
+}
+
 void MainGLWindow::mouseMoveEvent(QMouseEvent* event)
 {
-    if (event->buttons() & Qt::MiddleButton)
+    if (event->buttons() & Qt::LeftButton)
+    {
+        Ogre::Vector3 intersection;
+        if (raycast(event, intersection))
+        {
+            Ogre::Vector3 delta = intersection - m_LastIntersectionPos;
+            float dist = delta.normalise();
+            float sphereDist = 0.002f;
+            for (float x = 0; x < dist; x += sphereDist)
+            {
+                SphereSDF sphere(m_LastIntersectionPos + delta * x, 0.004f);
+                m_Mesh->getOctree()->subtract(&sphere);
+            }
+
+            m_LastIntersectionPos = intersection;
+
+            m_Mesh->updateMesh();
+            requestRedraw();
+        }
+    }
+    else if (event->buttons() & Qt::MiddleButton)
     {
         QPoint delta = event->pos() - m_MousePos;
         if (event->modifiers() & Qt::SHIFT)

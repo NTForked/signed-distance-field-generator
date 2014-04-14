@@ -17,9 +17,9 @@ class BVH
 public:
 	enum Type
 	{
-		PRIMITIVE,
-		PRIMITIVE_BUCKET,
-		NODE
+        PRIMITIVE = 0,
+        PRIMITIVE_BUCKET = 1,
+        NODE = 2
 	};
 protected:
 
@@ -84,7 +84,7 @@ public:
 	virtual bool intersectsAABB(const AABB& aabb) const = 0;
 
 	/// Retrieves all leaves inside the aabb.
-	virtual void getLeaves(const AABB& aabb, std::vector<const LeafType*>& leaves) const {}
+    virtual void getLeaves(const AABB&, std::vector<const LeafType*>&) const {}
 
 	virtual unsigned int getHeight() const { return 1; }
 	virtual float getHeightAvg() const { return 1.0f; }
@@ -197,7 +197,7 @@ protected:
 
 	int mSplitAxis;
 
-	static const int PRIMITIVES_PER_LEAF = 6;
+    static const int PRIMITIVES_PER_LEAF = 5;
 
 	__forceinline static void updateSplitParameters(const BoundingVolume &objBV, const Ogre::Vector3 &objCenter, const Ogre::Vector3 &pivot, int axis, int &numLeft, float &maxLeft, float &minRight)
 	{
@@ -216,18 +216,19 @@ protected:
 		const unsigned int mSplitAxis;
 		bool operator()(LeafType *s)
 		{
-			BoundingVolume bv;
-			s->getBoundingVolume(bv);
+            const BoundingVolume& bv = s->getBoundingVolume();
 			return bv.getCenter()[mSplitAxis] < mPivot;
 		}
 	};
 
 	int partitionSurfaces(std::vector<LeafType*> &surfaces, int left, int right, int axisCounter)
 	{
-		int numSurfaces = right-left;
+        int numSurfaces = right-left;
+        vAssert(numSurfaces > PRIMITIVES_PER_LEAF);
 
 		// create bounding volume big enough to contain all surfaces
-		std::vector<Ogre::Vector3> extremalPoints;
+        /*std::vector<Ogre::Vector3> extremalPoints;
+        extremalPoints.reserve(numSurfaces * 2);
 		for (int i = left; i < right; i++)
 		{
 			extremalPoints.insert(
@@ -235,7 +236,13 @@ protected:
 				surfaces[i]->getExtremalPoints().begin(),
 				surfaces[i]->getExtremalPoints().end());
 		}
-		mBoundingVolume = BoundingVolume(extremalPoints);
+        mBoundingVolume = BoundingVolume(extremalPoints);*/
+
+        mBoundingVolume = surfaces[left]->getBoundingVolume();
+        for (int i = left + 1; i < right; i++)
+        {
+            mBoundingVolume.merge(surfaces[i]->getBoundingVolume());
+        }
 		
 		// use spatial median
 		Ogre::Vector3 pivot = mBoundingVolume.getCenter();
@@ -248,7 +255,7 @@ protected:
 		For each axis we compute two penalties that correspond to these criteria. In the end we combine both penalties in some way and choose the axis with the smallest penalty.
 		*/
 
-		int numLeft[3] = {0, 0, 0};
+        /*int numLeft[3] = {0, 0, 0};
 		float maxLeft[3] = {-99999999.0f, -99999999.0f, -99999999.0f};
 		float minRight[3] = {99999999.0f, 99999999.0f, 99999999.0f};
 
@@ -274,9 +281,9 @@ protected:
 
 		mSplitAxis = 0;
 		if (penalty[1] <= penalty[0]) mSplitAxis = 1;
-		if (penalty[2] <= penalty[mSplitAxis]) mSplitAxis = 2;
+        if (penalty[2] <= penalty[mSplitAxis]) mSplitAxis = 2;*/
 
-		// mSplitAxis = axisCounter % 3;
+        mSplitAxis = axisCounter % 3;
 
 		typename std::vector<LeafType*>::iterator leftIt = surfaces.begin() + left;
 		typename std::vector<LeafType*>::iterator rightIt = surfaces.begin() + right;
@@ -300,7 +307,7 @@ protected:
 						break;
 					}
 				}
-				if (numSwapped >= numSurfaces/2) break;
+                if (numSwapped > 0) break; //numSurfaces/2) break;
 			}
 		}
 		else if (mid == right)
@@ -319,9 +326,11 @@ protected:
 						break;
 					}
 				}
-				if (numSwapped >= numSurfaces/2) break;
+                if (numSwapped > 0) break;// numSurfaces/2) break;
 			}
 		}
+        if (mid == left || mid == right)
+            std::cout << mBoundingVolume.min << " " << mBoundingVolume.max << std::endl;
 		vAssert(mid > left && mid < right);
 
 		return mid;
@@ -333,17 +342,19 @@ protected:
 public:
 	virtual ~BVHNode()
 	{
-		if (mChildren[0]->getType() != BVH<LeafType>::PRIMITIVE) delete mChildren[0];
-		if (mChildren[1]->getType() != BVH<LeafType>::PRIMITIVE) delete mChildren[1];
+        if (mChildren[0]->getType() != BVH<LeafType>::PRIMITIVE) delete mChildren[0];
+        if (mChildren[1]->getType() != BVH<LeafType>::PRIMITIVE) delete mChildren[1];
 	}
 
 	static BVH<LeafType>* create(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis)
 	{
 		if (right - left > PRIMITIVES_PER_LEAF)
 			return new BVHNode<BoundingVolume, LeafType>(surfaces, left, right, splitAxis);
-		else if (right - left > 1)
+        return new BVHContainer<LeafType>(surfaces.begin() + left, surfaces.begin() + right);
+        /*else if (right - left > 1)
 			return new BVHContainer<LeafType>(surfaces.begin() + left, surfaces.begin() + right);
-		else return surfaces[left];
+        else if (right - left == 1) return surfaces[left];
+        return nullptr;*/
 	}
 
 	/// Constructs a BVH for a list of surfaces - implemented inplace
@@ -528,9 +539,10 @@ public:
 			else
 				return new BVHNode<BoundingVolume, LeafType>(surfaces, left, right, splitAxis);
 		}
-		else if (right - left > 1)
+        return new BVHContainer<LeafType>(surfaces.begin() + left, surfaces.begin() + right);
+        /*else if (right - left > 1)
 			return new BVHContainer<LeafType>(surfaces.begin() + left, surfaces.begin() + right);
-		else return surfaces[left];
+        else return surfaces[left];*/
 	}
 
 	static BVH<LeafType>* create(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis, int maxParallelDepth, boost::thread_group &threads)
@@ -542,9 +554,10 @@ public:
 			else
 				return new BVHNode<BoundingVolume, LeafType>(surfaces, left, right, splitAxis);
 		}
-		else if (right - left > 1)
+        return new BVHContainer<LeafType>(surfaces.begin() + left, surfaces.begin() + right);
+        /*else if (right - left > 1)
 			return new BVHContainer<LeafType>(surfaces.begin() + left, surfaces.begin() + right);
-		else return surfaces[left];
+        else return surfaces[left];*/
 	}
 
 	void initialize(std::vector<LeafType*> &surfaces, int left, int right, int splitAxis, int maxParallelDepth)

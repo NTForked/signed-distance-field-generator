@@ -13,17 +13,21 @@ using std::shared_ptr;
 class BVHScene
 {
 protected:
-	shared_ptr<BVH<Surface> > m_BVH;
+    BVH<Surface>* m_BVH;
 	vector<shared_ptr<TransformedMesh> > m_Meshes;
 
 public:
-	BVHScene() {}
+    BVHScene() : m_BVH(nullptr) {}
 	~BVHScene()
 	{
-		// do this explicitly here to ensure that the BVH is destroyed before the meshes
-		if (m_BVH) m_BVH = nullptr;
+        destroyBVH();
 	}
 
+    void destroyBVH()
+    {
+        if (m_BVH && m_BVH->getType() != BVH<Surface>::PRIMITIVE)
+            delete m_BVH;
+    }
 	void clearMeshes()
 	{
 		m_Meshes.clear();
@@ -37,6 +41,7 @@ public:
 	template<class BV>
 	void generateBVH()
 	{
+        destroyBVH();
 		vector<Surface*> surfaces;
 		for (auto iMesh = m_Meshes.begin(); iMesh != m_Meshes.end(); ++iMesh)
 		{
@@ -45,19 +50,19 @@ public:
 		}
 #ifdef USE_BOOST_THREADING
 		const int numThreads = 16;
-		m_BVH = shared_ptr<BVH<Surface> >(BVHNodeThreaded<BV, Surface>::create(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads) / std::log(2.0))));
+        m_BVH = BVHNodeThreaded<BV, Surface>::create(surfaces, 0, (int)surfaces.size(), 0, static_cast<int>(std::log((double)numThreads) / std::log(2.0)));
 #else
-		m_BVH = shared_ptr<BVH<Surface> >(BVHNode<BV, Surface>::create(surfaces, 0, (int)surfaces.size(), 0));
+        m_BVH = BVHNode<BV, Surface>::create(surfaces, 0, (int)surfaces.size(), 0);
 #endif
 	}
 
 	inline BVH<Surface>* getBVH()
 	{
-		return m_BVH.get();
+        return m_BVH;
 	}
 	inline BVH<Surface>* getBVH() const
 	{
-		return m_BVH.get();
+        return m_BVH;
 	}
 
 };

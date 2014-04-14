@@ -58,18 +58,18 @@ protected:
 	public:
 		virtual ~Node() {}
 
-		virtual void countNodes(int& counter) const = 0;
+        virtual void countNodes(int&) const = 0;
 
-		virtual void countLeaves(int& counter) const {}
+        virtual void countLeaves(int&) const {}
 
-		virtual void countMemory(int& memoryCounter) const {}
+        virtual void countMemory(int&) const {}
 
-		virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) {}
+        virtual void sumPositionsAndMass(const Area&, Ogre::Vector3&, float&) {}
 
-		virtual void generateVertices(const Area& area, vector<Vertex>& vertices) {}
-		virtual void generateIndices(const Area& area, vector<unsigned int>& indices) const {}
+        virtual void generateVertices(const Area&, vector<Vertex>&) {}
+        virtual void generateIndices(const Area&, vector<unsigned int>&) const {}
 
-		virtual void markSharedVertices(bool marked) {}
+        virtual void markSharedVertices(bool) {}
 
 		virtual void invert() = 0;
 
@@ -251,5 +251,5 @@ public:
 	int getHeight() { return m_RootArea.m_SizeExpo; }
 
 	// NIY by this data structure...
-	virtual Sample getSample(const Ogre::Vector3& point) const override { return Sample(); }
+    virtual Sample getSample(const Ogre::Vector3&) const override { return Sample(); }
 };

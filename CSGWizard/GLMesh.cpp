@@ -16,21 +16,21 @@ GLMesh::~GLMesh()
 
 void GLMesh::updateMesh()
 {
-    auto mesh = m_Octree->generateMesh();
+    m_Mesh = m_Octree->generateMesh();
     /*mesh->vertexBuffer.push_back(Ogre::Vector3(0, 0, 0));
     mesh->vertexBuffer.push_back(Ogre::Vector3(0, 1, 0));
     mesh->vertexBuffer.push_back(Ogre::Vector3(0, 0, 1));
     mesh->indexBuffer.push_back(0);
     mesh->indexBuffer.push_back(1);
     mesh->indexBuffer.push_back(2);*/
-    m_VertexBufferSize = mesh->vertexBuffer.size();
-    m_IndexBufferSize = mesh->indexBuffer.size();
+    m_VertexBufferSize = m_Mesh->vertexBuffer.size();
+    m_IndexBufferSize = m_Mesh->indexBuffer.size();
 
     GLManager::getSingleton().getGLFunctions()->glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
-    GLManager::getSingleton().getGLFunctions()->glBufferData(GL_ARRAY_BUFFER, m_VertexBufferSize * sizeof(Vertex), mesh->vertexBuffer.data(), GL_DYNAMIC_DRAW);
+    GLManager::getSingleton().getGLFunctions()->glBufferData(GL_ARRAY_BUFFER, m_VertexBufferSize * sizeof(Vertex), m_Mesh->vertexBuffer.data(), GL_DYNAMIC_DRAW);
 
     GLManager::getSingleton().getGLFunctions()->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IndexBuffer);
-    GLManager::getSingleton().getGLFunctions()->glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_IndexBufferSize * sizeof(unsigned int), mesh->indexBuffer.data(), GL_DYNAMIC_DRAW);
+    GLManager::getSingleton().getGLFunctions()->glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_IndexBufferSize * sizeof(unsigned int), m_Mesh->indexBuffer.data(), GL_DYNAMIC_DRAW);
 }
 
 void GLMesh::render()

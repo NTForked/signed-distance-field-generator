@@ -90,9 +90,6 @@ void Mesh::computeTriangleNormals()
 	unsigned int triIndex = 0;
 	for (auto i = indexBuffer.begin(); i != indexBuffer.end(); i += 3)
 	{
-		int index1 = *i;
-		int index2 = *(i + 1);
-		int index3 = *(i + 2);
 		Ogre::Vector3 v0 = vertexBuffer[*(i + 1)].position - vertexBuffer[*i].position;
 		Ogre::Vector3 v1 = vertexBuffer[*(i + 2)].position - vertexBuffer[*i].position;
 		triangleNormals[triIndex] = v0.crossProduct(v1);
@@ -105,7 +102,7 @@ void Mesh::computeVertexNormals()
 {
 	assert(triangleNormals.size() == indexBuffer.size() / 3);
 
-    std::cout << triangleNormals.size() << " normals, " << vertexBuffer.size() << " vertices." << std::endl;
+    // std::cout << triangleNormals.size() << " normals, " << vertexBuffer.size() << " vertices." << std::endl;
 
 	for (auto i = vertexBuffer.begin(); i != vertexBuffer.end(); i++)
 		i->normal = Ogre::Vector3(0, 0, 0);
@@ -213,7 +210,7 @@ void TransformedMesh::computeCache() const
 		triData.cInv = static_cast<float>(-c/denom);
 		triData.dInv = static_cast<float>(a/denom);
 	}
-	std::cout << "Found " << numDegeneratedTris << " degenerated triangles." << std::endl;
+    // std::cout << "Found " << numDegeneratedTris << " degenerated triangles." << std::endl;
 
 	std::vector<Ogre::Vector3> angleWeightedVertexNormals;
 	angleWeightedVertexNormals.resize(verticesTotris.size());

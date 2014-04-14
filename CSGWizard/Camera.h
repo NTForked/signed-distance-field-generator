@@ -4,6 +4,7 @@
 #include "GLManager.h"
 #include "../Core/OgreMath/OgreMatrix4.h"
 #include "../Core/OgreMath/OgreVector3.h"
+#include "../Core/Ray.h"
 
 class Camera
 {
@@ -15,6 +16,7 @@ protected:
     Ogre::Vector3 m_Origin;
     Ogre::Vector3 m_LookAt;
     Ogre::Matrix4 m_ProjectionMatrix;
+    Ogre::Matrix4 m_InverseProjectionMatrix;
     Ogre::Matrix4 m_ViewMatrix;
     Ogre::Matrix4 m_InverseViewMatrix;
 
@@ -31,9 +33,12 @@ public:
 
     void updateUniforms(QOpenGLShaderProgram* program);
 
+    Ray getCameraRay(float xNDC, float yNDC);
+
     const Ogre::Matrix4& getInverseViewMatrix() { return m_InverseViewMatrix; }
     const Ogre::Matrix4& getViewMatrix() { return m_ViewMatrix; }
     const Ogre::Matrix4& getProjectionMatrix() { return m_ProjectionMatrix; }
+    const Ogre::Matrix4& getInverseProjectionMatrix() { return m_InverseProjectionMatrix; }
 };
 
 #endif // CAMERA_H

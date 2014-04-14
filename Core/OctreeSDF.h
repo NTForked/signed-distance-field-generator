@@ -83,17 +83,17 @@ protected:
 
 		virtual void countNodes(int& counter) const = 0;
 
-		virtual void countLeaves(int& counter) const {}
+        virtual void countLeaves(int&) const {}
 
-		virtual void countMemory(int& memoryCounter) const {}
+        virtual void countMemory(int&) const {}
 
-		virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) {}
+        virtual void sumPositionsAndMass(const Area&, Ogre::Vector3&, float&) {}
 
-		virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const { return Sample(); }
+        virtual Sample getSample(const Area&, const Ogre::Vector3&) const { return Sample(); }
 
-		virtual void getCubesToMarch(const Area& area, vector<Cube>& cubes) const {}
+        virtual void getCubesToMarch(const Area&, vector<Cube>&) const {}
 
-		virtual void getSharedVertices(const Area& area, std::vector<Vertex>& vertices, Vector3iHashGrid<unsigned int>& indexMap) const {}
+        virtual void getSharedVertices(const Area&, std::vector<Vertex>&, Vector3iHashGrid<unsigned int>&) const {}
 
 		virtual void invert() = 0;
 

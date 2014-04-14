@@ -9,6 +9,7 @@ class GLMesh
 {
 protected:
     std::shared_ptr<OctreeSF> m_Octree;
+    std::shared_ptr<Mesh> m_Mesh;
     GLuint m_VertexBuffer;
     GLuint m_IndexBuffer;
     unsigned int m_VertexBufferSize;
@@ -21,6 +22,9 @@ public:
     void updateMesh();
 
     void render();
+
+    std::shared_ptr<Mesh> getMesh() { return m_Mesh; }
+    std::shared_ptr<OctreeSF> getOctree() { return m_Octree; }
 };
 
 #endif // GLMESH_H

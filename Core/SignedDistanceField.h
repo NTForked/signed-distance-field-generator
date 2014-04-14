@@ -83,7 +83,7 @@ public:
 
 	virtual bool getSign(const Ogre::Vector3& point) const { return getSample(point).signedDistance >= 0.0f; }
 
-	virtual void getSamples(const Area& area, Sample* samples) const {}
+    virtual void getSamples(const Area&, Sample*) const {}
 
 	/// Retrieves whether the given AABB intersects the surface (zero contour of the sdf).
 	virtual bool intersectsSurface(const AABB& aabb) const = 0;
@@ -95,7 +95,7 @@ public:
 	virtual AABB getAABB() const = 0;
 
 	/// Called before the first call to getSample. Usually not required, only used by TriangleMeshSDF_Robust so far which builds a grid.
-	virtual void prepareSampling(const AABB& aabb, float cellSize) {}
+    virtual void prepareSampling(const AABB&, float) {}
 };
 
 // Interface for signed distance fields that can be processed using the Marching Cubes algorithm.

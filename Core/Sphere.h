@@ -77,26 +77,25 @@ public:
 	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
 		float distToCenter = std::sqrtf(center.squaredDistance(point));
-		sample.signedDistance = radiusSquared - distToCenter;
+        sample.signedDistance = radius - distToCenter;
 		if (distToCenter == 0.0f)
 			sample.closestSurfacePos = center;
 		else
 		{
 			sample.normal = (point - center) / distToCenter;
-			sample.closestSurfacePos = center + sample.normal * sample.signedDistance;
+            sample.closestSurfacePos = center + sample.normal * radius;
 		}	
 	}
 
 	virtual bool getSign(const Ogre::Vector3& point) const override
 	{
-		return (radiusSquared - center.squaredDistance(point) > 0);
+        return (radiusSquared - center.squaredDistance(point) > 0);
 	}
 
 	virtual bool intersectsSurface(const AABB& aabb) const override
 	{
 		if (!intersectsAABB(aabb))
 			return false;		// aabb and sphere do not overlap
-		int numContainedCorners = 0;
 		for (int i = 0; i < 8; i++)
 		{
 			if (!containsPoint(aabb.getCorner(i)))

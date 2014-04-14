@@ -29,6 +29,7 @@ void Camera::computeProjectionMatrix()
                 0,  m_Near / top, 0, 0,
                 0, 0, (m_Far + m_Near) / (m_Far - m_Near), -(2 * m_Far * m_Near) / (m_Far - m_Near),
                 0, 0, 1, 0);
+    m_InverseProjectionMatrix = m_ProjectionMatrix.inverse();
 }
 
 void Camera::setNearFar(float nearClip, float farClip)
@@ -67,4 +68,11 @@ void Camera::updateUniforms(QOpenGLShaderProgram* program)
     }
     program->setUniformValue("viewMatrix", viewMatrixData);
     program->setUniformValue("projMatrix", projMatrixData);
+}
+
+Ray Camera::getCameraRay(float xNDC, float yNDC)
+{
+    Ogre::Vector3 dir = m_InverseViewMatrix * m_InverseProjectionMatrix * Ogre::Vector3(xNDC, yNDC, 1);
+    dir.normalise();
+    return Ray(m_Origin, dir);
 }
