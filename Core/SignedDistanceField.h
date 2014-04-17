@@ -77,9 +77,9 @@ public:
 	}
 
 	/// Retrieves the sample at the given point (exact for implicit SDFs, interpolated for sampled SDFs).
-	virtual Sample getSample(const Ogre::Vector3& point) const = 0;
+    Sample getSample(const Ogre::Vector3& point) const { Sample s; getSample(point, s); return s; }
 
-	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const { sample = getSample(point); }
+    virtual void getSample(const Ogre::Vector3& point, Sample& sample) const = 0;
 
 	virtual bool getSign(const Ogre::Vector3& point) const { return getSample(point).signedDistance >= 0.0f; }
 

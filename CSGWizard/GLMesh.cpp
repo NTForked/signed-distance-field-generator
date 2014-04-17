@@ -23,8 +23,8 @@ void GLMesh::updateMesh()
     mesh->indexBuffer.push_back(0);
     mesh->indexBuffer.push_back(1);
     mesh->indexBuffer.push_back(2);*/
-    m_VertexBufferSize = m_Mesh->vertexBuffer.size();
-    m_IndexBufferSize = m_Mesh->indexBuffer.size();
+    m_VertexBufferSize = (int)m_Mesh->vertexBuffer.size();
+    m_IndexBufferSize = (int)m_Mesh->indexBuffer.size();
 
     GLManager::getSingleton().getGLFunctions()->glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
     GLManager::getSingleton().getGLFunctions()->glBufferData(GL_ARRAY_BUFFER, m_VertexBufferSize * sizeof(Vertex), m_Mesh->vertexBuffer.data(), GL_DYNAMIC_DRAW);

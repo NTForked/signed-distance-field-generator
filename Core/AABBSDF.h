@@ -9,9 +9,8 @@ class AABBSDF : public AABB, public SignedDistanceField3D
 public:
 	AABBSDF() {}
 	AABBSDF(const Ogre::Vector3 &_min, const Ogre::Vector3 &_max) : AABB(_min, _max) {}
-	virtual Sample getSample(const Ogre::Vector3& point) const override
+    virtual void getSample(const Ogre::Vector3& point, Sample& s) const override
 	{
-		Sample s;
 		if (containsPoint(point))
 		{
 			Ogre::Vector3 minVec = point - min;

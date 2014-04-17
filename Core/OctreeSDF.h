@@ -126,7 +126,7 @@ protected:
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 
-		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
+        // virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
 	};
 
 	class EmptyNode : public Node
@@ -148,7 +148,7 @@ protected:
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 
-		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
+        // virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
 	};
 
 	class GridNode : public Node
@@ -179,7 +179,7 @@ protected:
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 
-		// virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
+        // virtual Sample getSample(const Area& area, const Ogre::Vector3& point) const override;
 	};
 
 	Node* m_RootNode;
@@ -222,7 +222,7 @@ public:
 
 	vector<Cube> getCubesToMarch();
 
-	Sample getSample(const Ogre::Vector3& point) const override;
+    void getSample(const Ogre::Vector3& point, Sample& sample) const override;
 
 	/// Builds the triangle cache using marching cubes required for fast intersectsSurface queries.
 	void generateTriangleCache();

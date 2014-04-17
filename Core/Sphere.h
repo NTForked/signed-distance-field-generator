@@ -65,14 +65,6 @@ class SphereSDF : public Sphere, public SignedDistanceField3D
 public:
 	SphereSDF() {}
 	SphereSDF(const Ogre::Vector3& center, float radius) : Sphere(center, radius) {}
-	virtual Sample getSample(const Ogre::Vector3& point) const override
-	{
-		Sample s;
-		getSample(point, s);
-		return s;
-		// if (distToCenter != 0.0f)
-		//	s.normal = (point - center) / distToCenter;
-	}
 
 	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{

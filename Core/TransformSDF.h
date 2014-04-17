@@ -23,9 +23,9 @@ public:
 			points.push_back(m_Transform * m_SDF->getAABB().getCorner(i));
 		m_AABB = AABB(points);
 	}
-	Sample getSample(const Ogre::Vector3& point) const override
+    virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
-		return m_SDF->getSample(m_InverseTransform * point);
+        m_SDF->getSample(m_InverseTransform * point, sample);
 	}
 
 	bool intersectsSurface(const AABB& aabb) const override

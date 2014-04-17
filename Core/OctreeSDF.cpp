@@ -625,9 +625,9 @@ vector<OctreeSDF::Cube> OctreeSDF::getCubesToMarch()
 	return cubes;
 }
 
-OctreeSDF::Sample OctreeSDF::getSample(const Ogre::Vector3& point) const
+void OctreeSDF::getSample(const Ogre::Vector3& point, Sample& sample) const
 {
-	return m_RootNode->getSample(m_RootArea, point);
+    sample = m_RootNode->getSample(m_RootArea, point);
 }
 
 bool OctreeSDF::intersectsSurface(const AABB& aabb) const

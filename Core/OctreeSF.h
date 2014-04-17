@@ -138,6 +138,7 @@ protected:
 	class GridNode : public Node
 	{
 	public:
+        GridNode() { m_NodeType = GRID; }
         GridNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~GridNode();
 
@@ -165,6 +166,19 @@ protected:
 				sharedVertex->refCount++;
 			}
 
+            SurfaceEdge(const Vector3i& localMinPos, unsigned char direction, const Ogre::Vector3& globalPos, const SignedDistanceField3D& sdf) : direction(direction)
+            {
+                edgeIndex1 = indexOf(localMinPos);
+                static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
+                edgeIndex2 = edgeIndex1 + EDGE_OFFSETS[direction];
+                sharedVertex = new SharedSurfaceVertex();
+                Sample s;
+                sdf.getSample(globalPos, s);
+                sharedVertex->vertex.position = s.closestSurfacePos;
+                sharedVertex->signedDistance = s.signedDistance;
+                sharedVertex->refCount++;
+            }
+
 			void deleteSharedVertex()
 			{
 				sharedVertex->refCount--;
@@ -180,6 +194,11 @@ protected:
 		};
 		std::vector<unsigned short> m_SurfaceCubes;
 		std::vector<SurfaceEdge> m_SurfaceEdges;
+
+        void computeSigns(const Area& area, const SignedDistanceField3D& implicitSDF);
+        void computeEdges(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void computeEdges(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const std::bitset<LEAF_SIZE_3D>* ignoreEdges);
+        void computeCubes();
 
 		static inline int indexOf(int x, int y, int z) { return x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z; }
 
@@ -202,7 +221,12 @@ protected:
 
 		virtual void invert();
 
-		void addUniqueEdgesAndVerticesWithSignChange(std::vector<SurfaceEdge>& edgesIn, const std::vector<unsigned short>& cubesIn);
+        void merge(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void intersect(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+
+        void intersect(GridNode* otherNode);
+        void merge(GridNode* otherNode);
+        void addUniqueCubesWithSignChange(const std::vector<unsigned short>& cubesIn);
 
 		inline unsigned char getCubeBitMask(int index) const;
 
@@ -308,5 +332,5 @@ public:
     bool rayIntersectClosest(const Ray& ray, Ray::Intersection& intersection);
 
 	// NIY by this data structure...
-    virtual Sample getSample(const Ogre::Vector3&) const override { return Sample(); }
+    virtual void getSample(const Ogre::Vector3&, Sample&) const override {}
 };

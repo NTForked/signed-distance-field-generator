@@ -58,15 +58,15 @@ class TriangleMeshSDF_AWP : public TriangleMeshSDF
 public:
 	TriangleMeshSDF_AWP(std::shared_ptr<TransformedMesh> mesh) :
 		TriangleMeshSDF(mesh) {}
-	Sample getSample(const Ogre::Vector3& point) const override
+    virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
 		BVH<Surface>::ClosestLeafResult result;
-		const Surface* tri = m_RootNode.getBVH()->getClosestLeaf(point, result);
+        m_RootNode.getBVH()->getClosestLeaf(point, result);
 		// test sign
 		Vector3 rayDir = result.closestPoint - point;
 		if (rayDir.dotProduct(result.normal) < 0.0f) result.closestDistance *= -1;
-		// std::cout << result.closestDistance << std::endl;
-		return Sample(result.closestDistance, result.closestPoint);
+        sample.signedDistance = result.closestDistance;
+        sample.closestSurfacePos = result.closestPoint;
 	};
 };
 
@@ -242,22 +242,14 @@ public:
 		return inside;
 	}
 
-	Sample getSample(const Ogre::Vector3& point) const override
+    virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
 		BVH<Surface>::ClosestLeafResult result;
 		if (m_LastClosestTri)
 			m_LastClosestTri->getClosestLeaf(point, result);
 		m_LastClosestTri = m_RootNode.getBVH()->getClosestLeaf(point, result);
 		if (!getSign(point)) result.closestDistance *= -1;
-		return Sample(result.closestDistance, result.closestPoint);
+        sample.signedDistance = result.closestDistance;
+        sample.closestSurfacePos = result.closestPoint;
 	};
-
-	virtual void getSamples(const Area& area, Sample* samples) const override
-	{
-		/*AABB aabb = area.toAABB();
-		aabb.addEpsilon(area.m_RealSize * 0.5f);
-		std::vector<const Surface*> leaves;
-		m_RootNode.getBVH()->getLeaves(aabb, leaves);
-		std::cout << leaves.size() << std::endl;*/
-	}
 };

@@ -20,20 +20,20 @@ public:
 			m_AABB = (*m_SDFs.begin())->getAABB();
 			for (auto i = m_SDFs.begin() + 1; i != m_SDFs.end(); ++i)
 			{
-				m_AABB = AABB(m_AABB, (*i)->getAABB());
+				m_AABB.merge((*i)->getAABB());
 			}
 		}
 	}
-	Sample getSample(const Ogre::Vector3& point) const override
+    virtual void getSample(const Ogre::Vector3&, Sample& maxSample) const override
 	{
-		Sample maxSample(std::numeric_limits<float>::lowest());
+        maxSample.signedDistance = std::numeric_limits<float>::lowest();
+        Sample sample;
 		for (auto i = m_SDFs.begin(); i != m_SDFs.end(); ++i)
 		{
-			Sample sample = (*i)->getSample(point);
+            (*i)->getSample(point, sample);
 			if (sample.signedDistance > maxSample.signedDistance)
 				maxSample = sample;
 		}
-		return maxSample;
 	}
 
 	bool intersectsSurface(const AABB& aabb) const override

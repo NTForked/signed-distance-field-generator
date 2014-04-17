@@ -364,7 +364,6 @@ protected:
 	static const size_t PRIME1 = 73856093;
 	static const size_t PRIME2 = 19349663;
 	static const size_t PRIME3 = 83492791;
-
 public:
 	Vector3iHashGrid()
 	{

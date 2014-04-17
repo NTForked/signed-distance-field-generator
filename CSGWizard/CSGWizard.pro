@@ -33,7 +33,6 @@ HEADERS  += MainWindow.h \
     ../Core/VoronoiFracture.h \
     ../Core/VertexMerger.h \
     ../Core/Vertex.h \
-    ../Core/Vector3iHashGridRefCounted.h \
     ../Core/Vector3i.h \
     ../Core/UniformGridSDF.h \
     ../Core/TriangleSDF.h \

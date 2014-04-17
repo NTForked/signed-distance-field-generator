@@ -13,11 +13,10 @@ protected:
 
 public:
 	OpInvertSDF(SignedDistanceField3D* sdf) : m_SDF(sdf) {}
-	Sample getSample(const Ogre::Vector3& point) const override
+    virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
-		Sample sample = m_SDF->getSample(point);
+        m_SDF->getSample(point, sample);
 		sample.signedDistance *= -1.0f;
-		return sample;
 	}
 
 	bool intersectsSurface(const AABB& aabb) const override

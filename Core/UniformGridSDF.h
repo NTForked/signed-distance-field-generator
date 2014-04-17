@@ -184,7 +184,7 @@ public:
 		return cubes;
 	}
 
-	Sample getSample(const Ogre::Vector3& point) const override
+    virtual void getSample(const Ogre::Vector3&, Sample&) const override
 	{
 		// NIY
 		return Sample();

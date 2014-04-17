@@ -251,5 +251,5 @@ public:
 	int getHeight() { return m_RootArea.m_SizeExpo; }
 
 	// NIY by this data structure...
-    virtual Sample getSample(const Ogre::Vector3&) const override { return Sample(); }
+    virtual void getSample(const Ogre::Vector3&, Sample&) const override {}
 };

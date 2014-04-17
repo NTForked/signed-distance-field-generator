@@ -51,13 +51,6 @@ public:
 		return surfaceZ;
 	}
 
-	virtual Sample getSample(const Ogre::Vector3& point) const override
-	{
-		Sample sample;
-		getSample(point, sample);
-		return sample;
-	}
-
 	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
 		sample.normal = Ogre::Vector3(0, 0, 1);
@@ -124,7 +117,6 @@ public:
 				if (std::fabsf(m_HeightMap[x][y]) > noiseMax) noiseMax = std::fabsf(m_HeightMap[x][y]);
 
 		float multiplier = (float)m_ZRange / (noiseMax + 0.001f);
-		float max = 0;
 		for (int x = 0; x < m_HeightMapSize; x++)
 			for (int y = 0; y < m_HeightMapSize; y++)
 				m_HeightMap[x][y] *= multiplier;

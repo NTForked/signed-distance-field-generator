@@ -12,6 +12,7 @@ void MainGLWindow::initializeGL()
     GLManager::getSingleton().getGLFunctions()->glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
     m_Camera.setViewportSize(width(), height());
+    m_Camera.setNearFar(0.05f, 100.0f);
 
     m_CamXRot = 0;
     m_CamYRot = 0;
@@ -24,17 +25,17 @@ void MainGLWindow::initializeGL()
 
     GLManager::getSingleton().getGLFunctions()->glEnable(GL_DEPTH_TEST);
 
-    std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/buddha2.obj");
+    std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/bunny_highres.obj");
     TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
     // SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
-    auto octree = OctreeSF::sampleSDF(&meshSDF, 9);
+    auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
     m_Mesh = std::make_shared<GLMesh>(octree);
     m_CollisionGeometry.addMesh(std::make_shared<TransformedMesh>(m_Mesh->getMesh()));
 }
 
 void MainGLWindow::wheelEvent(QWheelEvent* event)
 {
-    float delta = -event->delta() * 0.001f;
+    float delta = -event->delta() * 0.0005f;
     if (m_DistToCenter + delta > 0.0f)
         m_DistToCenter += delta;
     updateCameraPos();
@@ -53,7 +54,7 @@ void MainGLWindow::mousePressEvent(QMouseEvent* event)
 
         if (raycast(event, m_LastIntersectionPos))
         {
-            SphereSDF sphere(m_LastIntersectionPos, 0.004f);
+            SphereSDF sphere(m_LastIntersectionPos, 0.005f);
             m_Mesh->getOctree()->subtract(&sphere);
             m_Mesh->updateMesh();
             requestRedraw();
@@ -88,10 +89,11 @@ void MainGLWindow::mouseMoveEvent(QMouseEvent* event)
         {
             Ogre::Vector3 delta = intersection - m_LastIntersectionPos;
             float dist = delta.normalise();
-            float sphereDist = 0.002f;
+            float sphereDist = 1.0f / m_Mesh->getOctree()->getInverseCellSize();
+            // std::cout << sphereDist << std::endl;
             for (float x = 0; x < dist; x += sphereDist)
             {
-                SphereSDF sphere(m_LastIntersectionPos + delta * x, 0.004f);
+                SphereSDF sphere(m_LastIntersectionPos + delta * x, 0.005f);
                 m_Mesh->getOctree()->subtract(&sphere);
             }
 
