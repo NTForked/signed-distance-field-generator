@@ -47,18 +47,18 @@ public:
 	~TriangleSurface() {}
 	const Surface* rayIntersectClosest(Ray::Intersection &intersection, const Ray &ray) const override
 	{
-		if (ray.intersectTriangle(intersection,
+        if (ray.intersectTriangle(intersection,
 			mMesh->triangleDataVS[mTriangleIndex]))
 			return this;
 		return nullptr;
 	}
-	const Surface* rayIntersectUpdate(Ray::Intersection &intersection, const Ray &ray) const override
+    const Surface* rayIntersectUpdate(Ray::Intersection &intersection, const Ray &ray) const override
 	{
-		if (ray.intersectTriangleUpdate(intersection,
+        if (ray.intersectTriangleUpdate(intersection,
 			mMesh->triangleDataVS[mTriangleIndex]))
 			return this;
 		return nullptr;
-	}
+    }
 
 	const TriangleCached& getCachedTriangle() const
 	{

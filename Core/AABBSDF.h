@@ -2,9 +2,9 @@
 #pragma once
 
 #include "AABB.h"
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 
-class AABBSDF : public AABB, public SignedDistanceField3D
+class AABBSDF : public AABB, public SolidGeometry
 {
 public:
 	AABBSDF() {}
@@ -22,7 +22,6 @@ public:
 			s.signedDistance = -std::sqrtf(squaredDistance(point));
 		}
 		// todo: compute normal
-		return s;
 	}
 
 	virtual bool getSign(const Ogre::Vector3& point) const override

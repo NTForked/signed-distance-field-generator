@@ -35,7 +35,7 @@ public:
 	};
 
 	/// Tests the ray against intersection with a sphere given by a position and a radius.
-	__forceinline bool intersectSphere(Intersection &intersection, const Ogre::Vector3 &sphereCenter, float squaredSphereRadius, float tNear = 0.0f, float tFar = 100000.0f) const
+    inline bool intersectSphere(Intersection &intersection, const Ogre::Vector3 &sphereCenter, float squaredSphereRadius, float tNear = 0.0f, float tFar = 100000.0f) const
 	{
 		Ogre::Vector3 movedRayOrigin(origin - sphereCenter);
 
@@ -52,27 +52,27 @@ public:
 		float t1 = (-b + discRoot) / (2*a);
 
 		// select closest hit
-		float tnear = std::min(t0, t1);
-		float tfar = std::max(t0, t1);
-		if (tfar < tNear || tnear > tFar) return false;
+        float tNearHit = std::min(t0, t1);
+        float tFarHit = std::max(t0, t1);
+        if (tFarHit < tNear || tNearHit > tFar) return false;
 
-		intersection.t = tnear;
+        intersection.t = tNearHit;
 		if (intersection.t < 0)
-			intersection.t = tfar;
+            intersection.t = tFarHit;
 
 		return true;
 	}
 
-	static __forceinline bool isZero(float val)
+    static inline bool isZero(float val)
 	{
 		return val < 0.00001f && val > -0.00001f;
 	}
 
 	// Test the ray against intersection with plane given by a normal and a position.
-	__forceinline bool intersectPlane(Intersection &intersection, const Ogre::Vector3 &planeNormal, const Ogre::Vector3 &planePosition, bool& backface) const
+    inline bool intersectPlane(Intersection &intersection, const Ogre::Vector3 &planeNormal, const Ogre::Vector3 &planePosition, bool& backface) const
 	{
 		float rayNormalAngle = planeNormal.dotProduct(direction);
-		if (std::abs(rayNormalAngle) == 0) return false;
+        if (std::fabsf(rayNormalAngle) == 0) return false;
 		backface = rayNormalAngle < 0;
 		// if (rayNormalAngle >= 0) return false;	// plane is parallel or faces away from the ray
 
@@ -85,22 +85,25 @@ public:
 	}
 
 	// Tests if the ray hits the plane at a closer distance than closestT
-	__forceinline bool intersectPlaneUpdate(float &tOut, float closestT, const Ogre::Vector3 &planeNormal, const Ogre::Vector3 &planePosition) const
+    inline bool intersectPlaneUpdate(float &tOut, float closestT, const Ogre::Vector3 &planeNormal, const Ogre::Vector3 &planePosition) const
 	{
-		float rayNormalAngle = planeNormal.dotProduct(direction);
-		if (rayNormalAngle >= 0) return false;	// plane is parallel or faces away from the ray
+        float rayNormalAngle = planeNormal.dotProduct(direction);
+        if (rayNormalAngle >= -0.0f)
+        {
+            return false;	// plane is parallel or faces away from the ray
+        }
 
 		//first move the ray so that we can test against a plane that goes through (0,0,0)
 		Ogre::Vector3 movedRayOrigin(origin - planePosition);
 
 		//dot(t*rayDir, n) = -dot(movedRayOrigin, planeNormal)
-		tOut = -movedRayOrigin.dotProduct(planeNormal) / rayNormalAngle;
-		return (tOut > 0.0f && tOut < closestT);
+        tOut = -movedRayOrigin.dotProduct(planeNormal) / rayNormalAngle;
+        return (tOut >= 0.0f && tOut < closestT);
 	}
 
 	// Tests the ray against intersection with an AABB given by min and max vectors.
 	// Source: http://www.cs.utah.edu/~awilliam/box/box.pdf
-	__forceinline bool intersectAABB(const Ogre::Vector3 bounds[2], float tNear, float tFar) const
+    inline bool intersectAABB(const Ogre::Vector3 bounds[2], float tNear, float tFar) const
 	{
 		float tMin, tMax, t2Min, t2Max;
 
@@ -123,7 +126,7 @@ public:
 
 		return (tMin < tFar && tMax > tNear);
 	}
-	__forceinline bool intersectAABB(const Ogre::Vector3 bounds[2]) const
+    inline bool intersectAABB(const Ogre::Vector3 bounds[2]) const
 	{
 		float tMin, tMax, t2Min, t2Max;
 
@@ -148,7 +151,7 @@ public:
 	}
 
 	/// Tests the ray against intersection with a triangle given by three points.
-	/*__forceinline bool intersectTriangle(Intersection &intersection, const TriangleCached& triData) const
+    inline bool intersectTriangleLame(Intersection &intersection, const TriangleCached& triData) const
 	{
 		if (triData.normal.dotProduct(this->direction) >= 0)
 			return false;
@@ -158,17 +161,17 @@ public:
 		Ogre::Matrix3 inverse;
 		if (!system.Inverse(inverse, 0)) return false;
 		Ogre::Vector3 &barycentricCoords = intersection.userData[0];
-		Ogre::Vector3 solution = inverse*(this->origin-p1);
+        Ogre::Vector3 solution = inverse*(this->origin-triData.p1);
 		if (solution.z <= 0.0f) return false;
 		barycentricCoords.x = solution.x;
 		barycentricCoords.y = solution.y;
 		barycentricCoords.z = 1.0f-barycentricCoords.x-barycentricCoords.y;
 		intersection.t = solution.z;
 		return (barycentricCoords.x >= 0) && (barycentricCoords.y >= 0) && (barycentricCoords.z >= 0);
-	}*/
+    }
 
 	/// Tests the ray against intersection with a triangle.
-	__forceinline bool intersectTriangle(Intersection &intersection, const TriangleCached& triData) const
+    inline bool intersectTriangle(Intersection &intersection, const TriangleCached& triData) const
 	{
 		bool backface = false;
 		if (!intersectPlane(intersection, triData.normal, triData.p1, backface)) return false;
@@ -182,14 +185,16 @@ public:
 	}
 
 	/// Tests the ray against intersection with a triangle and checks whether the intersection is closer than the closest intersection.
-	__forceinline bool intersectTriangleUpdate(Intersection &intersection, const TriangleCached& triData) const
+    inline bool intersectTriangleUpdate(Intersection &intersection, const TriangleCached& triData) const
 	{
 		float t;
-		if (!intersectPlaneUpdate(t, intersection.t, triData.normal, triData.p1)) return false;
+        if (!intersectPlaneUpdate(t, intersection.t, triData.normal, triData.p1)
+                && !intersectPlaneUpdate(t, intersection.t, -triData.normal, triData.p1)) return false;
 
 		Ogre::Vector3 intersectPosition = this->origin + t*this->direction;
 		Ogre::Vector3 barycentricCoords = triData.getBarycentricCoordinates(intersectPosition);
-		if ((barycentricCoords.x >= 0) && (barycentricCoords.y >= 0) && (barycentricCoords.z >= 0))
+        static const float epsilon = -0.0001f;
+        if ((barycentricCoords.x >= epsilon) && (barycentricCoords.y >= epsilon) && (barycentricCoords.z >= epsilon))
 		{
 			intersection.t = t;
 			intersection.userData[0] = barycentricCoords;

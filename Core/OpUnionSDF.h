@@ -3,17 +3,17 @@
 
 #include "OgreMath/OgreVector3.h"
 #include <vector>
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "AABB.h"
 
-class OpUnionSDF : public SignedDistanceField3D
+class OpUnionSDF : public SolidGeometry
 {
 protected:
-	std::vector<SignedDistanceField3D*> m_SDFs;
+    std::vector<SolidGeometry*> m_SDFs;
 	AABB m_AABB;
 
 public:
-	OpUnionSDF(std::vector<SignedDistanceField3D*> sdfs) : m_SDFs(sdfs)
+    OpUnionSDF(std::vector<SolidGeometry*> sdfs) : m_SDFs(sdfs)
 	{
 		if (!m_SDFs.empty())
 		{
@@ -24,7 +24,7 @@ public:
 			}
 		}
 	}
-    virtual void getSample(const Ogre::Vector3&, Sample& maxSample) const override
+	virtual void getSample(const Ogre::Vector3& point, Sample& maxSample) const override
 	{
         maxSample.signedDistance = std::numeric_limits<float>::lowest();
         Sample sample;

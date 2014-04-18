@@ -14,7 +14,6 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
         MainWindow.cpp \
-    ../Core/OctreeSF2.cpp \
     ../Core/OctreeSF.cpp \
     ../Core/OctreeSDF.cpp \
     ../Core/Mesh.cpp \
@@ -41,7 +40,6 @@ HEADERS  += MainWindow.h \
     ../Core/TransformSDF.h \
     ../Core/Surfaces.h \
     ../Core/Sphere.h \
-    ../Core/SignedDistanceField.h \
     ../Core/SDFManager.h \
     ../Core/Ray.h \
     ../Core/Profiler.h \
@@ -49,7 +47,6 @@ HEADERS  += MainWindow.h \
     ../Core/OpUnionSDF.h \
     ../Core/OpInvertSDF.h \
     ../Core/OpIntersectionSDF.h \
-    ../Core/OctreeSF2.h \
     ../Core/OctreeSF.h \
     ../Core/OctreeSDF.h \
     ../Core/OBJReader.h \
@@ -80,6 +77,7 @@ HEADERS  += MainWindow.h \
     GLWindow.h \
     MainGLWindow.h \
     GLManager.h \
-    Camera.h
+    Camera.h \
+    ../Core/SolidGeometry.h
 
 FORMS    += MainWindow.ui

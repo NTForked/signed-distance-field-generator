@@ -9,13 +9,13 @@
 #include "Surfaces.h"
 #include "AABB.h"
 #include "Profiler.h"
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include <math.h>
 
 using std::vector;
 using Ogre::Vector3;
 
-class TriangleMeshSDF : public SignedDistanceField3D
+class TriangleMeshSDF : public SolidGeometry
 {
 protected:
 	BVHScene m_RootNode;
@@ -126,7 +126,7 @@ public:
 		m_PlaneStepVec2[m_ImagePlaneAxis2] = m_CellSize;
 
 		// Add a constant offset to the ray origins to avoid rays passing exactly through vertices.
-		Ogre::Vector3 constantOffset(Ogre::Math::PI * 0.00001f, Ogre::Math::PI * 0.00001f, Ogre::Math::PI * 0.00001f);
+        Ogre::Vector3 constantOffset(0,0,0);//Ogre::Math::PI * 0.00001f, Ogre::Math::PI * 0.00001f, Ogre::Math::PI * 0.00001f);
 
 		m_RayResults = new std::vector<RayHit>*[m_Width];
 		for (int x = 0; x < m_Width; x++)
@@ -158,7 +158,7 @@ public:
 	{
 		numValidVotes += 2;
 		pos -= m_ImagePlaneMin;
-		int x = (int)std::floorf (pos[m_ImagePlaneAxis1] * m_InverseCellSize + 0.5f);
+        int x = (int)std::floorf(pos[m_ImagePlaneAxis1] * m_InverseCellSize + 0.5f);
 		int y = (int)std::floorf(pos[m_ImagePlaneAxis2] * m_InverseCellSize + 0.5f);
 		if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return false;
 		float z = pos[m_ImagePlaneNormalAxis];
@@ -199,7 +199,7 @@ private:
 	RaycastCache* m_RaycastCache2;
 	RaycastCache* m_RaycastCache3;
 
-	mutable const Surface* m_LastClosestTri;
+    // mutable const Surface* m_LastClosestTri;
 
 public:
 	~TriangleMeshSDF_Robust()
@@ -212,7 +212,7 @@ public:
 		}
 	}
 	TriangleMeshSDF_Robust(std::shared_ptr<TransformedMesh> mesh) :
-		TriangleMeshSDF(mesh), m_RaycastCache1(nullptr), m_LastClosestTri(nullptr) {}
+        TriangleMeshSDF(mesh), m_RaycastCache1(nullptr) {}
 	void prepareSampling(const AABB& aabb, float cellSize) override
 	{
 		if (m_RaycastCache1)
@@ -245,11 +245,24 @@ public:
     virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
 		BVH<Surface>::ClosestLeafResult result;
-		if (m_LastClosestTri)
-			m_LastClosestTri->getClosestLeaf(point, result);
-		m_LastClosestTri = m_RootNode.getBVH()->getClosestLeaf(point, result);
+        // if (m_LastClosestTri)
+        //	m_LastClosestTri->getClosestLeaf(point, result);
+        m_RootNode.getBVH()->getClosestLeaf(point, result);
 		if (!getSign(point)) result.closestDistance *= -1;
         sample.signedDistance = result.closestDistance;
         sample.closestSurfacePos = result.closestPoint;
-	};
+    }
+
+    virtual void raycastClosest(const Ray& ray, Sample& sample) const override
+    {
+        Ray::Intersection result;
+        result.t = std::numeric_limits<float>::max();
+        if (m_RootNode.getBVH()->rayIntersectUpdate(result, ray))
+        {
+            sample.signedDistance = result.t;
+            if (!getSign(ray.origin))
+                sample.signedDistance *= -1.0f;
+            sample.closestSurfacePos = ray.origin + ray.direction * result.t;
+        }
+    }
 };

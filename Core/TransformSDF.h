@@ -3,19 +3,19 @@
 
 #include "OgreMath/OgreMatrix4.h"
 #include <vector>
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "AABB.h"
 
-class TransformSDF : public SignedDistanceField3D
+class TransformSDF : public SolidGeometry
 {
 protected:
-	std::shared_ptr<SignedDistanceField3D> m_SDF;
+    std::shared_ptr<SolidGeometry> m_SDF;
 	Ogre::Matrix4 m_Transform;
 	Ogre::Matrix4 m_InverseTransform;
 	AABB m_AABB;
 
 public:
-	TransformSDF(std::shared_ptr<SignedDistanceField3D> sdf, const Ogre::Matrix4& transform) : m_SDF(sdf), m_Transform(transform)
+    TransformSDF(std::shared_ptr<SolidGeometry> sdf, const Ogre::Matrix4& transform) : m_SDF(sdf), m_Transform(transform)
 	{
 		m_InverseTransform = transform.inverse();
 		std::vector<Ogre::Vector3> points;

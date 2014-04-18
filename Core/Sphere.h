@@ -4,7 +4,7 @@
 #include "OgreMath/OgreVector3.h"
 #include "Ray.h"
 #include "AABB.h"
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "MathMisc.h"
 
 class Sphere
@@ -23,20 +23,9 @@ public:
 		return center.squaredDistance(otherCenter) <= radiusSum*radiusSum;
 	}
 
-	__forceinline bool containsPoint(const Ogre::Vector3& point) const
+    __forceinline bool containsPoint(const Ogre::Vector3& point) const
 	{
 		return center.squaredDistance(point) <= radiusSquared;
-	}
-
-	__forceinline bool rayIntersect(const Ray& ray, float tNear, float tFar) const
-	{
-		Ray::Intersection intersection;
-		return ray.intersectSphere(intersection, center, radiusSquared, tNear, tFar);
-	}
-	__forceinline bool rayIntersect(const Ray& ray) const
-	{
-		Ray::Intersection intersection;
-		return ray.intersectSphere(intersection, center, radiusSquared);
 	}
 
 	__forceinline Ogre::Vector3 getCenter() const
@@ -60,7 +49,7 @@ public:
 	}
 };
 
-class SphereSDF : public Sphere, public SignedDistanceField3D
+class SphereSDF : public Sphere, public SolidGeometry
 {
 public:
 	SphereSDF() {}
@@ -96,6 +85,18 @@ public:
 		// if the sphere contains all aabb corners, the AABB is completely inside the sphere and does not intersect the surface
 		return false;
 	}
+
+    virtual void raycastClosest(const Ray& ray, Sample& sample) const override
+    {
+        Ray::Intersection intersection;
+        if (ray.intersectSphere(intersection, center, radiusSquared))
+        {
+            sample.closestSurfacePos = ray.origin + ray.direction * intersection.t;
+            sample.signedDistance = intersection.t;
+            if (!getSign(ray.origin))
+                sample.signedDistance *= -1.0f;
+        }
+    }
 
 	virtual AABB getAABB() const override
 	{

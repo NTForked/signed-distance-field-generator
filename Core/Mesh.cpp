@@ -92,6 +92,8 @@ void Mesh::computeTriangleNormals()
 	{
 		Ogre::Vector3 v0 = vertexBuffer[*(i + 1)].position - vertexBuffer[*i].position;
 		Ogre::Vector3 v1 = vertexBuffer[*(i + 2)].position - vertexBuffer[*i].position;
+        v0.normalise();
+        v1.normalise();
 		triangleNormals[triIndex] = v0.crossProduct(v1);
 		triangleNormals[triIndex].normalise();
 		++triIndex;
@@ -145,7 +147,7 @@ void TransformedMesh::computeCache() const
 	auto it = vertexBufferVS.begin();
 	for (auto i = mMesh->vertexBuffer.begin(); i != mMesh->vertexBuffer.end(); ++i)
 	{
-		it->position = modelTransform * i->position;
+        it->position = modelTransform * i->position;
 		//apply only the rotation to the normal
 		it->normal = normalTransform * i->normal;
 		it->normal.normalise();
@@ -179,6 +181,8 @@ void TransformedMesh::computeCache() const
 
 		Ogre::Vector3 v0 = triData.p2 - triData.p1;
 		Ogre::Vector3 v1 = triData.p3 - triData.p1;
+        v0.normalise();
+        v1.normalise();
 
 		triData.normal = v0.crossProduct(v1);
 		triData.normal.normalise();
@@ -186,29 +190,30 @@ void TransformedMesh::computeCache() const
 		// slightly inspired by http://software.intel.com/en-us/articles/interactive-ray-tracing
 		// determine dominant axis
 		int domAxis = 0;
-		if (std::abs(triData.normal.y) >= std::abs(triData.normal.x) && std::abs(triData.normal.y) >= std::abs(triData.normal.z))
+        if (std::fabsf(triData.normal.y) >= std::fabsf(triData.normal.x) && std::fabsf(triData.normal.y) >= std::fabsf(triData.normal.z))
 			domAxis = 1;
-		else if (std::abs(triData.normal.z) >= std::abs(triData.normal.x) && std::abs(triData.normal.z) >= std::abs(triData.normal.y))
+        else if (std::fabsf(triData.normal.z) >= std::fabsf(triData.normal.x) && std::fabsf(triData.normal.z) >= std::fabsf(triData.normal.y))
 			domAxis = 2;
 		triData.equationIndex1 = (domAxis+1) % 3;
 		triData.equationIndex2 = (domAxis+2) % 3;
 
-		double a = triData.p2[triData.equationIndex1]-triData.p1[triData.equationIndex1];
-		double b = triData.p3[triData.equationIndex1]-triData.p1[triData.equationIndex1];
-		double c = triData.p2[triData.equationIndex2]-triData.p1[triData.equationIndex2];
-		double d = triData.p3[triData.equationIndex2]-triData.p1[triData.equationIndex2];
-		double denom = a*d - b*c;
-		if (std::abs(denom) < std::numeric_limits<double>::epsilon())
+        // use doubles for intermediate results for maximum precision
+        double a = triData.p2[triData.equationIndex1]-triData.p1[triData.equationIndex1];
+        double b = triData.p3[triData.equationIndex1]-triData.p1[triData.equationIndex1];
+        double c = triData.p2[triData.equationIndex2]-triData.p1[triData.equationIndex2];
+        double d = triData.p3[triData.equationIndex2]-triData.p1[triData.equationIndex2];
+        double denom = a*d - b*c;
+        if (std::abs(denom) < std::numeric_limits<double>::epsilon())
 		{
 			numDegeneratedTris++;
-			denom = std::numeric_limits<double>::epsilon();
+            denom = std::numeric_limits<double>::epsilon();
 			triData.degenerated = true;
 			//std::cout << "Degenerated triangle: " << p1 << " " << p2 << " " << p3 << " denom: " << denom << std::endl;
-		}
-		triData.aInv = static_cast<float>(d/denom);
-		triData.bInv = static_cast<float>(-b/denom);
-		triData.cInv = static_cast<float>(-c/denom);
-		triData.dInv = static_cast<float>(a/denom);
+        }
+        triData.aInv = static_cast<float>(d/denom);
+        triData.bInv = static_cast<float>(-b/denom);
+        triData.cInv = static_cast<float>(-c/denom);
+        triData.dInv = static_cast<float>(a/denom);
 	}
     // std::cout << "Found " << numDegeneratedTris << " degenerated triangles." << std::endl;
 

@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "Vector3i.h"
 #include "AABB.h"
 #include "OpInvertSDF.h"
@@ -26,7 +26,7 @@ Samples a signed distance field in an adaptive way.
 For each node (includes inner nodes and leaves) signed distances are stores for the 8 corners. This allows to interpolate signed distances in the node cell using trilinear interpolation.
 The actual signed distances are stored in a spatial hashmap because octree nodes share corners with other nodes.
 */
-class OctreeSDF : public SampledSignedDistanceField3D
+class OctreeSDF : public SampledSolidGeometry
 {
 protected:
 	class GridNode;
@@ -106,7 +106,7 @@ protected:
 	{
 	public:
 		Node* m_Children[8];
-		InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF);
+        InnerNode(const Area& area, const SolidGeometry& implicitSDF);
 		~InnerNode();
 		InnerNode(const InnerNode& rhs);
 
@@ -154,7 +154,7 @@ protected:
 	class GridNode : public Node
 	{
 	public:
-		GridNode(const Area& area, const SignedDistanceField3D& implicitSDF);
+        GridNode(const Area& area, const SolidGeometry& implicitSDF);
 		~GridNode();
 		// SharedLeafFace* m_Faces[6];
 		Sample m_Samples[LEAF_SIZE_3D];
@@ -200,11 +200,11 @@ protected:
 
 	Node* mergeAlignedNode(Node* node, Node* otherNode, const Area& area);
 
-	Node* intersect(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area);
+    Node* intersect(Node* node, const SolidGeometry& implicitSDF, const Area& area);
 
-	Node* subtract(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area);
+    Node* subtract(Node* node, const SolidGeometry& implicitSDF, const Area& area);
 
-	static Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF);
+    static Node* createNode(const Area& area, const SolidGeometry& implicitSDF);
 
 	BVHScene m_TriangleCache;
 public:
@@ -212,9 +212,9 @@ public:
 	OctreeSDF() : m_RootNode(nullptr) {}
 	OctreeSDF(const OctreeSDF& other);
 
-	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth);
+    static std::shared_ptr<OctreeSDF> sampleSDF(SolidGeometry* otherSDF, int maxDepth);
 
-	static std::shared_ptr<OctreeSDF> sampleSDF(SignedDistanceField3D* otherSDF, const AABB& aabb, int maxDepth);
+    static std::shared_ptr<OctreeSDF> sampleSDF(SolidGeometry* otherSDF, const AABB& aabb, int maxDepth);
 
 	float getInverseCellSize() override;
 
@@ -230,10 +230,10 @@ public:
 	virtual bool intersectsSurface(const AABB &) const override;
 
 	/// Subtracts the given signed distance field from this octree.
-	void subtract(SignedDistanceField3D* otherSDF);
+    void subtract(SolidGeometry* otherSDF);
 
 	/// Intersects the octree with a signed distance field. For intersections with other octrees, use intersectAlignedOctree if possible.
-	void intersect(SignedDistanceField3D* otherSDF);
+    void intersect(SolidGeometry* otherSDF);
 
 	/// Intersects the octree with another aligned octree (underlying grids must match).
 	void intersectAlignedOctree(OctreeSDF* otherOctree);
@@ -248,7 +248,7 @@ public:
 	void resize(const AABB& aabb);
 
 	/// Merges the octree with another signed distance field.
-	void merge(SignedDistanceField3D* otherSDF);
+    void merge(SolidGeometry* otherSDF);
 
 	/// Inverts the sdf represented by the octree.
 	void invert();

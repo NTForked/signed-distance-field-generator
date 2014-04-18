@@ -25,7 +25,7 @@
 #include "Prerequisites.h"
 #include "TriangleLookupTable.h"
 #include "Vertex.h"
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "Mesh.h"
 #include "Profiler.h"
 
@@ -59,7 +59,7 @@ class MarchingCubes {
 	};
 
 	static inline void marchCube(
-		const SampledSignedDistanceField3D::Cube& cube,
+		const SampledSolidGeometry::Cube& cube,
 		Vector3iHashGrid<VertexIndexed> &vertexMap,
 		std::vector<unsigned int> &indexBuffer,
 		int& numVertices)
@@ -150,7 +150,7 @@ public:
 		}
 	}
 
-	static std::shared_ptr<Mesh> marchSDF(const vector<SampledSignedDistanceField3D::Cube >& cubes, float voxelsPerUnit, Ogre::Vector3& minPos)
+	static std::shared_ptr<Mesh> marchSDF(const vector<SampledSolidGeometry::Cube >& cubes, float voxelsPerUnit, Ogre::Vector3& minPos)
 	{
 		std::shared_ptr<Mesh> outMesh = std::make_shared<Mesh>();
 		outMesh->indexBuffer.reserve(cubes.size() * 10);

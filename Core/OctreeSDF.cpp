@@ -1,7 +1,7 @@
 
 #include <stack>
 #include "OctreeSDF.h"
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "MarchingCubes.h"
 #include "Mesh.h"
 #include <bitset>
@@ -58,7 +58,7 @@ OctreeSDF::SharedLeafFace* OctreeSDF::lookupOrComputeYZFace(const Vector3i& glob
 Node constructors
 *******************************************************************************************/
 
-OctreeSDF::InnerNode::InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF)
+OctreeSDF::InnerNode::InnerNode(const Area& area, const SolidGeometry& implicitSDF)
 {
 	m_NodeType = INNER;
 	/*for (int i = 0; i < 8; i++)
@@ -111,7 +111,7 @@ OctreeSDF::EmptyNode::~EmptyNode()
 	}*/
 }
 
-OctreeSDF::GridNode::GridNode(const Area& area, const SignedDistanceField3D& implicitSDF)
+OctreeSDF::GridNode::GridNode(const Area& area, const SolidGeometry& implicitSDF)
 {
 	m_NodeType = GRID;
 	float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
@@ -125,7 +125,6 @@ OctreeSDF::GridNode::GridNode(const Area& area, const SignedDistanceField3D& imp
 		m_Faces[i]->useCount++;*/
 
 	// compute inner grid
-	implicitSDF.getSamples(area, m_Samples);
 	Ogre::Vector3 currentPos = area.m_MinRealPos;
 	for (unsigned int x = 0; x < LEAF_SIZE_1D; x++)
 	{
@@ -151,7 +150,7 @@ OctreeSDF::GridNode::~GridNode()
 		m_Faces[i]->useCount--;*/
 }
 
-OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SignedDistanceField3D& implicitSDF)
+OctreeSDF::Node* OctreeSDF::createNode(const Area& area, const SolidGeometry& implicitSDF)
 {
 	bool needsSubdivision = implicitSDF.cubeNeedsSubdivision(area);
 	if (area.m_SizeExpo <= LEAF_EXPO && needsSubdivision)
@@ -359,7 +358,7 @@ void OctreeSDF::GridNode::invert()
 		m_Samples[i].signedDistance *= -1.0f;
 }
 
-OctreeSDF::Node* OctreeSDF::intersect(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area)
+OctreeSDF::Node* OctreeSDF::intersect(Node* node, const SolidGeometry& implicitSDF, const Area& area)
 {
 	bool needsSubdivision = implicitSDF.cubeNeedsSubdivision(area);
 	if (node->getNodeType() == Node::INNER && needsSubdivision)
@@ -398,7 +397,7 @@ OctreeSDF::Node* OctreeSDF::intersect(Node* node, const SignedDistanceField3D& i
 	return node;
 }
 
-OctreeSDF::Node* OctreeSDF::subtract(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area)
+OctreeSDF::Node* OctreeSDF::subtract(Node* node, const SolidGeometry& implicitSDF, const Area& area)
 {
 	bool needsSubdivision = implicitSDF.cubeNeedsSubdivision(area);
 	if (node->getNodeType() == Node::INNER && needsSubdivision)
@@ -571,7 +570,7 @@ OctreeSDF::Node* OctreeSDF::mergeAlignedNode(Node* node, Node* otherNode, const 
 	return node;
 }
 
-std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth)
+std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SolidGeometry* otherSDF, int maxDepth)
 {
 	AABB aabb = otherSDF->getAABB();
 	Ogre::Vector3 epsilonVec(0.000001f, 0.000001f, 0.000001f);
@@ -580,7 +579,7 @@ std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF,
 	return sampleSDF(otherSDF, aabb, maxDepth);
 }
 
-std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SignedDistanceField3D* otherSDF, const AABB& aabb, int maxDepth)
+std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SolidGeometry* otherSDF, const AABB& aabb, int maxDepth)
 {
 	std::shared_ptr<OctreeSDF> octreeSDF = std::make_shared<OctreeSDF>();
 	Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();
@@ -637,7 +636,7 @@ bool OctreeSDF::intersectsSurface(const AABB& aabb) const
 	return true;
 }
 
-void OctreeSDF::subtract(SignedDistanceField3D* otherSDF)
+void OctreeSDF::subtract(SolidGeometry* otherSDF)
 {
 	otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
 	auto ts = Profiler::timestamp();
@@ -645,7 +644,7 @@ void OctreeSDF::subtract(SignedDistanceField3D* otherSDF)
 	Profiler::printJobDuration("Subtraction", ts);
 }
 
-void OctreeSDF::intersect(SignedDistanceField3D* otherSDF)
+void OctreeSDF::intersect(SolidGeometry* otherSDF)
 {
 	otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
 	auto ts = Profiler::timestamp();
@@ -706,7 +705,7 @@ void OctreeSDF::resize(const AABB& aabb)
 	}*/
 }
 
-void OctreeSDF::merge(SignedDistanceField3D* otherSDF)
+void OctreeSDF::merge(SolidGeometry* otherSDF)
 {
 	// this is not an optimal resize policy but it should work
 	// it is recommended to avoid resizes anyway

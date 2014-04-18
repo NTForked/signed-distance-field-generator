@@ -3,21 +3,27 @@
 
 #include "OgreMath/OgreVector3.h"
 #include <vector>
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "AABB.h"
 
-class OpInvertSDF : public SignedDistanceField3D
+class OpInvertSDF : public SolidGeometry
 {
 protected:
-	SignedDistanceField3D* m_SDF;
+    SolidGeometry* m_SDF;
 
 public:
-	OpInvertSDF(SignedDistanceField3D* sdf) : m_SDF(sdf) {}
+    OpInvertSDF(SolidGeometry* sdf) : m_SDF(sdf) {}
     virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
         m_SDF->getSample(point, sample);
 		sample.signedDistance *= -1.0f;
 	}
+
+    virtual void raycastClosest(const Ray& ray, Sample& sample) const override
+    {
+        m_SDF->raycastClosest(ray, sample);
+        sample.signedDistance *= -1.0f;
+    }
 
 	bool intersectsSurface(const AABB& aabb) const override
 	{

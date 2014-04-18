@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <sstream>
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "OctreeSDF.h"
 #include "TransformSDF.h"
 #include "FractalNoisePlaneSDF.h"

@@ -61,30 +61,4 @@ struct TriangleCached : public Triangle<Ogre::Vector3>
 		barycentricCoords.z = 1.0f - (barycentricCoords.x+barycentricCoords.y);
 		return barycentricCoords;
 	}
-
-	Ogre::Vector3 getPseudoNormalByPoint(const Ogre::Vector3& pointOnTrianglePlane) const
-	{
-		return getPseudoNormal(getBarycentricCoordinates(pointOnTrianglePlane));
-	}
-
-	Ogre::Vector3 getPseudoNormal(const Ogre::Vector3& barycentricCoords) const
-	{
-		const static float epsilon = std::numeric_limits<float>::epsilon();
-		if (barycentricCoords.x > epsilon && barycentricCoords.y > epsilon && barycentricCoords.z > epsilon)
-			return normal;
-		if (barycentricCoords.z > epsilon && barycentricCoords.x > epsilon)
-			return edgePseudoNormals[0];
-		if (barycentricCoords.x > epsilon && barycentricCoords.y > epsilon)
-			return edgePseudoNormals[1];
-		if (barycentricCoords.z > epsilon && barycentricCoords.y > epsilon)
-			return edgePseudoNormals[2];
-		if (barycentricCoords.z > epsilon)
-			return vertexPseudoNormals[0];
-		if (barycentricCoords.x > epsilon)
-			return vertexPseudoNormals[1];
-		if (barycentricCoords.y > epsilon)
-			return vertexPseudoNormals[2];
-		std::cout << "[getPseudoNormal] Invalid barycentric coordinates!" << std::endl;
-		return normal;
-	}
 };

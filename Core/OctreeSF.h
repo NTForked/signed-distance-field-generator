@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 #include <bitset>
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "Vector3i.h"
 #include "AABB.h"
 #include "OpInvertSDF.h"
@@ -27,7 +27,7 @@ Samples a signed distance field in an adaptive way.
 For each node (includes inner nodes and leaves) signed distances are stores for the 8 corners. This allows to interpolate signed distances in the node cell using trilinear interpolation.
 The actual signed distances are stored in a spatial hashmap because octree nodes share corners with other nodes.
 */
-class OctreeSF : public SampledSignedDistanceField3D
+class OctreeSF : public SampledSolidGeometry
 {
 protected:
 	class GridNode;
@@ -91,7 +91,7 @@ protected:
 	{
 	public:
 		Node* m_Children[8];
-        InnerNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        InnerNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~InnerNode();
 		InnerNode(const InnerNode& rhs);
 
@@ -119,7 +119,7 @@ protected:
 	{
 	public:
 		// EmptyNode() {}
-		EmptyNode(const Area& area, const SignedDistanceField3D& implicitSDF);
+        EmptyNode(const Area& area, const SolidGeometry& implicitSDF);
 		~EmptyNode();
 
 		bool m_Sign;
@@ -139,14 +139,14 @@ protected:
 	{
 	public:
         GridNode() { m_NodeType = GRID; }
-        GridNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        GridNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~GridNode();
 
 		std::bitset<LEAF_SIZE_3D> m_Signs;
 
 		struct SurfaceEdge
 		{
-			SurfaceEdge(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, const Ogre::Vector3& globalPos, const SignedDistanceField3D& sdf, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices) : direction(direction)
+            SurfaceEdge(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices) : direction(direction)
 			{
 				edgeIndex1 = indexOf(localMinPos);
 				static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
@@ -158,7 +158,11 @@ protected:
 				{
 					vertex = new SharedSurfaceVertex();
                     Sample s;
+                    globalPos[direction] += edgeLength * 0.5f;
                     sdf.getSample(globalPos, s);
+                    // Ogre::Vector3 rayDir(0,0,0);
+                    // rayDir[direction] = 1.0f;
+                    // sdf.raycastClosest(Ray(globalPos, rayDir), s);
 					vertex->vertex.position = s.closestSurfacePos;
                     vertex->signedDistance = s.signedDistance;
 				}
@@ -166,18 +170,19 @@ protected:
 				sharedVertex->refCount++;
 			}
 
-            SurfaceEdge(const Vector3i& localMinPos, unsigned char direction, const Ogre::Vector3& globalPos, const SignedDistanceField3D& sdf) : direction(direction)
+            /*SurfaceEdge(const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf) : direction(direction)
             {
                 edgeIndex1 = indexOf(localMinPos);
                 static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
                 edgeIndex2 = edgeIndex1 + EDGE_OFFSETS[direction];
                 sharedVertex = new SharedSurfaceVertex();
                 Sample s;
+                globalPos[direction] += edgeLength * 0.5f;
                 sdf.getSample(globalPos, s);
                 sharedVertex->vertex.position = s.closestSurfacePos;
                 sharedVertex->signedDistance = s.signedDistance;
                 sharedVertex->refCount++;
-            }
+            }*/
 
 			void deleteSharedVertex()
 			{
@@ -195,9 +200,9 @@ protected:
 		std::vector<unsigned short> m_SurfaceCubes;
 		std::vector<SurfaceEdge> m_SurfaceEdges;
 
-        void computeSigns(const Area& area, const SignedDistanceField3D& implicitSDF);
-        void computeEdges(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-        void computeEdges(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const std::bitset<LEAF_SIZE_3D>* ignoreEdges);
+        void computeSigns(const Area& area, const SolidGeometry& implicitSDF);
+        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const std::bitset<LEAF_SIZE_3D>* ignoreEdges);
         void computeCubes();
 
 		static inline int indexOf(int x, int y, int z) { return x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z; }
@@ -221,8 +226,8 @@ protected:
 
 		virtual void invert();
 
-        void merge(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-        void intersect(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void merge(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void intersect(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
         void intersect(GridNode* otherNode);
         void merge(GridNode* otherNode);
@@ -253,11 +258,11 @@ protected:
 
 	Node* mergeAlignedNode(Node* node, Node* otherNode, const Area& area);
 
-    Node* intersect(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+    Node* intersect(Node* node, const SolidGeometry& implicitSDF, const Area& area, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
-    Node* merge(Node* node, const SignedDistanceField3D& implicitSDF, const Area& area, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+    Node* merge(Node* node, const SolidGeometry& implicitSDF, const Area& area, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
-    static Node* createNode(const Area& area, const SignedDistanceField3D& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+    static Node* createNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
 	BVHScene m_TriangleCache;
 public:
@@ -265,9 +270,9 @@ public:
 	OctreeSF() : m_RootNode(nullptr) {}
 	OctreeSF(const OctreeSF& other);
 
-	static std::shared_ptr<OctreeSF> sampleSDF(SignedDistanceField3D* otherSDF, int maxDepth);
+    static std::shared_ptr<OctreeSF> sampleSDF(SolidGeometry* otherSDF, int maxDepth);
 
-	static std::shared_ptr<OctreeSF> sampleSDF(SignedDistanceField3D* otherSDF, const AABB& aabb, int maxDepth);
+    static std::shared_ptr<OctreeSF> sampleSDF(SolidGeometry* otherSDF, const AABB& aabb, int maxDepth);
 
 	float getInverseCellSize() override;
 
@@ -281,10 +286,10 @@ public:
 	virtual bool intersectsSurface(const AABB &) const override;
 
 	/// Subtracts the given signed distance field from this octree.
-	void subtract(SignedDistanceField3D* otherSDF);
+    void subtract(SolidGeometry* otherSDF);
 
 	/// Intersects the octree with a signed distance field. For intersections with other octrees, use intersectAlignedOctree if possible.
-	void intersect(SignedDistanceField3D* otherSDF);
+    void intersect(SolidGeometry* otherSDF);
 
 	/// Intersects the octree with another aligned octree (underlying grids must match).
 	void intersectAlignedOctree(OctreeSF* otherOctree);
@@ -299,7 +304,7 @@ public:
 	void resize(const AABB& aabb);
 
 	/// Merges the octree with another signed distance field.
-	void merge(SignedDistanceField3D* otherSDF);
+    void merge(SolidGeometry* otherSDF);
 
 	/// Inverts the sdf represented by the octree.
 	void invert();

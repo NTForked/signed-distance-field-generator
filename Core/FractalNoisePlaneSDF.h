@@ -3,12 +3,12 @@
 
 #include "OgreMath/OgreVector3.h"
 #include <vector>
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "AABB.h"
 #include "FractalNoiseGenerator.h"
 #include "Mesh.h"
 
-class FractalNoisePlaneSDF : public SignedDistanceField3D
+class FractalNoisePlaneSDF : public SolidGeometry
 {
 protected:
 	float** m_HeightMap;

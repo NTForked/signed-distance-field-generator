@@ -371,8 +371,8 @@ public:
 
 	const LeafType* rayIntersectClosest(Ray::Intersection &intersection, const Ray &ray) const override
 	{
-		if (!mBoundingVolume.rayIntersect(ray))
-			return nullptr;
+        if (!mBoundingVolume.rayIntersect(ray))
+            return nullptr;
 		intersection.t = std::numeric_limits<float>::infinity();
 		const LeafType *leftHit = mChildren[ray.sign[mSplitAxis]]->rayIntersectUpdate(intersection, ray); 
 		const LeafType *rightHit = mChildren[1-ray.sign[mSplitAxis]]->rayIntersectUpdate(intersection, ray);
@@ -381,8 +381,8 @@ public:
 	}
 	const LeafType* rayIntersectUpdate(Ray::Intersection &intersection, const Ray &ray) const override
 	{
-		if (!mBoundingVolume.rayIntersect(ray, 0.0f, (float)intersection.t))
-			return nullptr;
+        if (!mBoundingVolume.rayIntersect(ray, 0.0f, (float)intersection.t))
+            return nullptr;
 		const LeafType *leftHit = mChildren[ray.sign[mSplitAxis]]->rayIntersectUpdate(intersection, ray); 
 		const LeafType *rightHit =  mChildren[1-ray.sign[mSplitAxis]]->rayIntersectUpdate(intersection, ray);
 		if (rightHit) return rightHit;

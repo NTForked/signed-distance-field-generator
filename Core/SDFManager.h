@@ -4,7 +4,7 @@
 #include <memory>
 #include <fstream>
 #include "OBJReader.h"
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 #include "Mesh.h"
 #include "OctreeSDF.h"
 #include "OctreeSF.h"
@@ -45,13 +45,13 @@ public:
 	}
 
 	/// Creates an octree that approximates the given signed distance field.
-	static std::shared_ptr<OctreeSDF> sampleOctreeSDF(std::shared_ptr<SignedDistanceField3D> sdf, int maxOctreeDepth = 7)
+	static std::shared_ptr<OctreeSDF> sampleOctreeSDF(std::shared_ptr<SolidGeometry> sdf, int maxOctreeDepth = 7)
 	{
 		return OctreeSDF::sampleSDF(sdf.get(), maxOctreeDepth);
 	}
 
 	/// Creates a signed distance field given the filename of an .obj file.
-	static std::shared_ptr<SignedDistanceField3D> createSDFFromMesh(const std::string& objFileName)
+	static std::shared_ptr<SolidGeometry> createSDFFromMesh(const std::string& objFileName)
 	{
 		std::shared_ptr<Mesh> mesh = loadObjMesh(objFileName);
 		return std::make_shared<TriangleMeshSDF_Robust>(std::make_shared<TransformedMesh>(mesh));
@@ -61,7 +61,7 @@ public:
 	* Creates a signed distance field given a vertex and index buffer.
 	* In the vertex buffer, it is not necessary to provide normals.
 	*/
-	static std::shared_ptr<SignedDistanceField3D> createSDFFromMesh(
+	static std::shared_ptr<SolidGeometry> createSDFFromMesh(
 		std::vector<Vertex>& vertexBuffer,
 		std::vector<unsigned int>& indexBuffer)
 	{
@@ -70,7 +70,7 @@ public:
 	}
 
 	/// Creates a fractal noise sdf.
-	static std::shared_ptr<SignedDistanceField3D> createFractalNoiseSDF(float size,
+	static std::shared_ptr<SolidGeometry> createFractalNoiseSDF(float size,
 		float roughness,
 		float zRange,
 		const Ogre::Quaternion& rotation,
@@ -82,7 +82,7 @@ public:
 		return std::make_shared<TransformSDF>(fractalNoiseSDF, transform);
 	}
 
-	static std::shared_ptr<SignedDistanceField3D> createFractalNoiseSDF(float size,
+	static std::shared_ptr<SolidGeometry> createFractalNoiseSDF(float size,
 		float roughness,
 		float zRange)
 	{
@@ -90,7 +90,7 @@ public:
 	}
 
 	/// Exports a sampled signed distance field as a triangle mesh in .obj format.
-	static void exportSampledSDFAsMesh(const std::string& objFileName, std::shared_ptr<SampledSignedDistanceField3D> sdf)
+	static void exportSampledSDFAsMesh(const std::string& objFileName, std::shared_ptr<SampledSolidGeometry> sdf)
 	{
 		auto marched = sdf->generateMesh();
 		std::cout << "[Marching cubes] Computing normals ..." << std::endl;

@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 #include "AABB.h"
-#include "SignedDistanceField.h"
+#include "SolidGeometry.h"
 
 /*
 Samples a SDF using a uniform grid stores in an 3D array.
@@ -152,7 +152,7 @@ public:
 	}
 };
 
-class SignedDistanceField3DArray : public Generic3DArray<float>, public SampledSignedDistanceField3D
+class SignedDistanceField3DArray : public Generic3DArray<float>, public SampledSolidGeometry
 {
 public:
 	vector<Cube> getCubesToMarch()
@@ -187,7 +187,6 @@ public:
     virtual void getSample(const Ogre::Vector3&, Sample&) const override
 	{
 		// NIY
-		return Sample();
 	}
 
 	bool intersectsSurface(const AABB& aabb) const override

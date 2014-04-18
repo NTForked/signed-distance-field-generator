@@ -23,7 +23,6 @@
 #include "FracturePattern.h"
 #include "AABBSDF.h"
 #include "OctreeSF.h"
-#include "OctreeSF2.h"
 
 using std::vector;
 using Ogre::Vector3;
@@ -228,7 +227,7 @@ void testFractalNoisePlane()
 	Ogre::Quaternion rotation(Ogre::Radian(Ogre::Math::PI*0.1f), Ogre::Vector3(1, 0, 0));
 	auto fractalNoiseSDF = SDFManager::createFractalNoiseSDF(2.0f, 1.0f, 0.15f, rotation);
 	auto ts = Profiler::timestamp();
-	auto octreeSDF = OctreeSF::sampleSDF(std::static_pointer_cast<SignedDistanceField3D>(fractalNoiseSDF).get(), 8);
+	auto octreeSDF = OctreeSF::sampleSDF(std::static_pointer_cast<SampledSolidGeometry>(fractalNoiseSDF).get(), 8);
 	Profiler::printJobDuration("Fractal noise sampling", ts);
 	std::cout << "Fractal noise SDF has " << octreeSDF->countLeaves() << " leaves." << std::endl;
 	SDFManager::exportSampledSDFAsMesh("signedDistanceTestOctree_FractalNoise", octreeSDF);
