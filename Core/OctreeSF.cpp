@@ -7,7 +7,7 @@
 #include <bitset>
 
 /******************************************************************************************
-Node constructors
+InnerNode
 *******************************************************************************************/
 
 OctreeSF::InnerNode::InnerNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*>* sharedVertices)
@@ -45,6 +45,69 @@ OctreeSF::InnerNode::InnerNode(const InnerNode& rhs)
     }
 }
 
+void OctreeSF::InnerNode::countNodes(int& counter) const
+{
+    counter++;
+    for (int i = 0; i < 8; i++)
+        m_Children[i]->countNodes(counter);
+}
+
+void OctreeSF::InnerNode::countLeaves(int& counter) const
+{
+    for (int i = 0; i < 8; i++)
+        m_Children[i]->countLeaves(counter);
+}
+
+void OctreeSF::InnerNode::countMemory(int& counter) const
+{
+    counter += sizeof(*this);
+    for (int i = 0; i < 8; i++)
+        m_Children[i]->countMemory(counter);
+}
+
+void OctreeSF::InnerNode::markSharedVertices(bool marked)
+{
+    for (int i = 0; i < 8; i++)
+        m_Children[i]->markSharedVertices(marked);
+}
+
+bool OctreeSF::InnerNode::rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection)
+{
+    if (!ray.intersectAABB(&area.toAABB().min, 0, intersection.t)) return false;
+    Area subAreas[8];
+    area.getSubAreas(subAreas);
+    bool foundSomething = false;
+    for (int i = 0; i < 8; i++)
+    {
+        if (m_Children[i]->rayIntersectUpdate(subAreas[i], ray, intersection))
+            foundSomething = true;
+    }
+    return foundSomething;
+}
+
+void OctreeSF::InnerNode::generateVertices(vector<Vertex>& vertices)
+{
+    for (int i = 0; i < 8; i++)
+        m_Children[i]->generateVertices(vertices);
+}
+void OctreeSF::InnerNode::generateIndices(const Area& area, vector<unsigned int>& indices) const
+{
+    Area subAreas[8];
+    area.getSubAreas(subAreas);
+    for (int i = 0; i < 8; i++)
+        m_Children[i]->generateIndices(subAreas[i], indices);
+}
+
+void OctreeSF::InnerNode::invert()
+{
+    for (int i = 0; i < 8; i++)
+        m_Children[i]->invert();
+}
+
+/******************************************************************************************
+EmptyNode
+*******************************************************************************************/
+
 OctreeSF::EmptyNode::EmptyNode(const Area& area, const SolidGeometry& implicitSDF)
 {
     m_NodeType = EMPTY;
@@ -55,12 +118,14 @@ OctreeSF::EmptyNode::~EmptyNode()
 {
 }
 
-// dist1 * w + dist2 * (1-w) = 0
-// => w  = dist2 / (dist2 - dist1)
-static float getInterpolationWeight(float dist1, float dist2)
+void OctreeSF::EmptyNode::invert()
 {
-    return dist2 / (dist2 - dist1);
+    m_Sign = !m_Sign;
 }
+
+/******************************************************************************************
+GridNode
+*******************************************************************************************/
 
 OctreeSF::Node* OctreeSF::GridNode::clone() const
 {
@@ -227,58 +292,6 @@ void OctreeSF::GridNode::countMemory(int& memoryCounter) const
     }
 }
 
-OctreeSF::Node* OctreeSF::createNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*>* sharedVertices)
-{
-    bool needsSubdivision = implicitSDF.cubeNeedsSubdivision(area);
-    if (area.m_SizeExpo <= LEAF_EXPO && needsSubdivision)
-        return new GridNode(area, implicitSDF, sharedVertices);
-
-    if (needsSubdivision)
-        return new InnerNode(area, implicitSDF, sharedVertices);
-
-    return new EmptyNode(area, implicitSDF);
-}
-
-void OctreeSF::InnerNode::countNodes(int& counter) const
-{
-    counter++;
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->countNodes(counter);
-}
-
-void OctreeSF::InnerNode::countLeaves(int& counter) const
-{
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->countLeaves(counter);
-}
-
-void OctreeSF::InnerNode::countMemory(int& counter) const
-{
-    counter += sizeof(*this);
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->countMemory(counter);
-}
-
-void OctreeSF::InnerNode::markSharedVertices(bool marked)
-{
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->markSharedVertices(marked);
-}
-
-bool OctreeSF::InnerNode::rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection)
-{
-    if (!ray.intersectAABB(&area.toAABB().min, 0, intersection.t)) return false;
-    Area subAreas[8];
-    area.getSubAreas(subAreas);
-    bool foundSomething = false;
-    for (int i = 0; i < 8; i++)
-    {
-        if (m_Children[i]->rayIntersectUpdate(subAreas[i], ray, intersection))
-            foundSomething = true;
-    }
-    return foundSomething;
-}
-
 void OctreeSF::GridNode::markSharedVertices(bool marked)
 {
     for (auto i = m_SurfaceEdges.begin(); i != m_SurfaceEdges.end(); ++i)
@@ -352,29 +365,6 @@ void OctreeSF::GridNode::generateIndices(const Area&, vector<unsigned int>& indi
     }
 }
 
-void OctreeSF::InnerNode::generateVertices(vector<Vertex>& vertices)
-{
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->generateVertices(vertices);
-}
-void OctreeSF::InnerNode::generateIndices(const Area& area, vector<unsigned int>& indices) const
-{
-    Area subAreas[8];
-    area.getSubAreas(subAreas);
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->generateIndices(subAreas[i], indices);
-}
-
-void OctreeSF::InnerNode::invert()
-{
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->invert();
-}
-
-void OctreeSF::EmptyNode::invert()
-{
-    m_Sign = !m_Sign;
-}
 
 void OctreeSF::GridNode::invert()
 {
@@ -434,6 +424,7 @@ void OctreeSF::GridNode::merge(const Area& area, const SolidGeometry& implicitSD
 
 void OctreeSF::GridNode::intersect(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices)
 {
+    // auto ts = Profiler::timestamp();
     float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
     GridNode otherNode;
     otherNode.computeSigns(area, implicitSDF);
@@ -464,12 +455,14 @@ void OctreeSF::GridNode::intersect(const Area& area, const SolidGeometry& implic
                 {
                     i->sharedVertex->signedDistance = s.signedDistance;
                     i->sharedVertex->vertex.position = s.closestSurfacePos;
+                    i->sharedVertex->vertex.normal = s.normal;
                 }
             }
         }
         else i->deleteSharedVertex();
     }
     computeEdges(area, implicitSDF, sharedVertices, addedEdges);
+    // Profiler::getSingleton().accumulateJobDuration("GridNode::intersect", ts);
 }
 
 void OctreeSF::GridNode::intersect(GridNode* otherNode)
@@ -561,6 +554,22 @@ void OctreeSF::GridNode::addUniqueCubesWithSignChange(const std::vector<unsigned
     }
 }
 
+/******************************************************************************************
+OctreeSF
+*******************************************************************************************/
+
+OctreeSF::Node* OctreeSF::createNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*>* sharedVertices)
+{
+    bool needsSubdivision = implicitSDF.cubeNeedsSubdivision(area);
+    if (area.m_SizeExpo <= LEAF_EXPO && needsSubdivision)
+        return new GridNode(area, implicitSDF, sharedVertices);
+
+    if (needsSubdivision)
+        return new InnerNode(area, implicitSDF, sharedVertices);
+
+    return new EmptyNode(area, implicitSDF);
+}
+
 OctreeSF::Node* OctreeSF::intersect(Node* node, const SolidGeometry& implicitSDF, const Area& area, Vector3iHashGrid<SharedSurfaceVertex*>* sharedVertices)
 {
     bool needsSubdivision = implicitSDF.cubeNeedsSubdivision(area);
@@ -578,7 +587,7 @@ OctreeSF::Node* OctreeSF::intersect(Node* node, const SolidGeometry& implicitSDF
         if (implicitSDF.getSign(area.getCornerVecs(0).second))
             return node;
         delete node;
-        return createNode(area, implicitSDF, sharedVertices);
+        return new EmptyNode(area, implicitSDF);    // createNode(area, implicitSDF, sharedVertices);
     }
     if (node->getNodeType() == Node::EMPTY)
     {
@@ -758,7 +767,9 @@ std::shared_ptr<OctreeSF> OctreeSF::sampleSDF(SolidGeometry* otherSDF, const AAB
     otherSDF->prepareSampling(aabb, octreeSF->m_CellSize);
     octreeSF->m_RootArea = Area(Vector3i(0, 0, 0), maxDepth, aabb.getMin(), cubeSize);
     Vector3iHashGrid<SharedSurfaceVertex*> sharedVertices[3];
+    auto ts = Profiler::timestamp();
     octreeSF->m_RootNode = octreeSF->createNode(octreeSF->m_RootArea, *otherSDF, sharedVertices);
+    Profiler::printJobDuration("sampleSDF", ts);
     return octreeSF;
 }
 
@@ -789,18 +800,14 @@ void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsig
     // Profiler::printJobDuration("generateVerticesAndIndices", tsTotal);
 }
 
-#include "Profiler.h"
 std::shared_ptr<Mesh> OctreeSF::generateMesh()
 {
+    // auto ts = Profiler::timestamp();
     std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
     generateVerticesAndIndices(mesh->vertexBuffer, mesh->indexBuffer);
-    // mesh->smoothMesh(1);
-    // auto ts = Profiler::timestamp();
-    mesh->computeTriangleNormals();
-    // Profiler::printJobDuration("computeTriangleNormals", ts);
-    // ts = Profiler::timestamp();
-    mesh->computeVertexNormals();
-    // Profiler::printJobDuration("computeVertexNormals", ts);
+    // mesh->computeTriangleNormals();
+    // mesh->computeVertexNormals();
+    // Profiler::printJobDuration("generateMesh", ts);
     return mesh;
 }
 
@@ -820,9 +827,11 @@ bool OctreeSF::intersectsSurface(const AABB& aabb) const
 void OctreeSF::subtract(SolidGeometry* otherSDF)
 {
     otherSDF->prepareSampling(m_RootArea.toAABB(), m_CellSize);
-    // auto ts = Profiler::timestamp();
     Vector3iHashGrid<SharedSurfaceVertex*> sharedVertices[3];
+    // auto ts = Profiler::timestamp();
+    // Profiler::getSingleton().createJob("computeSigns");
     m_RootNode = intersect(m_RootNode, OpInvertSDF(otherSDF), m_RootArea, sharedVertices);
+    // Profiler::getSingleton().printJobDuration("computeSigns");
     // Profiler::printJobDuration("Subtraction", ts);
 }
 

@@ -57,7 +57,7 @@ public:
 
 	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
-		float distToCenter = std::sqrtf(center.squaredDistance(point));
+        float distToCenter = std::sqrtf(center.squaredDistance(point));
         sample.signedDistance = radius - distToCenter;
 		if (distToCenter == 0.0f)
 			sample.closestSurfacePos = center;
@@ -93,6 +93,8 @@ public:
         {
             sample.closestSurfacePos = ray.origin + ray.direction * intersection.t;
             sample.signedDistance = intersection.t;
+            sample.normal = ray.origin - center;
+            sample.normal.normalise();
             if (!getSign(ray.origin))
                 sample.signedDistance *= -1.0f;
         }

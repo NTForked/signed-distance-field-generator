@@ -32,7 +32,7 @@ class OctreeSF : public SampledSolidGeometry
 protected:
 	class GridNode;
 public:
-    static const int LEAF_EXPO = 3;
+    static const int LEAF_EXPO = 2;
 	static const int LEAF_SIZE_1D = (1 << LEAF_EXPO) + 1;
 	static const int LEAF_SIZE_2D = LEAF_SIZE_1D * LEAF_SIZE_1D;
 	static const int LEAF_SIZE_3D = LEAF_SIZE_2D * LEAF_SIZE_1D;
@@ -47,7 +47,7 @@ public:
 		int vertexIndex;
         unsigned short refCount;
 		bool marked;
-		SharedSurfaceVertex() : marked(false), refCount(0) {}
+        SharedSurfaceVertex() : marked(false), refCount(0) {}
 	};
 
 protected:
@@ -163,7 +163,8 @@ protected:
                     // Ogre::Vector3 rayDir(0,0,0);
                     // rayDir[direction] = 1.0f;
                     // sdf.raycastClosest(Ray(globalPos, rayDir), s);
-					vertex->vertex.position = s.closestSurfacePos;
+                    vertex->vertex.position = s.closestSurfacePos;
+                    vertex->vertex.normal = s.normal;
                     vertex->signedDistance = s.signedDistance;
 				}
 				sharedVertex = vertex;

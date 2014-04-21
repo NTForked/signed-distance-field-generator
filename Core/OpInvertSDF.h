@@ -17,12 +17,14 @@ public:
 	{
         m_SDF->getSample(point, sample);
 		sample.signedDistance *= -1.0f;
+        sample.normal *= -1.0f;
 	}
 
     virtual void raycastClosest(const Ray& ray, Sample& sample) const override
     {
         m_SDF->raycastClosest(ray, sample);
         sample.signedDistance *= -1.0f;
+        sample.normal *= -1.0f;
     }
 
 	bool intersectsSurface(const AABB& aabb) const override

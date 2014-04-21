@@ -251,6 +251,7 @@ public:
 		if (!getSign(point)) result.closestDistance *= -1;
         sample.signedDistance = result.closestDistance;
         sample.closestSurfacePos = result.closestPoint;
+        sample.normal = result.normal;
     }
 
     virtual void raycastClosest(const Ray& ray, Sample& sample) const override

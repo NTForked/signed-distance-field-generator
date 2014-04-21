@@ -25,10 +25,11 @@ void MainGLWindow::initializeGL()
 
     GLManager::getSingleton().getGLFunctions()->glEnable(GL_DEPTH_TEST);
 
-    // std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/bunny.capped.obj");
+    // std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/bunny_highres.obj");
     // TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
     SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.3f);
     auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
+    std::cout << "Volume has " << octree->countLeaves() << " leaves and occupies " << octree->countMemory() / 1000 << " kb." << std::endl;
     m_Mesh = std::make_shared<GLMesh>(octree);
     m_CollisionGeometry.addMesh(std::make_shared<TransformedMesh>(m_Mesh->getMesh()));
 }
@@ -54,7 +55,7 @@ void MainGLWindow::mousePressEvent(QMouseEvent* event)
 
         if (raycast(event, m_LastIntersectionPos))
         {
-            SphereSDF sphere(m_LastIntersectionPos, 0.05f);
+            SphereSDF sphere(m_LastIntersectionPos, 0.01f);
             m_Mesh->getOctree()->subtract(&sphere);
             m_Mesh->updateMesh();
             requestRedraw();
@@ -92,7 +93,7 @@ void MainGLWindow::mouseMoveEvent(QMouseEvent* event)
             float sphereDist = 1.0f / m_Mesh->getOctree()->getInverseCellSize();
             for (float x = 0; x < dist; x += sphereDist)
             {
-                SphereSDF sphere(m_LastIntersectionPos + delta * x, 0.05f);
+                SphereSDF sphere(m_LastIntersectionPos + delta * x, 0.01f);
                 m_Mesh->getOctree()->subtract(&sphere);
             }
 
