@@ -4,7 +4,6 @@
 #include "SolidGeometry.h"
 #include "MarchingCubes.h"
 #include "Mesh.h"
-#include <bitset>
 
 /******************************************************************************************
 InnerNode

@@ -143,7 +143,7 @@ protected:
         GridNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~GridNode();
 
-		std::bitset<LEAF_SIZE_3D> m_Signs;
+        std::bitset<LEAF_SIZE_3D> m_Signs;
 
 		struct SurfaceEdge
 		{
@@ -173,10 +173,10 @@ protected:
                 sharedVertex = vertex;
                 sharedVertex->refCount++;
 
-                /*sharedVertex = &muuh;//new SharedSurfaceVertex();       // 2 ms
+                /*sharedVertex = new SharedSurfaceVertex();
 				Sample s;
                 globalPos[direction] += edgeLength * 0.5f;
-                sdf.getSample(globalPos, s);                         // 2 ms
+                sdf.getSample(globalPos, s);
                 sharedVertex->vertex.position = s.closestSurfacePos;
 				sharedVertex->signedDistance = s.signedDistance;
                 sharedVertex->refCount++;*/

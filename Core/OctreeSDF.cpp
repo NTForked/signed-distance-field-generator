@@ -4,7 +4,6 @@
 #include "SolidGeometry.h"
 #include "MarchingCubes.h"
 #include "Mesh.h"
-#include <bitset>
 
 /*OctreeSDF::SharedLeafFace::SharedLeafFace(const Ogre::Vector3& pos, float stepSize, int dim1, int dim2, const SignedDistanceField3D& implicitSDF)
 {
