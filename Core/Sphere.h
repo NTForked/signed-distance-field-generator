@@ -65,7 +65,7 @@ public:
 		{
 			sample.normal = (point - center) / distToCenter;
             sample.closestSurfacePos = center + sample.normal * radius;
-		}	
+        }
 	}
 
 	virtual bool getSign(const Ogre::Vector3& point) const override

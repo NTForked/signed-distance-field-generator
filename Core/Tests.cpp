@@ -23,6 +23,7 @@
 #include "FracturePattern.h"
 #include "AABBSDF.h"
 #include "OctreeSF.h"
+#include "VoronoiFragments.h"
 
 using std::vector;
 using Ogre::Vector3;
@@ -98,6 +99,17 @@ void testVector3iHashGridPerformance()
 	}
 	Profiler::printJobDuration("boost::unordered_map [] benchmark", ts);
 }*/
+
+void testVoronoiFragments()
+{
+	SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.3f);
+	VoronoiFragments fragments(VoronoiFragments::generateFragmentPointsUniform(AABB(Ogre::Vector3(-0.3f, -0.3f, -0.3f), Ogre::Vector3(0.3f, 0.3f, 0.3f)), 100));
+	fragments.setFragment(1);
+	auto octree = OctreeSF::sampleSDF(&meshSDF, 7);
+	octree->intersect(&fragments);
+	std::cout << "Voronoi fragment has " << octree->countLeaves() << " leaves and occupies " << octree->countMemory() / 1000 << " kb." << std::endl;
+	SDFManager::exportSampledSDFAsMesh("../Tests/VoronoiTest.obj", octree);
+};
 
 template<class Sampler>
 void buildSDFAndMarch(const std::string& fileName, int maxDepth)
@@ -311,7 +323,7 @@ int main()
 	// testMeshImport<OctreeSF>();
 	// testCubeSplit();
 	// testSphere();
-	testFractalNoisePlane();
+	testVoronoiFragments();
 	// splitBuddha2<OctreeSF>();
 	// splitBuddha();
 	while (true) {}

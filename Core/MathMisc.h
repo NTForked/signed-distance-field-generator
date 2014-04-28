@@ -7,104 +7,6 @@ using Ogre::Vector3;
 
 struct MathMisc
 {
-	// http://www.gamedev.net/topic/552906-closest-point-on-triangle/
-	static Vector3 closestPointOnTriangle( const Vector3 *triangle, const Vector3 &sourcePosition, float& s, float &t )
-	{
-		Vector3 edge0 = triangle[1] - triangle[0];
-		Vector3 edge1 = triangle[2] - triangle[0];
-		Vector3 v0 = triangle[0] - sourcePosition;
-
-		float a = edge0.dotProduct( edge0 );
-		float b = edge0.dotProduct( edge1 );
-		float c = edge1.dotProduct( edge1 );
-		float d = edge0.dotProduct( v0 );
-		float e = edge1.dotProduct( v0 );
-
-		float det = a*c - b*b;
-		s = b*e - c*d;
-		t = b*d - a*e;
-
-		if ( s + t < det )
-		{
-			if ( s < 0.f )
-			{
-				if ( t < 0.f )
-				{
-					if ( d < 0.f )
-					{
-						s = Ogre::Math::Clamp( -d/a, 0.f, 1.f );
-						t = 0.f;
-					}
-					else
-					{
-						s = 0.f;
-						t = Ogre::Math::Clamp( -e/c, 0.f, 1.f );
-					}
-				}
-				else
-				{
-					s = 0.f;
-					t = Ogre::Math::Clamp( -e/c, 0.f, 1.f );
-				}
-			}
-			else if ( t < 0.f )
-			{
-				s = Ogre::Math::Clamp( -d/a, 0.f, 1.f );
-				t = 0.f;
-			}
-			else
-			{
-				float invDet = 1.f / det;
-				s *= invDet;
-				t *= invDet;
-			}
-		}
-		else
-		{
-			if ( s < 0.f )
-			{
-				float tmp0 = b+d;
-				float tmp1 = c+e;
-				if ( tmp1 > tmp0 )
-				{
-					float numer = tmp1 - tmp0;
-					float denom = a-2*b+c;
-					s = Ogre::Math::Clamp( numer/denom, 0.f, 1.f );
-					t = 1-s;
-				}
-				else
-				{
-					t = Ogre::Math::Clamp( -e/c, 0.f, 1.f );
-					s = 0.f;
-				}
-			}
-			else if ( t < 0.f )
-			{
-				if ( a+d > b+e )
-				{
-					float numer = c+e-b-d;
-					float denom = a-2*b+c;
-					s = Ogre::Math::Clamp( numer/denom, 0.f, 1.f );
-					t = 1-s;
-				}
-				else
-				{
-					s = Ogre::Math::Clamp( -e/c, 0.f, 1.f );
-					t = 0.f;
-				}
-			}
-			else
-			{
-				float numer = c+e-b-d;
-				float denom = a-2*b+c;
-				s = Ogre::Math::Clamp( numer/denom, 0.f, 1.f );
-				t = 1.f - s;
-			}
-		}
-
-		return triangle[0] + s * edge0 + t * edge1;
-	}
-
 	__forceinline static float rayPlaneIntersection(const Ogre::Vector3& rayOrigin, const Ogre::Vector3& rayDir, const Ogre::Vector3& planeNormal, const Ogre::Vector3& planePos)
 	{
 		float denom = rayDir.dotProduct(planeNormal);
@@ -152,7 +54,7 @@ struct MathMisc
 	}
 
 	// source: http://www.idt.mdh.se/personal/tla/publ/sb.pdf
-	__forceinline static float aabbPointSquaredDistance(const Ogre::Vector3& aabbMin, const Ogre::Vector3& aabbMax, const Ogre::Vector3& point)
+    inline static float aabbPointSquaredDistance(const Ogre::Vector3& aabbMin, const Ogre::Vector3& aabbMax, const Ogre::Vector3& point)
 	{
 		float squaredDist = 0;
 		if (point.x < aabbMin.x)
@@ -188,7 +90,7 @@ struct MathMisc
 			squaredDist += e*e;
 		}
 		return squaredDist;
-	}
+    }
 
 	template<class T>
 	static __forceinline T square(const T& val)

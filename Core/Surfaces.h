@@ -12,6 +12,7 @@
 #include "BVH.h"
 #include "Sphere.h"
 #include "MathMisc.h"
+#include "Mesh.h"
 
 class Surface : public BVH<Surface>
 {
@@ -23,11 +24,11 @@ public:
 	virtual ~Surface() {}
 
 	/// Retrieves the aabb of the Surface.
-    __forceinline const AABB& getBoundingVolume() const { return m_AABB; }
+    inline const AABB& getBoundingVolume() const { return m_AABB; }
 
 	// __forceinline void getBoundingVolume(SphereBV& sphereBV) { sphereBV = m_SphereBV; }
 
-	__forceinline const std::vector<Ogre::Vector3>& getExtremalPoints() { return m_ExtremalPoints; }
+    inline const std::vector<Ogre::Vector3>& getExtremalPoints() { return m_ExtremalPoints; }
 
 	float squaredDistance(const Ogre::Vector3& point) const { return m_AABB.squaredDistance(point); }
 };
@@ -152,4 +153,58 @@ public:
         return aabb.intersectsTriangle(mMesh->vertexBufferVS[mIndex1].position, mMesh->vertexBufferVS[mIndex2].position, mMesh->vertexBufferVS[mIndex3].position, mMesh->triangleDataVS[mTriangleIndex].normal);
         // return m_AABB.intersectsAABB(aabb);
 	}
+};
+
+// For storing point data.
+class PointBVH : public BVH<PointBVH>
+{
+protected:
+    Ogre::Vector3 m_Point;
+    mutable bool m_BlackListed;
+    AABB m_AABB;
+    std::vector<Ogre::Vector3> m_ExtremalPoints;
+    int m_Index;
+
+public:
+    PointBVH(const Ogre::Vector3& point, int index) : m_Point(point), m_Index(index)
+    {
+        m_AABB.min = point;
+        m_AABB.max = point;
+        m_ExtremalPoints.push_back(point);
+    }
+    const PointBVH* rayIntersectClosest(Ray::Intersection &intersection, const Ray &ray) const override { return nullptr; }
+
+    const PointBVH* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) const override
+    {
+        if (m_BlackListed) return nullptr;
+        float squaredDist = point.squaredDistance(m_Point);
+        if (squaredDist < result.closestDistance * result.closestDistance)
+        {
+            result.closestDistance = std::sqrtf(squaredDist);
+            result.closestPoint = m_Point;
+            return this;
+        }
+        return nullptr;
+    }
+
+    bool intersectsAABB(const AABB& aabb) const override
+    {
+        if (m_BlackListed) return false;
+        return aabb.containsPoint(m_Point);
+    }
+
+    void setBlackListed(bool blacklisted) const
+    {
+        m_BlackListed = blacklisted;
+    }
+
+    const Ogre::Vector3& getPoint() const { return m_Point; }
+
+    inline const AABB& getBoundingVolume() const { return m_AABB; }
+
+    inline const std::vector<Ogre::Vector3>& getExtremalPoints() { return m_ExtremalPoints; }
+
+    float squaredDistance(const Ogre::Vector3& point) const { return m_AABB.squaredDistance(point); }
+
+    int getIndex() const { return m_Index; }
 };

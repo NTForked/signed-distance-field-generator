@@ -26,10 +26,11 @@ SOURCES += main.cpp \
     GLWindow.cpp \
     MainGLWindow.cpp \
     GLManager.cpp \
-    Camera.cpp
+    Camera.cpp \
+    ../Core/VoronoiFragments.cpp
 
 HEADERS  += MainWindow.h \
-    ../Core/VoronoiFracture.h \
+    ../Core/VoronoiFragments.h \
     ../Core/VertexMerger.h \
     ../Core/Vertex.h \
     ../Core/Vector3i.h \

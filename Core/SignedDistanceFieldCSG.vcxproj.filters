@@ -45,7 +45,6 @@
     <ClInclude Include="MarchingCubes.h" />
     <ClInclude Include="Triangle.h" />
     <ClInclude Include="TriangleLookupTable.h" />
-    <ClInclude Include="SignedDistanceField.h" />
     <ClInclude Include="Vector3i.h" />
     <ClInclude Include="ExportPLY.h" />
     <ClInclude Include="ExportSTL.h" />
@@ -68,9 +67,10 @@
     <ClInclude Include="BVHScene.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="AABBSDF.h" />
-    <ClInclude Include="VoronoiFracture.h" />
     <ClInclude Include="BlockBasedSparseArray.h" />
     <ClInclude Include="OctreeSF.h" />
+    <ClInclude Include="VoronoiFragments.h" />
+    <ClInclude Include="SolidGeometry.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Mesh.cpp" />
@@ -92,5 +92,6 @@
     </ClCompile>
     <ClCompile Include="OctreeSF.cpp" />
     <ClCompile Include="Tests.cpp" />
+    <ClCompile Include="VoronoiFragments.cpp" />
   </ItemGroup>
 </Project>

@@ -367,7 +367,7 @@ protected:
 public:
 	Vector3iHashGrid()
 	{
-        rehash(5000);
+        rehash(10000);
 	}
 	void rehash(unsigned int size)
 	{

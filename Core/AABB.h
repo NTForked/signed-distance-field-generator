@@ -49,7 +49,7 @@ public:
 		}
 	}
 
-    void merge(const AABB &aabb2)
+    inline void merge(const AABB &aabb2)
     {
         min.x = std::min(min.x, aabb2.min.x);
         min.y = std::min(min.y, aabb2.min.y);
@@ -66,13 +66,13 @@ public:
 		max += epsilonVec;
 	}
 
-	Ogre::Vector3 getCorner(int corner) const
+    inline Ogre::Vector3 getCorner(int corner) const
 	{
 		Ogre::Vector3 sizeVec(max - min);
 		return min + Ogre::Vector3((float)((corner & 4) != 0), (float)((corner & 2) != 0), (float)(corner & 1)) * sizeVec;
 	}
 
-	__forceinline bool intersectsAABB(const AABB& otherAABB) const
+    inline bool intersectsAABB(const AABB& otherAABB) const
 	{
 		// perform separating axis test
 		if (MathMisc::intervalDoesNotOverlap(min.x, max.x, otherAABB.min.x, otherAABB.max.x)) return false;
@@ -81,26 +81,48 @@ public:
 		return true;
 	}
 
-	__forceinline bool containsPoint(const Ogre::Vector3& point) const
+    inline bool containsPoint(const Ogre::Vector3& point) const
 	{
 		return (point.x >= min.x && point.x < max.x
 			&& point.y >= min.y && point.y < max.y
 			&& point.z >= min.z && point.z < max.z);
 	}
 
-	__forceinline bool intersectsSphere(const Ogre::Vector3& center, float radius) const
+    inline bool intersectsSphere(const Ogre::Vector3& center, float radius) const
 	{
 		// if (!intersectsAABB(AABB(center, radius))) return false;
 		return squaredDistance(center) < radius*radius;
 	}
 
 	/// Returns the squared distance to the AABB for the given point, returns 0 if the point is inside the AABB.
-	__forceinline float squaredDistance(const Ogre::Vector3& point) const
+    inline float squaredDistance(const Ogre::Vector3& point) const
 	{
 		return MathMisc::aabbPointSquaredDistance(min, max, point);
 	}
 
-	__forceinline bool intersectsTriangle(const Ogre::Vector3& p1, const Ogre::Vector3& p2, const Ogre::Vector3& p3, const Ogre::Vector3& normal) const
+    inline float getMaximumSquaredDistance(const Ogre::Vector3& point) const
+    {
+        float maxSquaredDist = 0.0f;
+        for (int i = 0; i < 8; i++)
+        {
+            maxSquaredDist = std::max(maxSquaredDist, getCorner(i).squaredDistance(point));
+        }
+        return maxSquaredDist;
+    }
+
+    bool intersectsPlane(const Ogre::Vector3& p, const Ogre::Vector3& normal) const
+    {
+        unsigned char mask = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            float dist = (getCorner(i) - p).dotProduct(normal);
+            mask |= (1 << (int)(dist < 0.0f));
+            if (mask == 3) return true;
+        }
+        return false;
+    }
+
+    bool intersectsTriangle(const Ogre::Vector3& p1, const Ogre::Vector3& p2, const Ogre::Vector3& p3, const Ogre::Vector3& normal) const
 	{
 		// perform separating axis test
 		// first check AABB face normals
@@ -156,26 +178,26 @@ public:
 		return true;
 	}
 
-	__forceinline bool rayIntersect(const Ray& ray, float tNear, float tFar) const
+    inline bool rayIntersect(const Ray& ray, float tNear, float tFar) const
 	{
 		return ray.intersectAABB(&min, tNear, tFar);
 	}
-	__forceinline bool rayIntersect(const Ray& ray) const
+    inline bool rayIntersect(const Ray& ray) const
 	{
 		return ray.intersectAABB(&min);
 	}
 
-	__forceinline Ogre::Vector3 getCenter() const
+    inline Ogre::Vector3 getCenter() const
 	{
 		return (min + max) * 0.5f;
 	}
 
-	__forceinline const Ogre::Vector3& getMin() const
+    inline const Ogre::Vector3& getMin() const
 	{
 		return min;
 	}
 
-	__forceinline const Ogre::Vector3& getMax() const
+    inline const Ogre::Vector3& getMax() const
 	{
 		return max;
 	}

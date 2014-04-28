@@ -166,6 +166,7 @@
     <ClInclude Include="FractalNoisePlaneSDF.h" />
     <ClInclude Include="FracturePattern.h" />
     <ClInclude Include="OctreeSF.h" />
+    <ClInclude Include="SolidGeometry.h" />
     <ClInclude Include="TransformSDF.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="OctreeSDF.h" />
@@ -192,7 +193,6 @@
     <ClInclude Include="Ray.h" />
     <ClInclude Include="SDFManager.h" />
     <ClInclude Include="TriangleSDF.h" />
-    <ClInclude Include="SignedDistanceField.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="Surfaces.h" />
     <ClInclude Include="Triangle.h" />
@@ -201,7 +201,7 @@
     <ClInclude Include="Vector3i.h" />
     <ClInclude Include="VertexMerger.h" />
     <ClInclude Include="UniformGridSDF.h" />
-    <ClInclude Include="VoronoiFracture.h" />
+    <ClInclude Include="VoronoiFragments.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Tests.cpp" />
@@ -213,6 +213,7 @@
     <ClCompile Include="OgreMath\OgreMatrix4.cpp" />
     <ClCompile Include="OgreMath\OgreQuaternion.cpp" />
     <ClCompile Include="OgreMath\OgreVector3.cpp" />
+    <ClCompile Include="VoronoiFragments.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
