@@ -133,11 +133,9 @@ void testMeshImport()
 void testSphere()
 {
 	SphereSDF sdf(Ogre::Vector3(0, 0, 0), 1.0f);
-	auto ts = Profiler::timestamp();
-	auto octreeSDF = OctreeSDF::sampleSDF(&sdf, 8);
-	Profiler::printJobDuration("Sphere sampling", ts);
+	auto octreeSDF = OctreeSF::sampleSDF(&sdf, 8);
 	std::cout << "Num leaves: " << octreeSDF->countLeaves() << std::endl;
-	SDFManager::exportSampledSDFAsMesh("SphereSDF", octreeSDF);
+	// SDFManager::exportSampledSDFAsMesh("SphereSDF", octreeSDF);
 }
 
 void testCubeSplit()
@@ -323,9 +321,9 @@ int main()
 	// testMeshImport<OctreeSF>();
 	// testCubeSplit();
 	// testSphere();
-	testVoronoiFragments();
+	testSphere();
 	// splitBuddha2<OctreeSF>();
 	// splitBuddha();
-	while (true) {}
+	// while (true) {}
 	return 0;
 }
