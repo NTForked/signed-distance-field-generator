@@ -324,6 +324,6 @@ int main()
 	testSphere();
 	// splitBuddha2<OctreeSF>();
 	// splitBuddha();
-	// while (true) {}
+	while (true) {}
 	return 0;
 }

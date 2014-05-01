@@ -25,7 +25,9 @@
 #define vAssert(condition) {if (!(condition)) { std::cout << "assertion failed: " << #condition << " in " << __FILE__ << ", line " << __LINE__ << "." << std::endl; __debugbreak(); }}
 #else
 #define vAssert(condition)
+#ifndef NDEBUG
 #define NDEBUG
+#endif
 #endif
 
 #define OGRE_ENDIAN OGRE_ENDIAN_BIG

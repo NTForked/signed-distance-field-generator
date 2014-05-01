@@ -26,9 +26,9 @@ void MainGLWindow::initializeGL()
 
     GLManager::getSingleton().getGLFunctions()->glEnable(GL_DEPTH_TEST);
 
-    // std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/bunny_highres.obj");
-    // TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
-    SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.3f);
+    std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/buddha2.obj");
+    TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
+    // SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.3f);
     // VoronoiFragments fragments(VoronoiFragments::generateFragmentPointsUniform(AABB(Ogre::Vector3(-0.3f, -0.3f, -0.3f), Ogre::Vector3(0.3f, 0.3f, 0.3f)), 100));
     // fragments.setFragment(0);
     auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
@@ -59,7 +59,7 @@ void MainGLWindow::mousePressEvent(QMouseEvent* event)
 
         if (raycast(event, m_LastIntersectionPos))
         {
-            SphereSDF sphere(m_LastIntersectionPos, 0.01f);
+            SphereSDF sphere(m_LastIntersectionPos, 0.05f);
             m_Mesh->getOctree()->subtract(&sphere);
             m_Mesh->updateMesh();
             requestRedraw();

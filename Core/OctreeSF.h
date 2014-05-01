@@ -31,6 +31,9 @@ class OctreeSF : public SampledSolidGeometry
 {
 protected:
 	class GridNode;
+    class GridNode2;
+
+    typedef GridNode2 GridNodeImpl;
 public:
     static const int LEAF_EXPO = 2;
 	static const int LEAF_SIZE_1D = (1 << LEAF_EXPO) + 1;
@@ -136,6 +139,74 @@ protected:
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 	};
 
+    static inline int indexOf(int x, int y, int z) { return x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z; }
+
+    static inline int indexOf(const Vector3i &v) { return indexOf(v.x, v.y, v.z); }
+
+    static inline Vector3i fromIndex(int index) { return Vector3i(index / LEAF_SIZE_2D, (index % LEAF_SIZE_2D) / LEAF_SIZE_1D, index % LEAF_SIZE_1D); }
+
+    struct SurfaceEdge
+    {
+        SurfaceEdge() {}
+        inline void init(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices)
+        {
+            this->direction = direction;
+            edgeIndex1 = indexOf(localMinPos);
+            static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
+            edgeIndex2 = edgeIndex1 + EDGE_OFFSETS[direction];
+
+            bool created;
+            SharedSurfaceVertex*& vertex = sharedVertices[direction].lookupOrCreate(cellMinPos + localMinPos, created);
+            if (created)
+            {
+                vertex = new SharedSurfaceVertex();
+                Sample s;
+                globalPos[direction] += edgeLength * 0.5f;
+                sdf.getSample(globalPos, s);
+                // Ogre::Vector3 rayDir(0,0,0);
+                // rayDir[direction] = 1.0f;
+                // sdf.raycastClosest(Ray(globalPos, rayDir), s);
+                vertex->vertex.position = s.closestSurfacePos;
+                vertex->vertex.normal = s.normal;
+                vertex->signedDistance = s.signedDistance;
+            }
+            sharedVertex = vertex;
+            sharedVertex->refCount++;
+        }
+        inline void init(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf)
+        {
+            this->direction = direction;
+            edgeIndex1 = indexOf(localMinPos);
+            static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
+            edgeIndex2 = edgeIndex1 + EDGE_OFFSETS[direction];
+
+            sharedVertex = new SharedSurfaceVertex();
+            Sample s;
+            globalPos[direction] += edgeLength * 0.5f;
+            sdf.getSample(globalPos, s);
+            sharedVertex->vertex.position = s.closestSurfacePos;
+            sharedVertex->signedDistance = s.signedDistance;
+            sharedVertex->refCount++;
+        }
+        SurfaceEdge(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices)
+        {
+            init(cellMinPos, localMinPos, direction, globalPos, edgeLength, sdf, sharedVertices);
+        }
+
+        void deleteSharedVertex()
+        {
+            sharedVertex->refCount--;
+            if (!sharedVertex->refCount) delete sharedVertex;
+        }
+
+        SurfaceEdge clone() { SurfaceEdge copy(*this); copy.sharedVertex->refCount++; return copy; }
+
+        SharedSurfaceVertex* sharedVertex;
+        unsigned short edgeIndex1;
+        unsigned short edgeIndex2;
+        unsigned char direction;
+    };
+
 	class GridNode : public Node
 	{
 	public:
@@ -145,89 +216,6 @@ protected:
 
         std::bitset<LEAF_SIZE_3D> m_Signs;
 
-		struct SurfaceEdge
-		{
-            SurfaceEdge() {}
-            inline void init(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices)
-			{
-                this->direction = direction;
-                edgeIndex1 = indexOf(localMinPos);
-				static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
-                edgeIndex2 = edgeIndex1 + EDGE_OFFSETS[direction];
-
-                bool created;
-                SharedSurfaceVertex*& vertex = sharedVertices[direction].lookupOrCreate(cellMinPos + localMinPos, created);
-                if (created)
-				{
-                    vertex = new SharedSurfaceVertex();
-                    Sample s;
-                    globalPos[direction] += edgeLength * 0.5f;
-                    sdf.getSample(globalPos, s);
-                    // Ogre::Vector3 rayDir(0,0,0);
-                    // rayDir[direction] = 1.0f;
-                    // sdf.raycastClosest(Ray(globalPos, rayDir), s);
-                    vertex->vertex.position = s.closestSurfacePos;
-                    vertex->vertex.normal = s.normal;
-                    vertex->signedDistance = s.signedDistance;
-                }
-                sharedVertex = vertex;
-                sharedVertex->refCount++;
-
-                /*sharedVertex = new SharedSurfaceVertex();
-				Sample s;
-                globalPos[direction] += edgeLength * 0.5f;
-                sdf.getSample(globalPos, s);
-                sharedVertex->vertex.position = s.closestSurfacePos;
-				sharedVertex->signedDistance = s.signedDistance;
-                sharedVertex->refCount++;*/
-			}
-			inline void init(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf)
-			{
-				this->direction = direction;
-				edgeIndex1 = indexOf(localMinPos);
-				static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
-				edgeIndex2 = edgeIndex1 + EDGE_OFFSETS[direction];
-
-				sharedVertex = new SharedSurfaceVertex();
-				Sample s;
-				globalPos[direction] += edgeLength * 0.5f;
-				sdf.getSample(globalPos, s);
-				sharedVertex->vertex.position = s.closestSurfacePos;
-				sharedVertex->signedDistance = s.signedDistance;
-				sharedVertex->refCount++;
-			}
-            SurfaceEdge(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices)
-            {
-                init(cellMinPos, localMinPos, direction, globalPos, edgeLength, sdf, sharedVertices);
-            }
-
-            /*SurfaceEdge(const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf) : direction(direction)
-            {
-                edgeIndex1 = indexOf(localMinPos);
-                static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
-                edgeIndex2 = edgeIndex1 + EDGE_OFFSETS[direction];
-                sharedVertex = new SharedSurfaceVertex();
-                Sample s;
-                globalPos[direction] += edgeLength * 0.5f;
-                sdf.getSample(globalPos, s);
-                sharedVertex->vertex.position = s.closestSurfacePos;
-                sharedVertex->signedDistance = s.signedDistance;
-                sharedVertex->refCount++;
-            }*/
-
-			void deleteSharedVertex()
-			{
-				sharedVertex->refCount--;
-                if (!sharedVertex->refCount) delete sharedVertex;
-			}
-
-			SurfaceEdge clone() { SurfaceEdge copy(*this); copy.sharedVertex->refCount++; return copy; }
-
-			SharedSurfaceVertex* sharedVertex;
-			unsigned short edgeIndex1;
-			unsigned short edgeIndex2;
-			unsigned char direction;
-		};
 		std::vector<SurfaceEdge> m_SurfaceEdges;
 
         void computeSigns(const Area& area, const SolidGeometry& implicitSDF);
@@ -235,12 +223,6 @@ protected:
         void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const std::bitset<LEAF_SIZE_3D>* ignoreEdges);
 
 		void computeDirectionEdges(const Area& area, unsigned char edgeDirection, float stepSize, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-
-        static inline int indexOf(int x, int y, int z) { return x*LEAF_SIZE_2D + y * LEAF_SIZE_1D + z; }
-
-        static inline int indexOf(const Vector3i &v) { return indexOf(v.x, v.y, v.z); }
-
-        static inline Vector3i fromIndex(int index) { return Vector3i(index / LEAF_SIZE_2D, (index % LEAF_SIZE_2D) / LEAF_SIZE_1D, index % LEAF_SIZE_1D); }
 
 		virtual void countNodes(int& counter) const override { counter++; }
 
@@ -262,7 +244,6 @@ protected:
 
         void intersect(GridNode* otherNode);
         void merge(GridNode* otherNode);
-        void addUniqueCubesWithSignChange(const std::vector<unsigned short>& cubesIn);
 
         static inline unsigned char getCubeBitMask(int index, const bool* signsArray);
 
@@ -270,6 +251,51 @@ protected:
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 	};
+
+    class GridNode2 : public Node
+    {
+    public:
+        GridNode2() { m_NodeType = GRID; }
+        GridNode2(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        ~GridNode2();
+
+        bool m_Signs[LEAF_SIZE_3D];
+
+        std::vector<SurfaceEdge> m_SurfaceEdges;
+
+        void computeSigns(const Area& area, const SolidGeometry& implicitSDF);
+        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const std::bitset<LEAF_SIZE_3D>* ignoreEdges);
+
+        void computeDirectionEdges(const Area& area, unsigned char edgeDirection, float stepSize, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+
+        virtual void countNodes(int& counter) const override { counter++; }
+
+        virtual void countLeaves(int& counter) const override { counter++; }
+
+        virtual void countMemory(int& memoryCounter) const override;
+
+        virtual void markSharedVertices(bool marked) override;
+
+        virtual void generateVertices(vector<Vertex>& vertices) override;
+        virtual void generateIndices(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const override;
+
+        virtual Node* clone() const override;
+
+        virtual void invert();
+
+        void merge(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void intersect(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+
+        void intersect(GridNode2* otherNode);
+        void merge(GridNode2* otherNode);
+
+        static inline unsigned char getCubeBitMask(int index, const bool* signsArray);
+
+        virtual bool rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection) override;
+
+        // virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
+    };
 
 	Node* m_RootNode;
 
