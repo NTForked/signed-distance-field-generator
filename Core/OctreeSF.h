@@ -264,7 +264,7 @@ protected:
         void merge(GridNode* otherNode);
         void addUniqueCubesWithSignChange(const std::vector<unsigned short>& cubesIn);
 
-		inline unsigned char getCubeBitMask(int index) const;
+        static inline unsigned char getCubeBitMask(int index, const bool* signsArray);
 
         virtual bool rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection) override;
 

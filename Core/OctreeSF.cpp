@@ -166,6 +166,10 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 	float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
 	Ogre::Vector3 currentPos = area.m_MinRealPos;
 	int index = 0;
+    // copy signs first to array because std::bitset::operator[] is not very fast
+    static bool signsArray[LEAF_SIZE_3D];
+    for (int i = 0; i < LEAF_SIZE_3D; i++)
+        signsArray[i] = m_Signs[i];
 	for (int x = 0; x < LEAF_SIZE_1D; x++)
 	{
 		for (int y = 0; y < LEAF_SIZE_1D; y++)
@@ -173,7 +177,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 			for (int z = 0; z < LEAF_SIZE_1D; z++)
 			{
 				Vector3i iPos(x, y, z);
-				if (!ignoreEdges[0][index] && x < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_2D])
+                if (!ignoreEdges[0][index] && x < LEAF_SIZE_1D_INNER && signsArray[index] != signsArray[index + LEAF_SIZE_2D])
 				{
 					m_SurfaceEdges.emplace_back();
 					if (y > 0 && y < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
@@ -181,7 +185,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 					else
 						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
-				if (!ignoreEdges[1][index] && y < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_1D])
+                if (!ignoreEdges[1][index] && y < LEAF_SIZE_1D_INNER && signsArray[index] != signsArray[index + LEAF_SIZE_1D])
 				{
 					m_SurfaceEdges.emplace_back();
 					if (x > 0 && x < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
@@ -189,7 +193,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 					else
 						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
-				if (!ignoreEdges[2][index] && z < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + 1])
+                if (!ignoreEdges[2][index] && z < LEAF_SIZE_1D_INNER && signsArray[index] != signsArray[index + 1])
 				{
 					m_SurfaceEdges.emplace_back();
 					if (y > 0 && y < LEAF_SIZE_1D_INNER && x > 0 && x < LEAF_SIZE_1D_INNER)
@@ -213,14 +217,18 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 	float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
 	Ogre::Vector3 currentPos = area.m_MinRealPos;
 	int index = 0;
+    // copy signs first to array because std::bitset::operator[] is not very fast
+    static bool signsArray[LEAF_SIZE_3D];
+    for (int i = 0; i < LEAF_SIZE_3D; i++)
+        signsArray[i] = m_Signs[i];
 	for (int x = 0; x < LEAF_SIZE_1D; x++)
 	{
 		for (int y = 0; y < LEAF_SIZE_1D; y++)
-		{
+        {
 			for (int z = 0; z < LEAF_SIZE_1D; z++)
 			{
-				Vector3i iPos(x, y, z);
-				if (x < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_2D])
+                Vector3i iPos(x, y, z);
+                if (x < LEAF_SIZE_1D_INNER && signsArray[index] != signsArray[index + LEAF_SIZE_2D])
 				{
 					m_SurfaceEdges.emplace_back();
 					if (y > 0 && y < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
@@ -228,7 +236,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 					else
 						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
-				if (y < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_1D])
+                if (y < LEAF_SIZE_1D_INNER && signsArray[index] != signsArray[index + LEAF_SIZE_1D])
 				{
 					m_SurfaceEdges.emplace_back();
 					if (x > 0 && x < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
@@ -236,14 +244,14 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 					else
 						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
-				if (z < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + 1])
+                if (z < LEAF_SIZE_1D_INNER && signsArray[index] != signsArray[index + 1])
 				{
 					m_SurfaceEdges.emplace_back();
 					if (y > 0 && y < LEAF_SIZE_1D_INNER && x > 0 && x < LEAF_SIZE_1D_INNER)
 						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF);
 					else
 						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF, sharedVertices);
-				}
+                }
 				index++;
 				currentPos.z += stepSize;
 			}
@@ -331,6 +339,11 @@ void OctreeSF::GridNode::generateIndices(const Area&, vector<unsigned int>& indi
 		surfaceEdgeMaps[i->direction][i->edgeIndex1] = &(*i);
 	}
 
+    // copy signs first to array because std::bitset::operator[] is not very fast
+    static bool signsArray[LEAF_SIZE_3D];
+    for (int i = 0; i < LEAF_SIZE_3D; i++)
+        signsArray[i] = m_Signs[i];
+
 	int index = 0;
 	for (int x = 0; x < LEAF_SIZE_1D_INNER; x++)
 	{
@@ -338,7 +351,7 @@ void OctreeSF::GridNode::generateIndices(const Area&, vector<unsigned int>& indi
 		{
 			for (int z = 0; z < LEAF_SIZE_1D_INNER; z++)
 			{
-				unsigned char corners = getCubeBitMask(index);
+                unsigned char corners = getCubeBitMask(index, signsArray);
 				if (corners && corners != 255)
 				{
 					const std::vector<Triangle<int> >& tris = TLT::getSingleton().indexTable[corners];
@@ -402,17 +415,17 @@ void OctreeSF::GridNode::invert()
 	m_Signs.flip();
 }
 
-unsigned char OctreeSF::GridNode::getCubeBitMask(int index) const
+unsigned char OctreeSF::GridNode::getCubeBitMask(int index, const bool* signsArray)
 {
 	unsigned char corners = 0;
-	corners |= (unsigned char)m_Signs[index];
-	corners |= ((unsigned char)m_Signs[index + 1] << 1);
-	corners |= ((unsigned char)m_Signs[index + LEAF_SIZE_1D] << 2);
-	corners |= ((unsigned char)m_Signs[index + LEAF_SIZE_1D + 1] << 3);
-	corners |= ((unsigned char)m_Signs[index + LEAF_SIZE_2D] << 4);
-	corners |= ((unsigned char)m_Signs[index + LEAF_SIZE_2D + 1] << 5);
-	corners |= ((unsigned char)m_Signs[index + LEAF_SIZE_2D + LEAF_SIZE_1D] << 6);
-	corners |= ((unsigned char)m_Signs[index + LEAF_SIZE_2D + LEAF_SIZE_1D + 1] << 7);
+    corners |= (unsigned char)signsArray[index];
+    corners |= ((unsigned char)signsArray[index + 1] << 1);
+    corners |= ((unsigned char)signsArray[index + LEAF_SIZE_1D] << 2);
+    corners |= ((unsigned char)signsArray[index + LEAF_SIZE_1D + 1] << 3);
+    corners |= ((unsigned char)signsArray[index + LEAF_SIZE_2D] << 4);
+    corners |= ((unsigned char)signsArray[index + LEAF_SIZE_2D + 1] << 5);
+    corners |= ((unsigned char)signsArray[index + LEAF_SIZE_2D + LEAF_SIZE_1D] << 6);
+    corners |= ((unsigned char)signsArray[index + LEAF_SIZE_2D + LEAF_SIZE_1D + 1] << 7);
 	return corners;
 }
 
@@ -794,12 +807,12 @@ void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsig
 	int numLeaves = countLeaves();
 	vertices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 2);	// reasonable upper bound
 	m_RootNode->generateVertices(vertices);
-	// Profiler::printJobDuration("generateVertices", tsTotal);
+    // Profiler::printJobDuration("generateVertices", tsTotal);
 
-	auto tsIndices = Profiler::timestamp();
+    // auto tsIndices = Profiler::timestamp();
 	indices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 8);
 	m_RootNode->generateIndices(m_RootArea, indices, vertices);
-	// Profiler::printJobDuration("generateIndices", tsIndices);
+    // Profiler::printJobDuration("generateIndices", tsIndices);
 
 	m_RootNode->markSharedVertices(false);
 	Profiler::printJobDuration("generateVerticesAndIndices", tsTotal);
