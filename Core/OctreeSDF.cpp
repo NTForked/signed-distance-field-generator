@@ -572,14 +572,13 @@ OctreeSDF::Node* OctreeSDF::mergeAlignedNode(Node* node, Node* otherNode, const 
 std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SolidGeometry* otherSDF, int maxDepth)
 {
 	AABB aabb = otherSDF->getAABB();
-	Ogre::Vector3 epsilonVec(0.000001f, 0.000001f, 0.000001f);
-	aabb.min -= epsilonVec;
-	aabb.max += epsilonVec;
+    aabb.addEpsilon(0.00001f);
 	return sampleSDF(otherSDF, aabb, maxDepth);
 }
 
 std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SolidGeometry* otherSDF, const AABB& aabb, int maxDepth)
 {
+    auto ts = Profiler::timestamp();
 	std::shared_ptr<OctreeSDF> octreeSDF = std::make_shared<OctreeSDF>();
 	Ogre::Vector3 aabbSize = aabb.getMax() - aabb.getMin();
 	float cubeSize = std::max(std::max(aabbSize.x, aabbSize.y), aabbSize.z);
@@ -587,6 +586,7 @@ std::shared_ptr<OctreeSDF> OctreeSDF::sampleSDF(SolidGeometry* otherSDF, const A
 	otherSDF->prepareSampling(aabb, octreeSDF->m_CellSize);
 	octreeSDF->m_RootArea = Area(Vector3i(0, 0, 0), maxDepth, aabb.getMin(), cubeSize);
 	octreeSDF->m_RootNode = octreeSDF->createNode(octreeSDF->m_RootArea, *otherSDF);
+    Profiler::printJobDuration("OctreeSDF::sampleSDF", ts);
 	return octreeSDF;
 }
 

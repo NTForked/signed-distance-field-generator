@@ -216,6 +216,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 {
 	float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
 	Ogre::Vector3 currentPos = area.m_MinRealPos;
+    m_SurfaceEdges.reserve(LEAF_SIZE_2D);
 	int index = 0;
     // copy signs first to array because std::bitset::operator[] is not very fast
     static bool signsArray[LEAF_SIZE_3D];
@@ -611,7 +612,7 @@ void OctreeSF::GridNode2::computeSigns(const Area& area, const SolidGeometry& im
 	}
 }
 
-void OctreeSF::GridNode2::computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const std::bitset<LEAF_SIZE_3D>* ignoreEdges)
+void OctreeSF::GridNode2::computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const bool ignoreEdges[3][LEAF_SIZE_3D])
 {
 	float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
 	Ogre::Vector3 currentPos = area.m_MinRealPos;
@@ -662,38 +663,39 @@ void OctreeSF::GridNode2::computeEdges(const Area& area, const SolidGeometry& im
 {
 	float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
 	Ogre::Vector3 currentPos = area.m_MinRealPos;
-	int index = 0;
-	for (int x = 0; x < LEAF_SIZE_1D; x++)
+    int index = 0;
+    m_SurfaceEdges.reserve(LEAF_SIZE_2D);
+    for (int x = 0; x < LEAF_SIZE_1D; x++)
 	{
 		for (int y = 0; y < LEAF_SIZE_1D; y++)
 		{
 			for (int z = 0; z < LEAF_SIZE_1D; z++)
 			{
-				Vector3i iPos(x, y, z);
+                Vector3i iPos(x, y, z);
 				if (x < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_2D])
-				{
-					m_SurfaceEdges.emplace_back();
-					if (y > 0 && y < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
-						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF);
+                {
+                    m_SurfaceEdges.emplace_back();
+                    if (y > 0 && y < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
+                        m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF);
 					else
-						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF, sharedVertices);
+                        m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
-				if (y < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_1D])
+                if (y < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_1D])
 				{
-					m_SurfaceEdges.emplace_back();
-					if (x > 0 && x < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
-						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF);
+                    m_SurfaceEdges.emplace_back();
+                    if (x > 0 && x < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
+                        m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF);
 					else
-						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF, sharedVertices);
+                        m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
 				if (z < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + 1])
 				{
-					m_SurfaceEdges.emplace_back();
-					if (y > 0 && y < LEAF_SIZE_1D_INNER && x > 0 && x < LEAF_SIZE_1D_INNER)
-						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF);
+                    m_SurfaceEdges.emplace_back();
+                    if (y > 0 && y < LEAF_SIZE_1D_INNER && x > 0 && x < LEAF_SIZE_1D_INNER)
+                        m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF);
 					else
-						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF, sharedVertices);
-				}
+                        m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF, sharedVertices);
+                }
 				index++;
 				currentPos.z += stepSize;
 			}
@@ -702,7 +704,7 @@ void OctreeSF::GridNode2::computeEdges(const Area& area, const SolidGeometry& im
 		}
 		currentPos.y = area.m_MinRealPos.y;
 		currentPos.x += stepSize;
-	}
+    }
 }
 
 OctreeSF::GridNode2::GridNode2(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*>* sharedVertices)
@@ -710,7 +712,7 @@ OctreeSF::GridNode2::GridNode2(const Area& area, const SolidGeometry& implicitSD
 	m_NodeType = GRID;
 
 	computeSigns(area, implicitSDF);
-	computeEdges(area, implicitSDF, sharedVertices);
+    computeEdges(area, implicitSDF, sharedVertices);
 }
 
 OctreeSF::GridNode2::~GridNode2()
@@ -775,7 +777,7 @@ bool OctreeSF::GridNode2::rayIntersectUpdate(const Area& area, const Ray& ray, R
 #include "TriangleLookupTable.h"
 void OctreeSF::GridNode2::generateIndices(const Area&, vector<unsigned int>& indices, vector<Vertex>& vertices) const
 {
-	static const SurfaceEdge* surfaceEdgeMaps[3][LEAF_SIZE_3D];
+    const SurfaceEdge* surfaceEdgeMaps[3][LEAF_SIZE_3D];
 	for (auto i = m_SurfaceEdges.begin(); i != m_SurfaceEdges.end(); ++i)
 	{
 		surfaceEdgeMaps[i->direction][i->edgeIndex1] = &(*i);
@@ -876,7 +878,10 @@ void OctreeSF::GridNode2::merge(const Area& area, const SolidGeometry& implicitS
 		m_Signs[i] = m_Signs[i] || otherNode.m_Signs[i];
 	auto thisEdgesCopy = m_SurfaceEdges;
 	m_SurfaceEdges.clear();
-	std::bitset<LEAF_SIZE_3D> addedEdges[3];
+    bool addedEdges[3][LEAF_SIZE_3D];
+    memset(addedEdges[0], 0, LEAF_SIZE_3D);
+    memset(addedEdges[1], 0, LEAF_SIZE_3D);
+    memset(addedEdges[2], 0, LEAF_SIZE_3D);
 	for (auto i = thisEdgesCopy.begin(); i != thisEdgesCopy.end(); i++)
 	{
 		if (m_Signs[i->edgeIndex1] != m_Signs[i->edgeIndex2])
@@ -902,20 +907,23 @@ void OctreeSF::GridNode2::merge(const Area& area, const SolidGeometry& implicitS
 		}
 		else i->deleteSharedVertex();
 	}
-	computeEdges(area, implicitSDF, sharedVertices, addedEdges);
+    computeEdges(area, implicitSDF, sharedVertices, addedEdges);
 }
 
 void OctreeSF::GridNode2::intersect(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices)
 {
 	// auto ts = Profiler::timestamp();
-	float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
+    float stepSize = area.m_RealSize / LEAF_SIZE_1D_INNER;
 	GridNode2 otherNode;
 	otherNode.computeSigns(area, implicitSDF);
 	for (int i = 0; i < LEAF_SIZE_3D; i++)
 		m_Signs[i] = m_Signs[i] && otherNode.m_Signs[i];
 	auto thisEdgesCopy = m_SurfaceEdges;
 	m_SurfaceEdges.clear();
-	std::bitset<LEAF_SIZE_3D> addedEdges[3];
+    bool addedEdges[3][LEAF_SIZE_3D];
+    memset(addedEdges[0], 0, LEAF_SIZE_3D);
+    memset(addedEdges[1], 0, LEAF_SIZE_3D);
+    memset(addedEdges[2], 0, LEAF_SIZE_3D);
 	for (auto i = thisEdgesCopy.begin(); i != thisEdgesCopy.end(); i++)
 	{
 		if (m_Signs[i->edgeIndex1] != m_Signs[i->edgeIndex2])
@@ -944,13 +952,14 @@ void OctreeSF::GridNode2::intersect(const Area& area, const SolidGeometry& impli
 		}
 		else i->deleteSharedVertex();
 	}
-	computeEdges(area, implicitSDF, sharedVertices, addedEdges);
+    computeEdges(area, implicitSDF, sharedVertices, addedEdges);
 	// Profiler::getSingleton().accumulateJobDuration("GridNode::intersect", ts);
 }
 
 void OctreeSF::GridNode2::intersect(GridNode2* otherNode)
 {
-	auto thisEdgesCopy = m_SurfaceEdges;
+    // TODO
+    /*auto thisEdgesCopy = m_SurfaceEdges;
 	m_SurfaceEdges.clear();
 	std::bitset<LEAF_SIZE_3D> addedEdges[3];
 	static int addedEdgesIndices[3][LEAF_SIZE_3D];
@@ -977,12 +986,13 @@ void OctreeSF::GridNode2::intersect(GridNode2* otherNode)
 			}
 			else m_SurfaceEdges.push_back(i->clone());
 		}
-	}
+    }*/
 }
 
 void OctreeSF::GridNode2::merge(GridNode2* otherNode)
 {
-	auto thisEdgesCopy = m_SurfaceEdges;
+    // TODO
+    /*auto thisEdgesCopy = m_SurfaceEdges;
 	m_SurfaceEdges.clear();
 	std::bitset<LEAF_SIZE_3D> addedEdges[3];
 	static int addedEdgesIndices[3][LEAF_SIZE_3D];
@@ -1009,7 +1019,7 @@ void OctreeSF::GridNode2::merge(GridNode2* otherNode)
 			}
 			else m_SurfaceEdges.push_back(i->clone());
 		}
-	}
+    }*/
 }
 
 /******************************************************************************************
@@ -1210,6 +1220,7 @@ OctreeSF::Node* OctreeSF::mergeAlignedNode(Node* node, Node* otherNode, const Ar
 std::shared_ptr<OctreeSF> OctreeSF::sampleSDF(SolidGeometry* otherSDF, int maxDepth)
 {
 	AABB aabb = otherSDF->getAABB();
+    aabb.addEpsilon(0.00001f);
 	return sampleSDF(otherSDF, aabb, maxDepth);
 }
 
@@ -1224,7 +1235,7 @@ std::shared_ptr<OctreeSF> OctreeSF::sampleSDF(SolidGeometry* otherSDF, const AAB
 	octreeSF->m_RootArea = Area(Vector3i(0, 0, 0), maxDepth, aabb.getMin(), cubeSize);
 	Vector3iHashGrid<SharedSurfaceVertex*> sharedVertices[3];
 	octreeSF->m_RootNode = octreeSF->createNode(octreeSF->m_RootArea, *otherSDF, sharedVertices);
-	Profiler::printJobDuration("sampleSDF", ts);
+    Profiler::printJobDuration("OctreeSF::sampleSDF", ts);
 	return octreeSF;
 }
 

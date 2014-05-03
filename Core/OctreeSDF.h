@@ -31,7 +31,7 @@ class OctreeSDF : public SampledSolidGeometry
 protected:
 	class GridNode;
 public:
-	static const int LEAF_EXPO = 2;
+    static const int LEAF_EXPO = 2;
 	static const int LEAF_SIZE_1D = (1 << LEAF_EXPO) + 1;
 	static const int LEAF_SIZE_2D = LEAF_SIZE_1D * LEAF_SIZE_1D;
 	static const int LEAF_SIZE_3D = LEAF_SIZE_2D * LEAF_SIZE_1D;

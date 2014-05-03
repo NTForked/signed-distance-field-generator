@@ -35,7 +35,7 @@ protected:
 
     typedef GridNode2 GridNodeImpl;
 public:
-    static const int LEAF_EXPO = 2;
+    static const int LEAF_EXPO = 3;
 	static const int LEAF_SIZE_1D = (1 << LEAF_EXPO) + 1;
 	static const int LEAF_SIZE_2D = LEAF_SIZE_1D * LEAF_SIZE_1D;
 	static const int LEAF_SIZE_3D = LEAF_SIZE_2D * LEAF_SIZE_1D;
@@ -265,7 +265,7 @@ protected:
 
         void computeSigns(const Area& area, const SolidGeometry& implicitSDF);
         void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const std::bitset<LEAF_SIZE_3D>* ignoreEdges);
+        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const bool ignoreEdges[3][LEAF_SIZE_3D]);
 
         void computeDirectionEdges(const Area& area, unsigned char edgeDirection, float stepSize, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
