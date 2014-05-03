@@ -6,6 +6,7 @@
 
 MainGLWindow::MainGLWindow() : GLWindow()
 {
+    m_CurrentTool = SUBTRACT_SPHERE;
 }
 
 void MainGLWindow::initializeGL()
@@ -26,12 +27,12 @@ void MainGLWindow::initializeGL()
 
     GLManager::getSingleton().getGLFunctions()->glEnable(GL_DEPTH_TEST);
 
-    std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/buddha2.obj");
-    TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
-    // SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.3f);
+    // std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/buddha2.obj");
+    // TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
+    SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
     // VoronoiFragments fragments(VoronoiFragments::generateFragmentPointsUniform(AABB(Ogre::Vector3(-0.3f, -0.3f, -0.3f), Ogre::Vector3(0.3f, 0.3f, 0.3f)), 100));
     // fragments.setFragment(0);
-    auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
+    auto octree = OctreeSF::sampleSDF(&meshSDF, 8, 0.11f);
     // octree->subtract(&fragments);
     std::cout << "Volume has " << octree->countLeaves() << " leaves and occupies " << octree->countMemory() / 1000 << " kb." << std::endl;
     m_Mesh = std::make_shared<GLMesh>(octree);
@@ -55,25 +56,31 @@ void MainGLWindow::mousePressEvent(QMouseEvent* event)
 {
     if (event->buttons() & Qt::LeftButton)
     {
-        m_RaycastOctree = m_Mesh->getOctree()->clone();
-
-        if (raycast(event, m_LastIntersectionPos))
+        if (raycast(m_Mesh->getOctree(), event, m_LastIntersectionPos))
         {
-            SphereSDF sphere(m_LastIntersectionPos, 0.05f);
-            m_Mesh->getOctree()->subtract(&sphere);
+            if (m_CurrentTool == SUBTRACT_SPHERE)
+            {
+                SphereSDF sphere(m_LastIntersectionPos, 0.05f);
+                m_Mesh->getOctree()->subtract(&sphere);
+            }
+            else if (m_CurrentTool == MERGE_SPHERE)
+            {
+                SphereSDF sphere(m_LastIntersectionPos, 0.05f);
+                m_Mesh->getOctree()->merge(&sphere);
+            }
             m_Mesh->updateMesh();
             requestRedraw();
         }
     }
 }
 
-bool MainGLWindow::raycast(QMouseEvent* event, Ogre::Vector3& rayIntersection)
+bool MainGLWindow::raycast(std::shared_ptr<OctreeSF> octree, QMouseEvent* event, Ogre::Vector3& rayIntersection)
 {
     float xNDC = screenToNDC((float)event->pos().x() / width());
     float yNDC = screenToNDC((float)(height() - event->pos().y()) / height());
     Ray cameraRay = m_Camera.getCameraRay(xNDC, yNDC);
     Ray::Intersection hit;
-    if (m_RaycastOctree->rayIntersectClosest(cameraRay, hit))
+    if (octree->rayIntersectClosest(cameraRay, hit))
     {
         rayIntersection = cameraRay.origin + cameraRay.direction * hit.t;
         return true;
@@ -87,27 +94,7 @@ void MainGLWindow::mouseReleaseEvent(QMouseEvent* event)
 
 void MainGLWindow::mouseMoveEvent(QMouseEvent* event)
 {
-    if (event->buttons() & Qt::LeftButton)
-    {
-        Ogre::Vector3 intersection;
-        if (raycast(event, intersection))
-        {
-            Ogre::Vector3 delta = intersection - m_LastIntersectionPos;
-            float dist = delta.normalise();
-            float sphereDist = 1.0f / m_Mesh->getOctree()->getInverseCellSize();
-            for (float x = 0; x < dist; x += sphereDist)
-            {
-                SphereSDF sphere(m_LastIntersectionPos + delta * x, 0.01f);
-                m_Mesh->getOctree()->subtract(&sphere);
-            }
-
-            m_LastIntersectionPos = intersection;
-
-            m_Mesh->updateMesh();
-            requestRedraw();
-        }
-    }
-    else if (event->buttons() & Qt::MiddleButton)
+    if (event->buttons() & Qt::MiddleButton)
     {
         QPoint delta = event->pos() - m_MousePos;
         if (event->modifiers() & Qt::SHIFT)

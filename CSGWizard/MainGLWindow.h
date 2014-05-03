@@ -38,10 +38,23 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent* event) override;
     virtual void mouseMoveEvent(QMouseEvent* event) override;
 
-    bool raycast(QMouseEvent* event, Ogre::Vector3& rayIntersection);
+    bool raycast(std::shared_ptr<OctreeSF> octree, QMouseEvent* event, Ogre::Vector3& rayIntersection);
+
+    enum Tools
+    {
+        SUBTRACT_SPHERE,
+        MERGE_SPHERE,
+        CUT_PLANE
+    };
+    Tools m_CurrentTool;
 
 public:
     MainGLWindow();
+
+public slots:
+    void setSubtractSphereMode() { m_CurrentTool = SUBTRACT_SPHERE; }
+    void setMergeSphereMode() { m_CurrentTool = MERGE_SPHERE; }
+    void setCutPlaneMode() { m_CurrentTool = CUT_PLANE; }
 };
 
 #endif // MAINGLWINDOW_H

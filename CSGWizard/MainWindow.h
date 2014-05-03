@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QButtonGroup>
+#include <QPushButton>
 #include "MainGLWindow.h"
 
 namespace Ui {
@@ -19,6 +21,11 @@ public:
 private:
     Ui::MainWindow *ui;
     MainGLWindow* m_MainGLWidget;
+
+    QButtonGroup* m_ToolsButtonGroup;
+    QPushButton* m_SubtractSphereButton;
+    QPushButton* m_MergeSphereButton;
+    QPushButton* m_CutPlaneButton;
 };
 
 #endif // MAINWINDOW_H
