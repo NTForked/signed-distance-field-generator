@@ -45,7 +45,6 @@ public:
 	struct SharedSurfaceVertex
 	{
 		Vertex vertex;
-        float signedDistance;
 		int vertexIndex;
         unsigned short refCount;
         bool shared;
@@ -94,7 +93,7 @@ protected:
 	{
 	public:
 		Node* m_Children[8];
-        InnerNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        InnerNode(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 		~InnerNode();
 		InnerNode(const InnerNode& rhs);
 
@@ -167,7 +166,6 @@ protected:
                 // sdf.raycastClosest(Ray(globalPos, rayDir), s);
                 vertex->vertex.position = s.closestSurfacePos;
                 vertex->vertex.normal = s.normal;
-                vertex->signedDistance = s.signedDistance;
             }
             sharedVertex = vertex;
             sharedVertex->refCount++;
@@ -183,8 +181,10 @@ protected:
             Sample s;
             globalPos[direction] += edgeLength * 0.5f;
             sdf.getSample(globalPos, s);
+            // Ogre::Vector3 rayDir(0,0,0);
+            // rayDir[direction] = 1.0f;
+            // sdf.raycastClosest(Ray(globalPos, rayDir), s);
             sharedVertex->vertex.position = s.closestSurfacePos;
-            sharedVertex->signedDistance = s.signedDistance;
             sharedVertex->refCount++;
         }
 
@@ -206,18 +206,16 @@ protected:
     {
     public:
         GridNode() { m_NodeType = GRID; }
-        GridNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        GridNode(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
         ~GridNode();
 
         bool m_Signs[LEAF_SIZE_3D];
 
         std::vector<SurfaceEdge> m_SurfaceEdges;
 
-        void computeSigns(const Area& area, const SolidGeometry& implicitSDF);
-        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const bool ignoreEdges[3][LEAF_SIZE_3D]);
-
-        void computeDirectionEdges(const Area& area, unsigned char edgeDirection, float stepSize, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void computeSigns(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF);
+        void computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const bool ignoreEdges[3][LEAF_SIZE_3D]);
 
         virtual void countNodes(int& counter) const override { counter++; }
 
@@ -234,8 +232,8 @@ protected:
 
         virtual void invert();
 
-        void merge(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-        void intersect(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void merge(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        void intersect(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
         void intersect(GridNode* otherNode);
         void merge(GridNode* otherNode);
@@ -269,7 +267,9 @@ protected:
 
     Node* merge(Node* node, const SolidGeometry& implicitSDF, const Area& area, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
-    static Node* createNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+    Node* createNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+
+    inline Ogre::Vector3 getRealPos(const Vector3i& cellIndex) const;
 
 	BVHScene m_TriangleCache;
 public:

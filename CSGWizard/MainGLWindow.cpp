@@ -110,7 +110,6 @@ void MainGLWindow::mouseReleaseEvent(QMouseEvent* event)
         dir.normalise();
         Ogre::Vector3 normal = dir.crossProduct(ray1.direction);
         normal.normalise();
-        std::cout << p1 << " " << dir << std::endl;
         PlaneGeometry planeGeometry(p1, normal);
         m_Mesh->getOctree()->subtract(&planeGeometry);
         m_Mesh->updateMesh();
