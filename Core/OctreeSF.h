@@ -30,10 +30,9 @@ The actual signed distances are stored in a spatial hashmap because octree nodes
 class OctreeSF : public SampledSolidGeometry
 {
 protected:
-	class GridNode;
-    class GridNode2;
+    class GridNode;
 
-    typedef GridNode2 GridNodeImpl;
+    typedef GridNode GridNodeImpl;
 public:
     static const int LEAF_EXPO = 3;
 	static const int LEAF_SIZE_1D = (1 << LEAF_EXPO) + 1;
@@ -207,57 +206,12 @@ protected:
         unsigned char direction;
     };
 
-	class GridNode : public Node
-	{
-	public:
-        GridNode() { m_NodeType = GRID; }
-        GridNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-		~GridNode();
-
-        std::bitset<LEAF_SIZE_3D> m_Signs;
-
-		std::vector<SurfaceEdge> m_SurfaceEdges;
-
-        void computeSigns(const Area& area, const SolidGeometry& implicitSDF);
-        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-        void computeEdges(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const std::bitset<LEAF_SIZE_3D>* ignoreEdges);
-
-		void computeDirectionEdges(const Area& area, unsigned char edgeDirection, float stepSize, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-
-		virtual void countNodes(int& counter) const override { counter++; }
-
-		virtual void countLeaves(int& counter) const override { counter++; }
-
-		virtual void countMemory(int& memoryCounter) const override;
-
-		virtual void markSharedVertices(bool marked) override;
-
-        virtual void generateVertices(vector<Vertex>& vertices) override;
-        virtual void generateIndices(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const override;
-
-		virtual Node* clone() const override;
-
-		virtual void invert();
-
-        void merge(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-        void intersect(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-
-        void intersect(GridNode* otherNode);
-        void merge(GridNode* otherNode);
-
-        static inline unsigned char getCubeBitMask(int index, const bool* signsArray);
-
-        virtual bool rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection) override;
-
-		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
-	};
-
-    class GridNode2 : public Node
+    class GridNode : public Node
     {
     public:
-        GridNode2() { m_NodeType = GRID; }
-        GridNode2(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
-        ~GridNode2();
+        GridNode() { m_NodeType = GRID; }
+        GridNode(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
+        ~GridNode();
 
         bool m_Signs[LEAF_SIZE_3D];
 
@@ -287,8 +241,8 @@ protected:
         void merge(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
         void intersect(const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
 
-        void intersect(GridNode2* otherNode);
-        void merge(GridNode2* otherNode);
+        void intersect(GridNode* otherNode);
+        void merge(GridNode* otherNode);
 
         static inline unsigned char getCubeBitMask(int index, const bool* signsArray);
 

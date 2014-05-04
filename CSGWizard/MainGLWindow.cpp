@@ -30,11 +30,7 @@ void MainGLWindow::initializeGL()
     // std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/buddha2.obj");
     // TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
     SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
-    // VoronoiFragments fragments(VoronoiFragments::generateFragmentPointsUniform(AABB(Ogre::Vector3(-0.3f, -0.3f, -0.3f), Ogre::Vector3(0.3f, 0.3f, 0.3f)), 100));
-    // fragments.setFragment(0);
-    OctreeSDF::sampleSDF(&meshSDF, 8);
     auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
-    // octree->subtract(&fragments);
     std::cout << "Volume has " << octree->countLeaves() << " leaves and occupies " << octree->countMemory() / 1000 << " kb." << std::endl;
     m_Mesh = std::make_shared<GLMesh>(octree);
     m_CollisionGeometry.addMesh(std::make_shared<TransformedMesh>(m_Mesh->getMesh()));
