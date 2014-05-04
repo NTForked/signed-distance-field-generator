@@ -172,7 +172,7 @@ protected:
             sharedVertex = vertex;
             sharedVertex->refCount++;
         }
-        inline void init(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf)
+        inline void init(const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf)
         {
             this->direction = direction;
             edgeIndex1 = indexOf(localMinPos);
@@ -186,10 +186,6 @@ protected:
             sharedVertex->vertex.position = s.closestSurfacePos;
             sharedVertex->signedDistance = s.signedDistance;
             sharedVertex->refCount++;
-        }
-        SurfaceEdge(const Vector3i& cellMinPos, const Vector3i& localMinPos, unsigned char direction, Ogre::Vector3 globalPos, float edgeLength, const SolidGeometry& sdf, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices)
-        {
-            init(cellMinPos, localMinPos, direction, globalPos, edgeLength, sdf, sharedVertices);
         }
 
         void deleteSharedVertex()

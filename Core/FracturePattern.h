@@ -109,7 +109,7 @@ class SphericalFracturePattern : public FracturePattern
 public:
 	SphericalFracturePattern(int octreeDepth, int numRecursiveSplits)
 	{
-		SphereSDF sdf(Ogre::Vector3(0, 0, 0), 1.0f);
+		SphereGeometry sdf(Ogre::Vector3(0, 0, 0), 1.0f);
 		auto sphereSDF = OctreeSDF::sampleSDF(&sdf, octreeDepth);
 		m_PatternPieces.push_back(sphereSDF);
 		splitRecursivePointOfImpact(Ogre::Vector3(0, 0, 0), numRecursiveSplits, sphereSDF, m_PatternPieces);

@@ -86,7 +86,7 @@ public:
     /// Retrieves the axis aligned bounding box of the sdf.
     virtual AABB getAABB() const = 0;
 
-    virtual void raycastClosest(const Ray& ray, Sample& sample) const {}
+    virtual bool raycastClosest(const Ray&, Sample&) const { return false; }
 
     virtual bool getSign(const Ogre::Vector3& point) const { return getSample(point).signedDistance >= 0.0f; }
 

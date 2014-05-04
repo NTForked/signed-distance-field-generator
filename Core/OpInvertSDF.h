@@ -20,11 +20,13 @@ public:
         sample.normal *= -1.0f;
 	}
 
-    virtual void raycastClosest(const Ray& ray, Sample& sample) const override
+    virtual bool raycastClosest(const Ray& ray, Sample& sample) const override
     {
-        m_SDF->raycastClosest(ray, sample);
+        if (!m_SDF->raycastClosest(ray, sample))
+            return false;
         sample.signedDistance *= -1.0f;
         sample.normal *= -1.0f;
+        return true;
     }
 
 	bool intersectsSurface(const AABB& aabb) const override

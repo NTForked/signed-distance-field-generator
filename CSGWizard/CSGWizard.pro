@@ -64,7 +64,6 @@ HEADERS  += MainWindow.h \
     ../Core/BVH.h \
     ../Core/BlockBasedSparseArray.h \
     ../Core/Area.h \
-    ../Core/AABBSDF.h \
     ../Core/AABB.h \
     ../Core/OgreMath/OgreVector4.h \
     ../Core/OgreMath/OgreVector3.h \
@@ -79,6 +78,8 @@ HEADERS  += MainWindow.h \
     MainGLWindow.h \
     GLManager.h \
     Camera.h \
-    ../Core/SolidGeometry.h
+    ../Core/SolidGeometry.h \
+    ../Core/AABBGeometry.h \
+    ../Core/PlaneGeometry.h
 
 FORMS    += MainWindow.ui

@@ -2,11 +2,12 @@
 #include "GLManager.h"
 #include "../Core/SDFManager.h"
 #include "../Core/OctreeSF.h"
-#include "../Core/VoronoiFragments.h"
+#include "../Core/PlaneGeometry.h"
 
 MainGLWindow::MainGLWindow() : GLWindow()
 {
     m_CurrentTool = SUBTRACT_SPHERE;
+    m_Cutting = false;
 }
 
 void MainGLWindow::initializeGL()
@@ -27,9 +28,9 @@ void MainGLWindow::initializeGL()
 
     GLManager::getSingleton().getGLFunctions()->glEnable(GL_DEPTH_TEST);
 
-    // std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/buddha2.obj");
-    // TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
-    SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
+    std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/bunny_highres.obj");
+    TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
+    // SphereGeometry meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
     auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
     std::cout << "Volume has " << octree->countLeaves() << " leaves and occupies " << octree->countMemory() / 1000 << " kb." << std::endl;
     m_Mesh = std::make_shared<GLMesh>(octree);
@@ -49,20 +50,31 @@ float screenToNDC(float x)
     return 2 * x - 1;
 }
 
+Ogre::Vector2 MainGLWindow::getNDCMouseCoords(QMouseEvent* event) const
+{
+    return Ogre::Vector2(screenToNDC((float)event->pos().x() / width()),
+        screenToNDC((float)(height() - event->pos().y()) / height()));
+}
+
 void MainGLWindow::mousePressEvent(QMouseEvent* event)
 {
     if (event->buttons() & Qt::LeftButton)
     {
-        if (raycast(m_Mesh->getOctree(), event, m_LastIntersectionPos))
+        if (m_CurrentTool == CUT_PLANE)
+        {
+            m_Cutting = true;
+            m_CuttingStartPos = getNDCMouseCoords(event);
+        }
+        else if (raycast(m_Mesh->getOctree(), event, m_LastIntersectionPos))
         {
             if (m_CurrentTool == SUBTRACT_SPHERE)
             {
-                SphereSDF sphere(m_LastIntersectionPos, 0.05f);
+                SphereGeometry sphere(m_LastIntersectionPos, 0.05f);
                 m_Mesh->getOctree()->subtract(&sphere);
             }
             else if (m_CurrentTool == MERGE_SPHERE)
             {
-                SphereSDF sphere(m_LastIntersectionPos, 0.05f);
+                SphereGeometry sphere(m_LastIntersectionPos, 0.05f);
                 m_Mesh->getOctree()->merge(&sphere);
             }
             m_Mesh->updateMesh();
@@ -73,9 +85,8 @@ void MainGLWindow::mousePressEvent(QMouseEvent* event)
 
 bool MainGLWindow::raycast(std::shared_ptr<OctreeSF> octree, QMouseEvent* event, Ogre::Vector3& rayIntersection)
 {
-    float xNDC = screenToNDC((float)event->pos().x() / width());
-    float yNDC = screenToNDC((float)(height() - event->pos().y()) / height());
-    Ray cameraRay = m_Camera.getCameraRay(xNDC, yNDC);
+    Ogre::Vector2 coords = getNDCMouseCoords(event);
+    Ray cameraRay = m_Camera.getCameraRay(coords.x, coords.y);
     Ray::Intersection hit;
     if (octree->rayIntersectClosest(cameraRay, hit))
     {
@@ -87,6 +98,24 @@ bool MainGLWindow::raycast(std::shared_ptr<OctreeSF> octree, QMouseEvent* event,
 
 void MainGLWindow::mouseReleaseEvent(QMouseEvent* event)
 {
+    if (m_CurrentTool == CUT_PLANE && m_Cutting)
+    {
+        m_Cutting = false;
+        Ogre::Vector2 coords = getNDCMouseCoords(event);
+        Ray ray1 = m_Camera.getCameraRay(m_CuttingStartPos.x, m_CuttingStartPos.y);
+        Ray ray2 = m_Camera.getCameraRay(coords.x, coords.y);
+        Ogre::Vector3 p1 = ray1.origin + ray1.direction;
+        Ogre::Vector3 p2 = ray2.origin + ray2.direction;
+        Ogre::Vector3 dir = p2 - p1;
+        dir.normalise();
+        Ogre::Vector3 normal = dir.crossProduct(ray1.direction);
+        normal.normalise();
+        std::cout << p1 << " " << dir << std::endl;
+        PlaneGeometry planeGeometry(p1, normal);
+        m_Mesh->getOctree()->subtract(&planeGeometry);
+        m_Mesh->updateMesh();
+        requestRedraw();
+    }
 }
 
 void MainGLWindow::mouseMoveEvent(QMouseEvent* event)

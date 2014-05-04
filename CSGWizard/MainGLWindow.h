@@ -17,6 +17,9 @@ protected:
     float m_CamXRot;
     float m_CamYRot;
 
+    bool m_Cutting;
+    Ogre::Vector2 m_CuttingStartPos;
+
     QPoint m_MousePos;
     Ogre::Vector3 m_LastIntersectionPos;
 
@@ -24,9 +27,9 @@ protected:
 
     std::shared_ptr<GLMesh> m_Mesh;
 
-    std::shared_ptr<OctreeSF> m_RaycastOctree;
-
     BVHScene m_CollisionGeometry;
+
+    Ogre::Vector2 getNDCMouseCoords(QMouseEvent* event) const;
 
     virtual void initializeGL() override;
     virtual void render() override;

@@ -177,7 +177,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 				{
 					m_SurfaceEdges.emplace_back();
 					if (y > 0 && y < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
-						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF);
+                        m_SurfaceEdges.back().init(iPos, 0, currentPos, stepSize, implicitSDF);
 					else
 						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
@@ -185,7 +185,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 				{
 					m_SurfaceEdges.emplace_back();
 					if (x > 0 && x < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
-						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF);
+                        m_SurfaceEdges.back().init(iPos, 1, currentPos, stepSize, implicitSDF);
 					else
 						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
@@ -193,7 +193,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 				{
 					m_SurfaceEdges.emplace_back();
 					if (y > 0 && y < LEAF_SIZE_1D_INNER && x > 0 && x < LEAF_SIZE_1D_INNER)
-						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF);
+                        m_SurfaceEdges.back().init(iPos, 2, currentPos, stepSize, implicitSDF);
 					else
 						m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
@@ -225,7 +225,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
                 {
                     m_SurfaceEdges.emplace_back();
                     if (y > 0 && y < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
-                        m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF);
+                        m_SurfaceEdges.back().init(iPos, 0, currentPos, stepSize, implicitSDF);
 					else
                         m_SurfaceEdges.back().init(area.m_MinPos, iPos, 0, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
@@ -233,7 +233,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 				{
                     m_SurfaceEdges.emplace_back();
                     if (x > 0 && x < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
-                        m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF);
+                        m_SurfaceEdges.back().init(iPos, 1, currentPos, stepSize, implicitSDF);
 					else
                         m_SurfaceEdges.back().init(area.m_MinPos, iPos, 1, currentPos, stepSize, implicitSDF, sharedVertices);
 				}
@@ -241,7 +241,7 @@ void OctreeSF::GridNode::computeEdges(const Area& area, const SolidGeometry& imp
 				{
                     m_SurfaceEdges.emplace_back();
                     if (y > 0 && y < LEAF_SIZE_1D_INNER && x > 0 && x < LEAF_SIZE_1D_INNER)
-                        m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF);
+                        m_SurfaceEdges.back().init(iPos, 2, currentPos, stepSize, implicitSDF);
 					else
                         m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF, sharedVertices);
                 }
@@ -324,7 +324,7 @@ bool OctreeSF::GridNode::rayIntersectUpdate(const Area& area, const Ray& ray, Ra
 }
 
 #include "TriangleLookupTable.h"
-void OctreeSF::GridNode::generateIndices(const Area&, vector<unsigned int>& indices, vector<Vertex>& vertices) const
+void OctreeSF::GridNode::generateIndices(const Area&, vector<unsigned int>& indices, vector<Vertex>&) const
 {
     const SurfaceEdge* surfaceEdgeMaps[3][LEAF_SIZE_3D];
 	for (auto i = m_SurfaceEdges.begin(); i != m_SurfaceEdges.end(); ++i)

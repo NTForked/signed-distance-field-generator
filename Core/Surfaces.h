@@ -172,7 +172,7 @@ public:
         m_AABB.max = point;
         m_ExtremalPoints.push_back(point);
     }
-    const PointBVH* rayIntersectClosest(Ray::Intersection &intersection, const Ray &ray) const override { return nullptr; }
+    const PointBVH* rayIntersectClosest(Ray::Intersection&, const Ray&) const override { return nullptr; }
 
     const PointBVH* getClosestLeaf(const Ogre::Vector3& point, ClosestLeafResult& result) const override
     {

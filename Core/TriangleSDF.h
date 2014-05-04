@@ -254,7 +254,7 @@ public:
         sample.normal = result.normal;
     }
 
-    virtual void raycastClosest(const Ray& ray, Sample& sample) const override
+    virtual bool raycastClosest(const Ray& ray, Sample& sample) const override
     {
         Ray::Intersection result;
         result.t = std::numeric_limits<float>::max();
@@ -264,6 +264,8 @@ public:
             if (!getSign(ray.origin))
                 sample.signedDistance *= -1.0f;
             sample.closestSurfacePos = ray.origin + ray.direction * result.t;
+            return true;
         }
+        return false;
     }
 };

@@ -49,11 +49,11 @@ public:
 	}
 };
 
-class SphereSDF : public Sphere, public SolidGeometry
+class SphereGeometry : public Sphere, public SolidGeometry
 {
 public:
-	SphereSDF() {}
-	SphereSDF(const Ogre::Vector3& center, float radius) : Sphere(center, radius) {}
+    SphereGeometry() {}
+    SphereGeometry(const Ogre::Vector3& center, float radius) : Sphere(center, radius) {}
 
 	virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override
 	{
@@ -86,7 +86,7 @@ public:
 		return false;
 	}
 
-    virtual void raycastClosest(const Ray& ray, Sample& sample) const override
+    virtual bool raycastClosest(const Ray& ray, Sample& sample) const override
     {
         Ray::Intersection intersection;
         if (ray.intersectSphere(intersection, center, radiusSquared))
@@ -97,7 +97,9 @@ public:
             sample.normal.normalise();
             if (!getSign(ray.origin))
                 sample.signedDistance *= -1.0f;
+            return true;
         }
+        return false;
     }
 
 	virtual AABB getAABB() const override
