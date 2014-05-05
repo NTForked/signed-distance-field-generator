@@ -14,6 +14,7 @@ public:
     {
         m_Pos = pos;
         m_Normal = normal;
+        m_Normal.normalise();
     }
 
     virtual void getSample(const Ogre::Vector3& point, Sample& sample) const override

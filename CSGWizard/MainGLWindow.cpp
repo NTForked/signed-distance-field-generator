@@ -46,6 +46,8 @@ void MainGLWindow::initializeGL()
     // TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
     SphereGeometry meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
     auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
+    PlaneGeometry plane(Ogre::Vector3(0, 0, 0), Ogre::Vector3(0, 1, -1));
+    octree->intersect(&plane);
     std::cout << "Volume has " << octree->countLeaves() << " leaves and occupies " << octree->countMemory() / 1000 << " kb." << std::endl;
     m_Mesh = std::make_shared<GLMesh>(octree);
     m_CollisionGeometry.addMesh(std::make_shared<TransformedMesh>(m_Mesh->getMesh()));

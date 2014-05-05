@@ -29,6 +29,7 @@ GLManager::GLManager()
             "   float lighting = clamp(ambient + diffuse, 0, 1);\n"
             "   \n"
             "   colorOut = vec4(materialColor * lighting, 1);\n"
+            "//   colorOut = vec4(abs(normal), 1);\n"
             "}";
     m_SolidLightingProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderCode);
     if (!m_SolidLightingProgram->link())

@@ -139,9 +139,7 @@ OctreeSF::Node* OctreeSF::GridNode::clone() const
 
 void OctreeSF::GridNode::computeSigns(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF)
 {
-    float stepSize = tree->m_CellSize;
     // compute inner grid
-    Ogre::Vector3 currentPos = area.m_MinRealPos;
     int index = 0;
     for (unsigned int x = 0; x < LEAF_SIZE_1D; x++)
     {
@@ -149,21 +147,16 @@ void OctreeSF::GridNode::computeSigns(OctreeSF* tree, const Area& area, const So
         {
             for (unsigned int z = 0; z < LEAF_SIZE_1D; z++)
             {
+                Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + Vector3i(x, y, z));
                 m_Signs[index++] = implicitSDF.getSign(currentPos);
-                currentPos.z += stepSize;
             }
-            currentPos.z = area.m_MinRealPos.z;
-            currentPos.y += stepSize;
         }
-        currentPos.y = area.m_MinRealPos.y;
-        currentPos.x += stepSize;
     }
 }
 
 void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const bool ignoreEdges[3][LEAF_SIZE_3D])
 {
     float stepSize = tree->m_CellSize;
-    Ogre::Vector3 currentPos = area.m_MinRealPos;
     int index = 0;
 
     for (int x = 0; x < LEAF_SIZE_1D; x++)
@@ -175,6 +168,7 @@ void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const So
                 Vector3i iPos(x, y, z);
                 if (!ignoreEdges[0][index] && x < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_2D])
                 {
+                    Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + iPos);
                     m_SurfaceEdges.emplace_back();
                     if (y > 0 && y < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
                         m_SurfaceEdges.back().init(iPos, 0, currentPos, stepSize, implicitSDF);
@@ -183,6 +177,7 @@ void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const So
                 }
                 if (!ignoreEdges[1][index] && y < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_1D])
                 {
+                    Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + iPos);
                     m_SurfaceEdges.emplace_back();
                     if (x > 0 && x < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
                         m_SurfaceEdges.back().init(iPos, 1, currentPos, stepSize, implicitSDF);
@@ -191,6 +186,7 @@ void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const So
                 }
                 if (!ignoreEdges[2][index] && z < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + 1])
                 {
+                    Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + iPos);
                     m_SurfaceEdges.emplace_back();
                     if (y > 0 && y < LEAF_SIZE_1D_INNER && x > 0 && x < LEAF_SIZE_1D_INNER)
                         m_SurfaceEdges.back().init(iPos, 2, currentPos, stepSize, implicitSDF);
@@ -198,20 +194,14 @@ void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const So
                         m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF, sharedVertices);
                 }
                 index++;
-                currentPos.z += stepSize;
             }
-            currentPos.z = area.m_MinRealPos.z;
-            currentPos.y += stepSize;
         }
-        currentPos.y = area.m_MinRealPos.y;
-        currentPos.x += stepSize;
     }
 }
 
 void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices)
 {
     float stepSize = tree->m_CellSize;
-    Ogre::Vector3 currentPos = area.m_MinRealPos;
     int index = 0;
     m_SurfaceEdges.reserve(LEAF_SIZE_2D);
     for (int x = 0; x < LEAF_SIZE_1D; x++)
@@ -223,6 +213,7 @@ void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const So
                 Vector3i iPos(x, y, z);
                 if (x < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_2D])
                 {
+                    Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + iPos);
                     m_SurfaceEdges.emplace_back();
                     if (y > 0 && y < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
                         m_SurfaceEdges.back().init(iPos, 0, currentPos, stepSize, implicitSDF);
@@ -231,6 +222,7 @@ void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const So
                 }
                 if (y < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + LEAF_SIZE_1D])
                 {
+                    Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + iPos);
                     m_SurfaceEdges.emplace_back();
                     if (x > 0 && x < LEAF_SIZE_1D_INNER && z > 0 && z < LEAF_SIZE_1D_INNER)
                         m_SurfaceEdges.back().init(iPos, 1, currentPos, stepSize, implicitSDF);
@@ -239,6 +231,7 @@ void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const So
                 }
                 if (z < LEAF_SIZE_1D_INNER && m_Signs[index] != m_Signs[index + 1])
                 {
+                    Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + iPos);
                     m_SurfaceEdges.emplace_back();
                     if (y > 0 && y < LEAF_SIZE_1D_INNER && x > 0 && x < LEAF_SIZE_1D_INNER)
                         m_SurfaceEdges.back().init(iPos, 2, currentPos, stepSize, implicitSDF);
@@ -246,13 +239,8 @@ void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const So
                         m_SurfaceEdges.back().init(area.m_MinPos, iPos, 2, currentPos, stepSize, implicitSDF, sharedVertices);
                 }
                 index++;
-                currentPos.z += stepSize;
             }
-            currentPos.z = area.m_MinRealPos.z;
-            currentPos.y += stepSize;
         }
-        currentPos.y = area.m_MinRealPos.y;
-        currentPos.x += stepSize;
     }
 }
 
@@ -450,11 +438,17 @@ void OctreeSF::GridNode::merge(OctreeSF* tree, const Area& area, const SolidGeom
                 globalPos[i->direction] += cellSize * 0.5f;
                 Sample s;
                 implicitSDF.getSample(globalPos, s);
-                if (s.closestSurfacePos.squaredDistance(insidePos) > i->sharedVertex->vertex.position.squaredDistance(insidePos))
+                Ogre::Vector3 newDiff = s.closestSurfacePos - insidePos;
+                Ogre::Vector3 oldDiff = i->sharedVertex->vertex.position - insidePos;
+                for (int j = 0; j < 3; j++)
                 {
-                    i->sharedVertex->vertex.position = s.closestSurfacePos;
-                    i->sharedVertex->vertex.normal = s.normal;
+                    if (newDiff[j] * newDiff[j] > oldDiff[j] * oldDiff[j])
+                    {
+                        i->sharedVertex->vertex.position[j] = s.closestSurfacePos[j];
+                        i->sharedVertex->vertex.normal[j] = s.normal[j];
+                    }
                 }
+                i->sharedVertex->vertex.normal.normalise();
             }
         }
         else i->deleteSharedVertex();
@@ -498,11 +492,17 @@ void OctreeSF::GridNode::intersect(OctreeSF* tree, const Area& area, const Solid
                 // implicitSDF.raycastClosest(Ray(globalPos, rayDir), s);
                 globalPos[i->direction] += cellSize * 0.5f;
                 implicitSDF.getSample(globalPos, s);
-                if (s.closestSurfacePos.squaredDistance(insidePos) < i->sharedVertex->vertex.position.squaredDistance(insidePos))
+                Ogre::Vector3 newDiff = s.closestSurfacePos - insidePos;
+                Ogre::Vector3 oldDiff = i->sharedVertex->vertex.position - insidePos;
+                for (int j = 0; j < 3; j++)
                 {
-                    i->sharedVertex->vertex.position = s.closestSurfacePos;
-                    i->sharedVertex->vertex.normal = s.normal;
+                    if (newDiff[j] * newDiff[j] < oldDiff[j] * oldDiff[j])
+                    {
+                        i->sharedVertex->vertex.position[j] = s.closestSurfacePos[j];
+                        i->sharedVertex->vertex.normal[j] = s.normal[j];
+                    }
                 }
+                i->sharedVertex->vertex.normal.normalise();
             }
         }
         else i->deleteSharedVertex();
