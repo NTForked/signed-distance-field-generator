@@ -167,21 +167,17 @@ public:
 		std::cout << "[Marching cubes] " << numVertices << " vertices created." << std::endl;
 
 		// build vertex buffer
-		ts = Profiler::timestamp();
 		outMesh->vertexBuffer.resize(numVertices);
 		for (auto it = vertexMap.begin(); it != vertexMap.end(); it++)
 		{
 			for (auto it2 = it->begin(); it2 != it->end(); it2++)
 				outMesh->vertexBuffer[it2->second.index] = it2->second.vertex;
 		}
-		Profiler::printJobDuration("Vertex copying", ts);
 
 		// finally scale with respect to voxelsPerUnit 
-		ts = Profiler::timestamp();
 		float scale = 1.0f / voxelsPerUnit;
 		for (auto it = outMesh->vertexBuffer.begin(); it != outMesh->vertexBuffer.end(); it++)
 			it->position = (it->position * scale) + minPos;
-		Profiler::printJobDuration("Vertex scaling", ts);
 
 		return outMesh;
 	}

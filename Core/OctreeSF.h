@@ -185,6 +185,7 @@ protected:
             // rayDir[direction] = 1.0f;
             // sdf.raycastClosest(Ray(globalPos, rayDir), s);
             sharedVertex->vertex.position = s.closestSurfacePos;
+            sharedVertex->vertex.normal = s.normal;
             sharedVertex->refCount++;
         }
 

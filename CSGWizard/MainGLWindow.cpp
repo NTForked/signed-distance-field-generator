@@ -8,6 +8,20 @@ MainGLWindow::MainGLWindow() : GLWindow()
 {
     m_CurrentTool = SUBTRACT_SPHERE;
     m_Cutting = false;
+    m_WireFrameMode = false;
+}
+
+void performSomeTests()
+{
+    PlaneGeometry plane(Ogre::Vector3(0, 0, 0), Ogre::Vector3(0, 0, -1));
+    SphereGeometry sphere(Ogre::Vector3(0, 0, 0), 0.5f);
+    auto octree = OctreeSDF::sampleSDF(&sphere, 8);
+    octree->intersect(&plane);
+    SDFManager::exportSampledSDFAsMesh("SpherePlaneSDF.obj", octree);
+
+    auto octreeSF = OctreeSF::sampleSDF(&sphere, 8);
+    octreeSF->intersect(&plane);
+    SDFManager::exportSampledSDFAsMesh("SpherePlaneSF.obj", octreeSF);
 }
 
 void MainGLWindow::initializeGL()
@@ -28,17 +42,20 @@ void MainGLWindow::initializeGL()
 
     GLManager::getSingleton().getGLFunctions()->glEnable(GL_DEPTH_TEST);
 
-    std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/bunny_highres.obj");
-    TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
-    // SphereGeometry meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
+    // std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/bunny_highres.obj");
+    // TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
+    SphereGeometry meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
     auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
     std::cout << "Volume has " << octree->countLeaves() << " leaves and occupies " << octree->countMemory() / 1000 << " kb." << std::endl;
     m_Mesh = std::make_shared<GLMesh>(octree);
     m_CollisionGeometry.addMesh(std::make_shared<TransformedMesh>(m_Mesh->getMesh()));
+
+    // performSomeTests();
 }
 
 void MainGLWindow::wheelEvent(QWheelEvent* event)
 {
+    if (event->buttons() & Qt::MiddleButton) return;
     float delta = -event->delta() * 0.0005f;
     if (m_DistToCenter + delta > 0.0f)
         m_DistToCenter += delta;
@@ -140,6 +157,22 @@ void MainGLWindow::mouseMoveEvent(QMouseEvent* event)
         updateCameraPos();
     }
     m_MousePos = event->pos();
+}
+
+void MainGLWindow::keyPressEvent(QKeyEvent*)
+{
+}
+void MainGLWindow::keyReleaseEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Tab)
+    {
+        m_WireFrameMode = !m_WireFrameMode;
+        if (m_WireFrameMode)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        requestRedraw();
+    }
 }
 
 void MainGLWindow::updateCameraPos()

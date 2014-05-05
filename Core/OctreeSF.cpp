@@ -443,13 +443,13 @@ void OctreeSF::GridNode::merge(OctreeSF* tree, const Area& area, const SolidGeom
             {
                 Vector3i minPos = fromIndex(i->edgeIndex1);
                 Ogre::Vector3 globalPos = tree->getRealPos(area.m_MinPos + minPos);
-                globalPos[i->direction] += cellSize * 0.5f;
-                Sample s;
-                implicitSDF.getSample(globalPos, s);
-
                 Ogre::Vector3 insidePos = globalPos;
                 if (otherNode.m_Signs[i->edgeIndex2])
                     insidePos = tree->getRealPos(area.m_MinPos + fromIndex(i->edgeIndex2));
+
+                globalPos[i->direction] += cellSize * 0.5f;
+                Sample s;
+                implicitSDF.getSample(globalPos, s);
                 if (s.closestSurfacePos.squaredDistance(insidePos) > i->sharedVertex->vertex.position.squaredDistance(insidePos))
                 {
                     i->sharedVertex->vertex.position = s.closestSurfacePos;
@@ -488,16 +488,16 @@ void OctreeSF::GridNode::intersect(OctreeSF* tree, const Area& area, const Solid
             {
                 Vector3i minPos = fromIndex(i->edgeIndex1);
                 Ogre::Vector3 globalPos = tree->getRealPos(area.m_MinPos + minPos);
+                Ogre::Vector3 insidePos = globalPos;
+                if (otherNode.m_Signs[i->edgeIndex2])
+                    insidePos = tree->getRealPos(area.m_MinPos + fromIndex(i->edgeIndex2));
+
                 Sample s;
                 // Ogre::Vector3 rayDir(0,0,0);
                 // rayDir[i->direction] = 1.0f;
                 // implicitSDF.raycastClosest(Ray(globalPos, rayDir), s);
                 globalPos[i->direction] += cellSize * 0.5f;
                 implicitSDF.getSample(globalPos, s);
-
-                Ogre::Vector3 insidePos = globalPos;
-                if (otherNode.m_Signs[i->edgeIndex2])
-                    insidePos = tree->getRealPos(area.m_MinPos + fromIndex(i->edgeIndex2));
                 if (s.closestSurfacePos.squaredDistance(insidePos) < i->sharedVertex->vertex.position.squaredDistance(insidePos))
                 {
                     i->sharedVertex->vertex.position = s.closestSurfacePos;

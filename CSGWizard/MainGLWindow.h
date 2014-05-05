@@ -17,6 +17,8 @@ protected:
     float m_CamXRot;
     float m_CamYRot;
 
+    bool m_WireFrameMode;
+
     bool m_Cutting;
     Ogre::Vector2 m_CuttingStartPos;
 
@@ -40,6 +42,9 @@ protected:
     virtual void mousePressEvent(QMouseEvent* event) override;
     virtual void mouseReleaseEvent(QMouseEvent* event) override;
     virtual void mouseMoveEvent(QMouseEvent* event) override;
+
+    virtual void keyPressEvent(QKeyEvent *) override;
+    virtual void keyReleaseEvent(QKeyEvent *) override;
 
     bool raycast(std::shared_ptr<OctreeSF> octree, QMouseEvent* event, Ogre::Vector3& rayIntersection);
 
