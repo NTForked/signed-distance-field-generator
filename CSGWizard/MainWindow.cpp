@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 #include <QBoxLayout>
+#include <QFileDialog>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -26,6 +27,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_MergeSphereButton, SIGNAL(released()), m_MainGLWidget, SLOT(setMergeSphereMode()));
     connect(m_CutPlaneButton, SIGNAL(released()), m_MainGLWidget, SLOT(setCutPlaneMode()));
 
+    connect(ui->actionLoad_mesh, SIGNAL(triggered()), this, SLOT(openLoadMeshDialog()));
+
     m_ToolsButtonGroup = new QButtonGroup(ui->toolBar);
     m_ToolsButtonGroup->addButton(m_SubtractSphereButton);
     m_ToolsButtonGroup->addButton(m_MergeSphereButton);
@@ -34,6 +37,15 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->toolBar->addWidget(m_SubtractSphereButton);
     ui->toolBar->addWidget(m_MergeSphereButton);
     ui->toolBar->addWidget(m_CutPlaneButton);
+}
+
+void MainWindow::openLoadMeshDialog()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, "Open File",
+                                                     "",
+                                                     "Meshes (*.obj)");
+    m_MainGLWidget->loadMesh(fileName);
+
 }
 
 MainWindow::~MainWindow()

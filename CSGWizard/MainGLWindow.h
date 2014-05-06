@@ -59,6 +59,8 @@ protected:
 public:
     MainGLWindow();
 
+    void loadMesh(const QString& fileName);
+
 public slots:
     void setSubtractSphereMode() { m_CurrentTool = SUBTRACT_SPHERE; }
     void setMergeSphereMode() { m_CurrentTool = MERGE_SPHERE; }

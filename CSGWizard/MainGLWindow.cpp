@@ -42,17 +42,27 @@ void MainGLWindow::initializeGL()
 
     GLManager::getSingleton().getGLFunctions()->glEnable(GL_DEPTH_TEST);
 
-    // std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh("../Tests/bunny_highres.obj");
-    // TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
+
     SphereGeometry meshSDF(Ogre::Vector3(0, 0, 0), 0.5f);
     auto octree = OctreeSF::sampleSDF(&meshSDF, 8);
-    PlaneGeometry plane(Ogre::Vector3(0, 0, 0), Ogre::Vector3(0, 1, -1));
-    octree->intersect(&plane);
+    // PlaneGeometry plane(Ogre::Vector3(0, 0, 0), Ogre::Vector3(0, 1, -1));
+    // octree->intersect(&plane);
     std::cout << "Volume has " << octree->countLeaves() << " leaves and occupies " << octree->countMemory() / 1000 << " kb." << std::endl;
     m_Mesh = std::make_shared<GLMesh>(octree);
     m_CollisionGeometry.addMesh(std::make_shared<TransformedMesh>(m_Mesh->getMesh()));
 
     // performSomeTests();
+}
+
+void MainGLWindow::loadMesh(const QString& fileName)
+{
+    std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh(fileName.toLocal8Bit().constData());
+    TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
+    auto octree = OctreeSF::sampleSDF(&meshSDF, 9);
+    m_Mesh = std::make_shared<GLMesh>(octree);
+    m_CollisionGeometry.clearMeshes();
+    m_CollisionGeometry.addMesh(std::make_shared<TransformedMesh>(m_Mesh->getMesh()));
+    requestRedraw();
 }
 
 void MainGLWindow::wheelEvent(QWheelEvent* event)

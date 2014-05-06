@@ -18,6 +18,9 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+public slots:
+    void openLoadMeshDialog();
+
 private:
     Ui::MainWindow *ui;
     MainGLWindow* m_MainGLWidget;
