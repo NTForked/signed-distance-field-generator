@@ -67,12 +67,47 @@ protected:
 	public:
 		virtual ~Node() {}
 
-        virtual void forEachSurfaceLeaf(const Area&, const std::function<void(GridNode*, const Area&)>&) {}
+        struct Edge
+        {
+            Area minArea;
+            GridNode* n1;
+            GridNode* n2;
+            GridNode* n3;
+            GridNode* n4;
+            unsigned char direction;
 
-        virtual void forEachSurfaceLeaf(const std::function<void(GridNode*)>&) {}
+            Edge() {}
+            Edge(GridNode* n1, GridNode* n2, GridNode* n3, GridNode* n4, const Area& minArea, unsigned char direction)
+                : n1(n1), n2(n2), n3(n3), n4(n4), minArea(minArea), direction(direction) {}
+
+        };
+
+        struct Face
+        {
+            Area minArea;
+            GridNode* n1;
+            GridNode* n2;
+            unsigned normalDirection;
+            Face() {}
+            Face(GridNode* n1, GridNode* n2, const Area& minArea, unsigned char normalDirection)
+                : n1(n1), n2(n2), minArea(minArea), normalDirection(normalDirection) {}
+        };
+
+        //! Executes the given function for all surface nodes.
+        virtual void forEachSurfaceNode(const Area&, const std::function<void(GridNode*, const Area&)>&) {}
+
+        //! Executes the given function for all surface nodes.
+        virtual void forEachSurfaceNode(const std::function<void(GridNode*)>&) {}
+
+        //! Executes the given function for all pairs neighboring surface nodes that share a face in the octree.
+        virtual void forEachSurfaceFace(const Area&, const std::function<void(const Face&)>&) {}
+
+        //! Executes the given function for all neighboring surface nodes that share an edge in the octree.
+        virtual void forEachSurfaceEdge(const Area&, const std::function<void(const Edge&)>&) {}
 
 		virtual void countNodes(int& counter) const = 0;
 
+        //! Counts the total memory consumption of the octree.
         virtual void countMemory(int&) const {}
 
         virtual void sumPositionsAndMass(const Area&, Ogre::Vector3&, float&) {}
@@ -84,8 +119,6 @@ protected:
         virtual bool rayIntersectUpdate(const Area&, const Ray&, Ray::Intersection&) { return false; }
 
 		inline Type getNodeType() { return m_NodeType; }
-
-
 	};
 
 	class InnerNode : public Node
@@ -96,9 +129,10 @@ protected:
 		~InnerNode();
 		InnerNode(const InnerNode& rhs);
 
-        virtual void forEachSurfaceLeaf(const Area& area, const std::function<void(GridNode*, const Area&)>& function);
-
-        virtual void forEachSurfaceLeaf(const std::function<void(GridNode*)>& function);
+        virtual void forEachSurfaceNode(const Area& area, const std::function<void(GridNode*, const Area&)>& function) override;
+        virtual void forEachSurfaceNode(const std::function<void(GridNode*)>& function) override;
+        virtual void forEachSurfaceFace(const Area&, const std::function<void(const Face&)>&) override;
+        virtual void forEachSurfaceEdge(const Area&, const std::function<void(const Edge&)>&) override;
 
 		virtual void countNodes(int& counter) const override;
 
@@ -109,6 +143,9 @@ protected:
 		virtual Node* clone() const override { return new InnerNode(*this); }
 
         virtual bool rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection) override;
+
+        static void forEachSurfaceFace(Node* n1, Node* n2, const Area& minArea, unsigned char normalDirection, const std::function<void(const Face&)>&);
+        static void forEachSurfaceEdge(Node* n1, Node* n2, Node* n3, Node* n4, const Area& minArea, unsigned char direction, const std::function<void(const Edge&)>&);
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 	};
@@ -210,9 +247,8 @@ protected:
 
         std::vector<SurfaceEdge> m_SurfaceEdges;
 
-        virtual void forEachSurfaceLeaf(const Area& area, const std::function<void(GridNode*, const Area&)>& function);
-
-        virtual void forEachSurfaceLeaf(const std::function<void(GridNode*)>& function);
+        virtual void forEachSurfaceNode(const Area& area, const std::function<void(GridNode*, const Area&)>& function) override;
+        virtual void forEachSurfaceNode(const std::function<void(GridNode*)>& function) override;
 
         void computeSigns(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF);
         void computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);

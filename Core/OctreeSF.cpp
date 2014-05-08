@@ -44,18 +44,126 @@ OctreeSF::InnerNode::InnerNode(const InnerNode& rhs)
     }
 }
 
-void OctreeSF::InnerNode::forEachSurfaceLeaf(const Area& area, const std::function<void(GridNode*, const Area&)>& function)
+void OctreeSF::InnerNode::forEachSurfaceNode(const Area& area, const std::function<void(GridNode*, const Area&)>& function)
 {
     Area subAreas[8];
     area.getSubAreas(subAreas);
     for (int i = 0; i < 8; i++)
-        m_Children[i]->forEachSurfaceLeaf(subAreas[i], function);
+        m_Children[i]->forEachSurfaceNode(subAreas[i], function);
 }
 
-void OctreeSF::InnerNode::forEachSurfaceLeaf(const std::function<void(GridNode*)>& function)
+void OctreeSF::InnerNode::forEachSurfaceNode(const std::function<void(GridNode*)>& function)
 {
     for (int i = 0; i < 8; i++)
-        m_Children[i]->forEachSurfaceLeaf(function);
+        m_Children[i]->forEachSurfaceNode(function);
+}
+
+void OctreeSF::InnerNode::forEachSurfaceFace(const Area& area, const std::function<void(const Face&)>& function)
+{
+    Area subAreas[8];
+    area.getSubAreas(subAreas);
+    for (int i = 0; i < 8; i++)
+    {
+        for (unsigned char d = 0; d < 3; d++)
+        {
+            int neighborIndex = i + (1 << d);
+            if (neighborIndex < 8)
+            {
+                forEachSurfaceFace(m_Children[i], m_Children[neighborIndex], subAreas[i], d, function);
+            }
+        }
+        m_Children[i]->forEachSurfaceFace(area, function);
+    }
+}
+
+void OctreeSF::InnerNode::forEachSurfaceFace(Node* n1, Node* n2, const Area& minArea, unsigned char normalDirection, const std::function<void(const Face&)>& function)
+{
+    if (n1->getNodeType() == EMPTY || n2->getNodeType() == EMPTY)
+        return;
+    if (n1->getNodeType() == GRID && n2->getNodeType() == GRID)
+    {
+        function(Face((GridNode*)n1, (GridNode*)n2, minArea, normalDirection));
+        return;
+    }
+    if (n1->getNodeType() == INNER && n2->getNodeType() == INNER)
+    {
+        Area subAreas[8];
+        minArea.getSubAreas(subAreas);
+        InnerNode* innerNode1 = (InnerNode*)n1;
+        InnerNode* innerNode2 = (InnerNode*)n2;
+        unsigned char dim1 = (normalDirection + 1) % 3;
+        unsigned char dim2 = (normalDirection + 2) % 3;
+        unsigned char dimensionMask1 = 1 << normalDirection;
+        // the children of the two inner nodes share 4 faces
+        // for instance, for neighborDir = 0 this processes the pairs (100, 000), (101, 001), (110, 010), (111, 011)
+        for (unsigned char i = 0; i < 2; i++)
+        {
+            for (unsigned char j = 0; j < 2; j++)
+            {
+                unsigned char index2 = (i << dim1) | (j << dim2);
+                unsigned char index1 = dimensionMask1 | index2;
+                forEachSurfaceFace(innerNode1->m_Children[index1], innerNode2->m_Children[index2], subAreas[index1], normalDirection, function);
+            }
+        }
+    }
+}
+
+void OctreeSF::InnerNode::forEachSurfaceEdge(const Area& area, const std::function<void(const Edge&)>& function)
+{
+    Area subAreas[8];
+    area.getSubAreas(subAreas);
+    // there are six edges inside the node
+    forEachSurfaceEdge(m_Children[0], m_Children[1], m_Children[2], m_Children[3], subAreas[0], 0, function);
+    forEachSurfaceEdge(m_Children[0], m_Children[1], m_Children[4], m_Children[5], subAreas[0], 1, function);
+    forEachSurfaceEdge(m_Children[0], m_Children[2], m_Children[4], m_Children[6], subAreas[0], 2, function);
+
+    forEachSurfaceEdge(m_Children[1], m_Children[3], m_Children[5], m_Children[7], subAreas[0], 2, function);
+
+    forEachSurfaceEdge(m_Children[2], m_Children[3], m_Children[6], m_Children[7], subAreas[0], 1, function);
+
+    forEachSurfaceEdge(m_Children[4], m_Children[5], m_Children[6], m_Children[7], subAreas[0], 0, function);
+
+    for (int i = 0; i < 8; i++)
+    {
+        m_Children[i]->forEachSurfaceEdge(area, function);
+    }
+}
+
+void OctreeSF::InnerNode::forEachSurfaceEdge(Node* n1, Node* n2, Node* n3, Node* n4, const Area& minArea, unsigned char direction, const std::function<void(const Edge&)>& function)
+{
+    if (n1->getNodeType() == EMPTY || n2->getNodeType() == EMPTY || n3->getNodeType() == EMPTY || n4->getNodeType() == EMPTY)
+        return;
+    if (n1->getNodeType() == GRID && n2->getNodeType() == GRID && n3->getNodeType() == GRID && n4->getNodeType() == GRID)
+    {
+        function(Edge((GridNode*)n1, (GridNode*)n2, (GridNode*)n2, (GridNode*)n3, minArea, direction));
+        return;
+    }
+    if (n1->getNodeType() == INNER && n2->getNodeType() == INNER)
+    {
+        Area subAreas[8];
+        minArea.getSubAreas(subAreas);
+        InnerNode* innerNode1 = (InnerNode*)n1;
+        InnerNode* innerNode2 = (InnerNode*)n2;
+        InnerNode* innerNode3 = (InnerNode*)n3;
+        InnerNode* innerNode4 = (InnerNode*)n4;
+        // the children of the inner nodes share two edges
+        unsigned char dim1 = (direction + 1) % 3;
+        unsigned char dim2 = (direction + 2) % 3;
+        if (dim1 > dim2) std::swap(dim1, dim2);
+        unsigned char dim1Mask = 1 << dim1;
+        unsigned char dim2Mask = 1 << dim2;
+        int n1Mask = dim1Mask | dim2Mask;
+        int n2Mask = dim1Mask;
+        int n3Mask = dim2Mask;
+        for (int i = 0; i < 2; i++)
+        {
+            unsigned char commonMask = i << direction;
+            forEachSurfaceEdge(innerNode1->m_Children[n1Mask | commonMask],
+                    innerNode2->m_Children[n2Mask | commonMask],
+                    innerNode3->m_Children[n3Mask | commonMask],
+                    innerNode4->m_Children[commonMask], minArea, direction, function);
+        }
+    }
 }
 
 void OctreeSF::InnerNode::countNodes(int& counter) const
@@ -126,12 +234,12 @@ OctreeSF::Node* OctreeSF::GridNode::clone() const
     return copy;
 }
 
-void OctreeSF::GridNode::forEachSurfaceLeaf(const Area& area, const std::function<void(GridNode*, const Area&)>& function)
+void OctreeSF::GridNode::forEachSurfaceNode(const Area& area, const std::function<void(GridNode*, const Area&)>& function)
 {
     function(this, area);
 }
 
-void OctreeSF::GridNode::forEachSurfaceLeaf(const std::function<void(GridNode*)>& function)
+void OctreeSF::GridNode::forEachSurfaceNode(const std::function<void(GridNode*)>& function)
 {
     function(this);
 }
@@ -813,16 +921,16 @@ void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsig
     auto tsTotal = Profiler::timestamp();
     int numLeaves = countLeaves();
     vertices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 2);	// reasonable upper bound
-    m_RootNode->forEachSurfaceLeaf([&vertices](GridNode* node) { node->generateVertices(vertices); });
+    m_RootNode->forEachSurfaceNode([&vertices](GridNode* node) { node->generateVertices(vertices); });
     // Profiler::printJobDuration("generateVertices", tsTotal);
 
     // auto tsIndices = Profiler::timestamp();
     indices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 8);
-    m_RootNode->forEachSurfaceLeaf(m_RootArea,
+    m_RootNode->forEachSurfaceNode(m_RootArea,
                                    [&indices, &vertices](GridNode* node, const Area& area) { node->generateIndices(area, indices, vertices); });
     // Profiler::printJobDuration("generateIndices", tsIndices);
 
-    m_RootNode->forEachSurfaceLeaf([](GridNode* node) { node->markSharedVertices(false); });
+    m_RootNode->forEachSurfaceNode([](GridNode* node) { node->markSharedVertices(false); });
     Profiler::printJobDuration("generateVerticesAndIndices", tsTotal);
 }
 
@@ -961,7 +1069,7 @@ int OctreeSF::countNodes()
 int OctreeSF::countLeaves()
 {
     int counter = 0;
-    m_RootNode->forEachSurfaceLeaf([&counter](GridNode*) { counter++;});
+    m_RootNode->forEachSurfaceNode([&counter](GridNode*) { counter++;});
     return counter;
 }
 
@@ -969,7 +1077,7 @@ int OctreeSF::countMemory()
 {
     int counter = 0;
     m_RootNode->countMemory(counter);
-    m_RootNode->forEachSurfaceLeaf([](GridNode* node) { node->markSharedVertices(false); });
+    m_RootNode->forEachSurfaceNode([](GridNode* node) { node->markSharedVertices(false); });
     return counter;
 }
 
