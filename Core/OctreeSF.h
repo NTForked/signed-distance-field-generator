@@ -12,7 +12,7 @@
 #include "OpInvertSDF.h"
 #include "Area.h"
 #include "BVHScene.h"
-// #include "Vector3iHashGridRefCounted.h"
+#include <functional>
 
 // #define USE_BOOST_POOL
 
@@ -67,18 +67,15 @@ protected:
 	public:
 		virtual ~Node() {}
 
-		virtual void countNodes(int& counter) const = 0;
+        virtual void forEachSurfaceLeaf(const Area&, const std::function<void(GridNode*, const Area&)>&) {}
 
-        virtual void countLeaves(int&) const {}
+        virtual void forEachSurfaceLeaf(const std::function<void(GridNode*)>&) {}
+
+		virtual void countNodes(int& counter) const = 0;
 
         virtual void countMemory(int&) const {}
 
         virtual void sumPositionsAndMass(const Area&, Ogre::Vector3&, float&) {}
-
-        virtual void generateVertices(vector<Vertex>&) {}
-        virtual void generateIndices(const Area&, vector<unsigned int>&, vector<Vertex>&) const {}
-
-        virtual void markSharedVertices(bool) {}
 
 		virtual void invert() = 0;
 
@@ -87,6 +84,8 @@ protected:
         virtual bool rayIntersectUpdate(const Area&, const Ray&, Ray::Intersection&) { return false; }
 
 		inline Type getNodeType() { return m_NodeType; }
+
+
 	};
 
 	class InnerNode : public Node
@@ -97,16 +96,13 @@ protected:
 		~InnerNode();
 		InnerNode(const InnerNode& rhs);
 
+        virtual void forEachSurfaceLeaf(const Area& area, const std::function<void(GridNode*, const Area&)>& function);
+
+        virtual void forEachSurfaceLeaf(const std::function<void(GridNode*)>& function);
+
 		virtual void countNodes(int& counter) const override;
 
-		virtual void countLeaves(int& counter) const override;
-
 		virtual void countMemory(int& memoryCounter) const override;
-
-		virtual void markSharedVertices(bool marked) override;
-
-        virtual void generateVertices(vector<Vertex>& positions) override;
-        virtual void generateIndices(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const override;
 
 		virtual void invert();
 
@@ -214,20 +210,22 @@ protected:
 
         std::vector<SurfaceEdge> m_SurfaceEdges;
 
+        virtual void forEachSurfaceLeaf(const Area& area, const std::function<void(GridNode*, const Area&)>& function);
+
+        virtual void forEachSurfaceLeaf(const std::function<void(GridNode*)>& function);
+
         void computeSigns(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF);
         void computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices);
         void computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, Vector3iHashGrid<SharedSurfaceVertex*> *sharedVertices, const bool ignoreEdges[3][LEAF_SIZE_3D]);
 
         virtual void countNodes(int& counter) const override { counter++; }
 
-        virtual void countLeaves(int& counter) const override { counter++; }
-
         virtual void countMemory(int& memoryCounter) const override;
 
-        virtual void markSharedVertices(bool marked) override;
+        virtual void markSharedVertices(bool marked);
 
-        virtual void generateVertices(vector<Vertex>& vertices) override;
-        virtual void generateIndices(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const override;
+        virtual void generateVertices(vector<Vertex>& vertices);
+        virtual void generateIndices(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const;
 
         virtual Node* clone() const override;
 

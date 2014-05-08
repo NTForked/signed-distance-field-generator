@@ -44,6 +44,20 @@ OctreeSF::InnerNode::InnerNode(const InnerNode& rhs)
     }
 }
 
+void OctreeSF::InnerNode::forEachSurfaceLeaf(const Area& area, const std::function<void(GridNode*, const Area&)>& function)
+{
+    Area subAreas[8];
+    area.getSubAreas(subAreas);
+    for (int i = 0; i < 8; i++)
+        m_Children[i]->forEachSurfaceLeaf(subAreas[i], function);
+}
+
+void OctreeSF::InnerNode::forEachSurfaceLeaf(const std::function<void(GridNode*)>& function)
+{
+    for (int i = 0; i < 8; i++)
+        m_Children[i]->forEachSurfaceLeaf(function);
+}
+
 void OctreeSF::InnerNode::countNodes(int& counter) const
 {
     counter++;
@@ -51,23 +65,11 @@ void OctreeSF::InnerNode::countNodes(int& counter) const
         m_Children[i]->countNodes(counter);
 }
 
-void OctreeSF::InnerNode::countLeaves(int& counter) const
-{
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->countLeaves(counter);
-}
-
 void OctreeSF::InnerNode::countMemory(int& counter) const
 {
     counter += sizeof(*this);
     for (int i = 0; i < 8; i++)
         m_Children[i]->countMemory(counter);
-}
-
-void OctreeSF::InnerNode::markSharedVertices(bool marked)
-{
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->markSharedVertices(marked);
 }
 
 bool OctreeSF::InnerNode::rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection)
@@ -82,19 +84,6 @@ bool OctreeSF::InnerNode::rayIntersectUpdate(const Area& area, const Ray& ray, R
             foundSomething = true;
     }
     return foundSomething;
-}
-
-void OctreeSF::InnerNode::generateVertices(vector<Vertex>& vertices)
-{
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->generateVertices(vertices);
-}
-void OctreeSF::InnerNode::generateIndices(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const
-{
-    Area subAreas[8];
-    area.getSubAreas(subAreas);
-    for (int i = 0; i < 8; i++)
-        m_Children[i]->generateIndices(subAreas[i], indices, vertices);
 }
 
 void OctreeSF::InnerNode::invert()
@@ -135,6 +124,16 @@ OctreeSF::Node* OctreeSF::GridNode::clone() const
         i->sharedVertex->refCount++;
     }
     return copy;
+}
+
+void OctreeSF::GridNode::forEachSurfaceLeaf(const Area& area, const std::function<void(GridNode*, const Area&)>& function)
+{
+    function(this, area);
+}
+
+void OctreeSF::GridNode::forEachSurfaceLeaf(const std::function<void(GridNode*)>& function)
+{
+    function(this);
 }
 
 void OctreeSF::GridNode::computeSigns(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF)
@@ -814,15 +813,16 @@ void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsig
     auto tsTotal = Profiler::timestamp();
     int numLeaves = countLeaves();
     vertices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 2);	// reasonable upper bound
-    m_RootNode->generateVertices(vertices);
+    m_RootNode->forEachSurfaceLeaf([&vertices](GridNode* node) { node->generateVertices(vertices); });
     // Profiler::printJobDuration("generateVertices", tsTotal);
 
     // auto tsIndices = Profiler::timestamp();
     indices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 8);
-    m_RootNode->generateIndices(m_RootArea, indices, vertices);
+    m_RootNode->forEachSurfaceLeaf(m_RootArea,
+                                   [&indices, &vertices](GridNode* node, const Area& area) { node->generateIndices(area, indices, vertices); });
     // Profiler::printJobDuration("generateIndices", tsIndices);
 
-    m_RootNode->markSharedVertices(false);
+    m_RootNode->forEachSurfaceLeaf([](GridNode* node) { node->markSharedVertices(false); });
     Profiler::printJobDuration("generateVerticesAndIndices", tsTotal);
 }
 
@@ -961,7 +961,7 @@ int OctreeSF::countNodes()
 int OctreeSF::countLeaves()
 {
     int counter = 0;
-    m_RootNode->countLeaves(counter);
+    m_RootNode->forEachSurfaceLeaf([&counter](GridNode*) { counter++;});
     return counter;
 }
 
@@ -969,7 +969,7 @@ int OctreeSF::countMemory()
 {
     int counter = 0;
     m_RootNode->countMemory(counter);
-    m_RootNode->markSharedVertices(false);
+    m_RootNode->forEachSurfaceLeaf([](GridNode* node) { node->markSharedVertices(false); });
     return counter;
 }
 
