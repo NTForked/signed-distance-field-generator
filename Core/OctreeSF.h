@@ -23,6 +23,12 @@
 using std::vector;
 
 /*
+Dual Contouring design
+Proposal 1:
+Grid nodes store no redundant data.
+*/
+
+/*
 Samples a signed distance field in an adaptive way.
 For each node (includes inner nodes and leaves) signed distances are stores for the 8 corners. This allows to interpolate signed distances in the node cell using trilinear interpolation.
 The actual signed distances are stored in a spatial hashmap because octree nodes share corners with other nodes.
@@ -67,28 +73,24 @@ protected:
 
         struct Edge
         {
-            Area minArea;
             GridNode* n1;
             GridNode* n2;
-            GridNode* n3;
-            GridNode* n4;
             unsigned char direction;
 
             Edge() {}
-            Edge(GridNode* n1, GridNode* n2, GridNode* n3, GridNode* n4, const Area& minArea, unsigned char direction)
-                : n1(n1), n2(n2), n3(n3), n4(n4), minArea(minArea), direction(direction) {}
+            Edge(GridNode* n1, GridNode* n2, unsigned char direction)
+                : n1(n1), n2(n2), direction(direction) {}
 
         };
 
         struct Face
         {
-            Area minArea;
             GridNode* n1;
             GridNode* n2;
             unsigned normalDirection;
             Face() {}
-            Face(GridNode* n1, GridNode* n2, const Area& minArea, unsigned char normalDirection)
-                : n1(n1), n2(n2), minArea(minArea), normalDirection(normalDirection) {}
+            Face(GridNode* n1, GridNode* n2, unsigned char normalDirection)
+                : n1(n1), n2(n2), normalDirection(normalDirection) {}
         };
 
         //! Executes the given function for all surface nodes.
@@ -98,10 +100,7 @@ protected:
         virtual void forEachSurfaceNode(const std::function<void(GridNode*)>&) {}
 
         //! Executes the given function for all pairs neighboring surface nodes that share a face in the octree.
-        virtual void forEachSurfaceFace(const Area&, const std::function<void(const Face&)>&) {}
-
-        //! Executes the given function for all neighboring surface nodes that share an edge in the octree.
-        virtual void forEachSurfaceEdge(const Area&, const std::function<void(const Edge&)>&) {}
+        virtual void forEachSurfaceFaceAndEdge(const std::function<void(const Face&)>&, const std::function<void(const Edge&)>&) {}
 
 		virtual void countNodes(int& counter) const = 0;
 
@@ -129,8 +128,7 @@ protected:
 
         virtual void forEachSurfaceNode(const Area& area, const std::function<void(GridNode*, const Area&)>& function) override;
         virtual void forEachSurfaceNode(const std::function<void(GridNode*)>& function) override;
-        virtual void forEachSurfaceFace(const Area&, const std::function<void(const Face&)>&) override;
-        virtual void forEachSurfaceEdge(const Area&, const std::function<void(const Edge&)>&) override;
+        virtual void forEachSurfaceFaceAndEdge(const std::function<void(const Face&)>&, const std::function<void(const Edge&)>&) override;
 
 		virtual void countNodes(int& counter) const override;
 
@@ -142,8 +140,8 @@ protected:
 
         virtual bool rayIntersectUpdate(const Area& area, const Ray& ray, Ray::Intersection& intersection) override;
 
-        static void forEachSurfaceFace(Node* n1, Node* n2, const Area& minArea, unsigned char normalDirection, const std::function<void(const Face&)>&);
-        static void forEachSurfaceEdge(Node* n1, Node* n2, Node* n3, Node* n4, const Area& minArea, unsigned char direction, const std::function<void(const Edge&)>&);
+        static void forEachSurfaceFace(Node* n1, Node* n2, unsigned char normalDirection, const std::function<void(const Face&)>&, const std::function<void(const Edge&)>&);
+        static void forEachSurfaceEdge(Node* n1, Node* n2, unsigned char direction, const std::function<void(const Edge&)>&);
 
 		// virtual void sumPositionsAndMass(const Area& area, Ogre::Vector3& weightedPosSum, float& totalMass) override;
 	};
@@ -190,26 +188,34 @@ protected:
             // Ogre::Vector3 rayDir(0,0,0);
             // rayDir[direction] = 1.0f;
             // sdf.raycastClosest(Ray(globalPos, rayDir), s);
-            surfacePosition = s.closestSurfacePos;
-            surfaceNormal = s.normal;
+            vertex.position = s.closestSurfacePos;
+            vertex.normal = s.normal;
         }
 
         SurfaceEdge clone() { SurfaceEdge copy(*this); return copy; }
 
-        Ogre::Vector3 surfacePosition;
-        Ogre::Vector3 surfaceNormal;
+        Vertex vertex;
         unsigned short edgeIndex1;
         unsigned short edgeIndex2;
         unsigned char direction;
+
+        unsigned short getNeighborCube(unsigned char neighborIndex) const
+        {
+            static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
+            unsigned short cubeIndex = edgeIndex1;
+            cubeIndex -= (neighborIndex & 1) * EDGE_OFFSETS[(direction + 1) % 3];
+            cubeIndex -= ((neighborIndex & 2) >> 1) * EDGE_OFFSETS[(direction + 2) % 3];
+            return cubeIndex;
+        }
     };
 
     struct SurfaceCube
     {
         SurfaceCube() {}
-        SurfaceCube(unsigned short cubeIndex) : cubeIndex(cubeIndex) {}
-        SurfaceVertex surfaceVertex;
+        SurfaceCube(unsigned short cubeIndex) : cubeIndex(cubeIndex) {}// memset(edgeSamples, 0, sizeof(Vertex*) * 3); }
+        // SurfaceVertex surfaceVertex;
         unsigned short cubeIndex;
-        std::vector<unsigned short> edgeIndices;
+        unsigned int vertexIndex;
     };
 
     class GridNode : public Node
@@ -219,21 +225,24 @@ protected:
         GridNode(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF);
         ~GridNode();
 
+        Area m_Area;        // remove me!
+
         bool m_Signs[LEAF_SIZE_3D];
+
+        std::vector<SurfaceEdge> m_SurfaceEdges;
 
         std::vector<SurfaceCube> m_SurfaceCubes;
 
-        std::vector<SurfaceEdge> m_InnerSurfaceEdges;
-        std::vector<SurfaceEdge> m_FaceSurfaceEdges[3];
-        std::vector<SurfaceEdge> m_EdgeSurfaceEdges[3];
+        // stores (offset, neighbor)
+        std::vector<std::pair<Vector3i, GridNode*> > m_CachedNeighbors;
 
         virtual void forEachSurfaceNode(const Area& area, const std::function<void(GridNode*, const Area&)>& function) override;
         virtual void forEachSurfaceNode(const std::function<void(GridNode*)>& function) override;
 
         void computeSigns(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF);
         void computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF);
-        void computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, const bool ignoreEdges[3][LEAF_SIZE_3D]);
-        void computeCubes();
+
+        void cacheNeighbor(const Vector3i& offset, GridNode* other);
 
         virtual void countNodes(int& counter) const override { counter++; }
 

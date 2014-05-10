@@ -21,7 +21,12 @@
 class TLT
 {
 private:
-	unsigned char boolsToByte(bool *bools)
+    static bool nBit(unsigned char c, unsigned char n)
+    {
+        return (c & (1 << n)) >> n;
+    }
+
+    static unsigned char boolsToByte(bool *bools)
 	{
 		unsigned char byte = 0;
 		for (unsigned int i = 0; i < 8; i++)
@@ -106,9 +111,16 @@ public:
 		DirectedEdge(unsigned char minCornerIndex, unsigned char direction) : minCornerIndex(minCornerIndex), direction(direction) {}
 		unsigned char minCornerIndex;
 		unsigned char direction;
+
+        unsigned char getCorner2Index()
+        {
+            return minCornerIndex | (1 << (2 - direction));
+        }
 	};
 
 	DirectedEdge directedEdges[12];
+
+    std::vector<DirectedEdge> cubeConfigToEdges[256];
 
 	TLT()
 	{
@@ -262,6 +274,15 @@ public:
 				indexTable[i].push_back(tri);
 			}
 		}
+
+        for (int c = 0; c < 256; c++)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                if (nBit(c, directedEdges[i].minCornerIndex) != nBit(c, directedEdges[i].getCorner2Index()))
+                    cubeConfigToEdges[c].push_back(directedEdges[i]);
+            }
+        }
 	}
 
 	friend std::ostream& operator<< (std::ostream &out, TLT &tlt) {

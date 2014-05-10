@@ -58,7 +58,7 @@ void MainGLWindow::loadMesh(const QString& fileName)
 {
     std::shared_ptr<Mesh> mesh = SDFManager::loadObjMesh(fileName.toLocal8Bit().constData());
     TriangleMeshSDF_Robust meshSDF(std::make_shared<TransformedMesh>(mesh));
-    auto octree = OctreeSF::sampleSDF(&meshSDF, 9);
+    auto octree = OctreeSF::sampleSDF(&meshSDF, 7);
     m_Mesh = std::make_shared<GLMesh>(octree);
     m_CollisionGeometry.clearMeshes();
     m_CollisionGeometry.addMesh(std::make_shared<TransformedMesh>(m_Mesh->getMesh()));
@@ -207,7 +207,8 @@ void MainGLWindow::render()
     GLManager::getSingleton().getGLFunctions()->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     GLManager::getSingleton().getSolidLightingProgram()->bind();
     m_Camera.updateUniforms(GLManager::getSingleton().getSolidLightingProgram());
-    m_Mesh->render();
+    if (m_Mesh)
+        m_Mesh->render();
 }
 
 void MainGLWindow::resizeEvent(QResizeEvent* event)
