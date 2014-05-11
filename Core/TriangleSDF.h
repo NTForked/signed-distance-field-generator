@@ -45,7 +45,7 @@ public:
 	bool intersectsSurface(const AABB& aabb) const override
 	{
 		AABB epsilonAABB = aabb;
-		// epsilonAABB.addEpsilon(0.0001f);
+        // epsilonAABB.addEpsilon(0.001f);
 		return m_RootNode.getBVH()->intersectsAABB(epsilonAABB);
 	}
 

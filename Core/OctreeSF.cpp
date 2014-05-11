@@ -312,7 +312,6 @@ void OctreeSF::GridNode::generateVertices(vector<Vertex>& vertices)
                 if (corners && corners != 255)
                 {
                     const std::vector<TLT::DirectedEdge>& edges = TLT::getSingleton().cubeConfigToEdges[corners];
-                    vAssert(edges.size() > 0);
                     // todo: proper vertex placement using QEF
                     m_SurfaceCubes.emplace_back(index);
                     m_SurfaceCubes.back().vertexIndex = vertices.size();
@@ -359,13 +358,12 @@ bool OctreeSF::GridNode::rayIntersectUpdate(const Area& area, const Ray& ray, Ra
 void OctreeSF::GridNode::generateIndices(const Area& area, vector<unsigned int>& indices, vector<Vertex>&) const
 {
     unsigned int vertexIndices[LEAF_SIZE_3D];
-    int undefined = std::numeric_limits<unsigned int>::max();
+    unsigned int undefined = std::numeric_limits<unsigned int>::max();
     memset(vertexIndices, undefined, LEAF_SIZE_3D * sizeof(unsigned int));
     for (auto i = m_SurfaceCubes.begin(); i != m_SurfaceCubes.end(); ++i)
     {
         vertexIndices[i->cubeIndex] = i->vertexIndex;
     }
-    vAssert(m_CachedNeighbors.size() <= 6);
 
     for (auto i = m_CachedNeighbors.begin(); i != m_CachedNeighbors.end(); ++i)
     {
@@ -393,13 +391,12 @@ void OctreeSF::GridNode::generateIndices(const Area& area, vector<unsigned int>&
             int v1 = vertexIndices[i->getNeighborCube(1)];
             int v2 = vertexIndices[i->getNeighborCube(2)];
             int v3 = vertexIndices[i->getNeighborCube(3)];
-            // if (v0 == undefined || v1 == undefined || v2 == undefined || v3 == undefined)
-            //    continue;
-            // std::cout << fromIndex(i->getNeighborCube(0)) << std::endl;
-            vAssert(v0 != undefined);
-            vAssert(v1 != undefined);
-            vAssert(v2 != undefined);
-            vAssert(v3 != undefined);
+            if (v0 == undefined || v1 == undefined || v2 == undefined || v3 == undefined)
+            {
+                std::cout << "[OctreeSF::generateIndices] Could not find required neighbor!" << std::endl;
+                continue;
+            }
+            vAssert(m_Signs[i->edgeIndex1] != m_Signs[i->edgeIndex2]);
             if (m_Signs[i->edgeIndex1])
             {
                 indices.push_back(v0);
@@ -849,9 +846,10 @@ void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsig
     int numLeaves = countLeaves();
     vertices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 2);	// reasonable upper bound
     m_RootNode->forEachSurfaceNode([&vertices](GridNode* node) { node->generateVertices(vertices); });
+    Profiler::printJobDuration("generateVertices", tsTotal);
     std::cout << "Generated " << vertices.size() << " vertices." << std::endl;
-    // Profiler::printJobDuration("generateVertices", tsTotal);
 
+    auto tsFaceTraversal = Profiler::timestamp();
     m_RootNode->forEachSurfaceFaceAndEdge(
     [](const Node::Face& face) {
         Vector3i offset(0, 0, 0);
@@ -861,6 +859,7 @@ void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsig
         Vector3i offset(1, 1, 1);
         offset[edge.direction] = 0;
         edge.n1->cacheNeighbor(offset, edge.n2); });
+    Profiler::printJobDuration("forEachSurfaceFaceAndEdge", tsFaceTraversal);
 
     // auto tsIndices = Profiler::timestamp();
     indices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 8);
