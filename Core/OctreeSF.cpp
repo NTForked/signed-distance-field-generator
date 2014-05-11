@@ -327,7 +327,63 @@ void OctreeSF::GridNode::countMemory(int& memoryCounter) const
     memoryCounter += (int)m_SurfaceEdges.capacity() * sizeof(SurfaceEdge);
 }
 
-void OctreeSF::GridNode::generateVertices(vector<Vertex>& vertices)
+void OctreeSF::GridNode::generateVerticesMC(vector<Vertex>& vertices)
+{
+}
+
+void OctreeSF::GridNode::generateIndicesMC(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const
+{
+    const SurfaceEdge* surfaceEdgeMaps[3][LEAF_SIZE_3D];
+    for (auto i = m_SurfaceEdges.begin(); i != m_SurfaceEdges.end(); ++i)
+    {
+        surfaceEdgeMaps[i->direction][i->edgeIndex1] = &(*i);
+    }
+
+    int index = 0;
+    for (int x = 0; x < LEAF_SIZE_1D_INNER; x++)
+    {
+        for (int y = 0; y < LEAF_SIZE_1D_INNER; y++)
+        {
+            for (int z = 0; z < LEAF_SIZE_1D_INNER; z++)
+            {
+                unsigned char corners = getCubeBitMask(index, m_Signs);
+                if (corners && corners != 255)
+                {
+                    const std::vector<Triangle<int> >& tris = TLT::getSingleton().indexTable[corners];
+                    for (auto i2 = tris.begin(); i2 != tris.end(); ++i2)
+                    {
+                        const TLT::DirectedEdge& p1 = TLT::getSingleton().directedEdges[i2->p1];
+                        const TLT::DirectedEdge& p2 = TLT::getSingleton().directedEdges[i2->p2];
+                        const TLT::DirectedEdge& p3 = TLT::getSingleton().directedEdges[i2->p3];
+                        const SurfaceEdge* vert = surfaceEdgeMaps[p1.direction][index
+                                + (p1.minCornerIndex & 1)
+                                + ((p1.minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
+                                + ((p1.minCornerIndex & 4) >> 2) * LEAF_SIZE_2D];
+                        indices.push_back((int)vertices.size());
+                        vertices.push_back(vert->vertex);
+                        vert = surfaceEdgeMaps[p2.direction][index
+                                + (p2.minCornerIndex & 1)
+                                + ((p2.minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
+                                + ((p2.minCornerIndex & 4) >> 2) * LEAF_SIZE_2D];
+                        indices.push_back((int)vertices.size());
+                        vertices.push_back(vert->vertex);
+                        vert = surfaceEdgeMaps[p3.direction][index
+                                + (p3.minCornerIndex & 1)
+                                + ((p3.minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
+                                + ((p3.minCornerIndex & 4) >> 2) * LEAF_SIZE_2D];
+                        indices.push_back((int)vertices.size());
+                        vertices.push_back(vert->vertex);
+                    }
+                }
+                index++;
+            }
+            index++;
+        }
+        index += LEAF_SIZE_1D;
+    }
+}
+
+void OctreeSF::GridNode::generateVerticesDC(vector<Vertex>& vertices)
 {
     m_CachedNeighbors.clear();
     m_SurfaceCubes.clear();
@@ -379,8 +435,8 @@ bool OctreeSF::GridNode::rayIntersectUpdate(const Area& area, const Ray& ray, Ra
 {
     if (!ray.intersectAABB(&area.toAABB().min, 0, intersection.t)) return false;
     std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
-    generateVertices(mesh->vertexBuffer);
-    generateIndices(area, mesh->indexBuffer, mesh->vertexBuffer);
+    // generateVerticesDC(mesh->vertexBuffer);
+    generateIndicesMC(area, mesh->indexBuffer, mesh->vertexBuffer);
     mesh->computeTriangleNormals();
     std::shared_ptr<TransformedMesh> transformedMesh = std::make_shared<TransformedMesh>(mesh);
     transformedMesh->computeCache();
@@ -391,7 +447,7 @@ bool OctreeSF::GridNode::rayIntersectUpdate(const Area& area, const Ray& ray, Ra
 }
 
 #include "TriangleLookupTable.h"
-void OctreeSF::GridNode::generateIndices(const Area& area, vector<unsigned int>& indices, vector<Vertex>&) const
+void OctreeSF::GridNode::generateIndicesDC(const Area& area, vector<unsigned int>& indices, vector<Vertex>&) const
 {
     unsigned int vertexIndices[LEAF_SIZE_3D];
     unsigned int undefined = std::numeric_limits<unsigned int>::max();
@@ -881,13 +937,13 @@ void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsig
     auto tsTotal = Profiler::timestamp();
     int numLeaves = countLeaves();
     vertices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 2);	// reasonable upper bound
-    m_RootNode->forEachSurfaceNode([&vertices](GridNode* node) { node->generateVertices(vertices); });
+    m_RootNode->forEachSurfaceNode([&vertices](GridNode* node) { node->generateVerticesDC(vertices); });
     Profiler::printJobDuration("generateVertices", tsTotal);
     std::cout << "Generated " << vertices.size() << " vertices." << std::endl;
 
     auto tsFaceTraversal = Profiler::timestamp();
     m_RootNode->forEachSurfaceFaceAndEdge(
-    [](const Node::Face& face) {
+                [](const Node::Face& face) {
         Vector3i offset(0, 0, 0);
         offset[face.normalDirection] = 1;
         face.n1->cacheNeighbor(offset, face.n2); },
@@ -900,7 +956,7 @@ void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsig
     // auto tsIndices = Profiler::timestamp();
     indices.reserve(numLeaves * LEAF_SIZE_2D_INNER * 8);
     m_RootNode->forEachSurfaceNode(m_RootArea,
-                                   [&indices, &vertices](GridNode* node, const Area& area) { node->generateIndices(area, indices, vertices); });
+                                   [&indices, &vertices](GridNode* node, const Area& area) { node->generateIndicesDC(area, indices, vertices); });
     // Profiler::printJobDuration("generateIndices", tsIndices);
     Profiler::printJobDuration("generateVerticesAndIndices", tsTotal);
 }

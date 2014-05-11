@@ -249,8 +249,11 @@ protected:
 
         virtual void countMemory(int& memoryCounter) const override;
 
-        virtual void generateVertices(vector<Vertex>& vertices);
-        virtual void generateIndices(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const;
+        void generateVerticesDC(vector<Vertex>& vertices);
+        void generateIndicesDC(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const;
+
+        void generateVerticesMC(vector<Vertex>& vertices);
+        void generateIndicesMC(const Area& area, vector<unsigned int>& indices, vector<Vertex>& vertices) const;
 
         virtual Node* clone() const override;
 
