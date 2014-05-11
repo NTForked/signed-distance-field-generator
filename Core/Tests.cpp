@@ -21,7 +21,7 @@
 #include "FractalNoisePlaneSDF.h"
 #include "Sphere.h"
 #include "FracturePattern.h"
-#include "AABBSDF.h"
+#include "AABBGeometry.h"
 #include "OctreeSF.h"
 #include "VoronoiFragments.h"
 
@@ -102,7 +102,7 @@ void testVector3iHashGridPerformance()
 
 void testVoronoiFragments()
 {
-	SphereSDF meshSDF(Ogre::Vector3(0, 0, 0), 0.3f);
+	SphereGeometry meshSDF(Ogre::Vector3(0, 0, 0), 0.3f);
 	VoronoiFragments fragments(VoronoiFragments::generateFragmentPointsUniform(AABB(Ogre::Vector3(-0.3f, -0.3f, -0.3f), Ogre::Vector3(0.3f, 0.3f, 0.3f)), 100));
 	fragments.setFragment(1);
 	auto octree = OctreeSF::sampleSDF(&meshSDF, 7);
@@ -132,15 +132,15 @@ void testMeshImport()
 
 void testSphere()
 {
-	SphereSDF sdf(Ogre::Vector3(0, 0, 0), 1.0f);
+	SphereGeometry sdf(Ogre::Vector3(0, 0, 0), 1.0f);
 	auto octreeSDF = OctreeSF::sampleSDF(&sdf, 8);
 	std::cout << "Num leaves: " << octreeSDF->countLeaves() << std::endl;
-	// SDFManager::exportSampledSDFAsMesh("SphereSDF", octreeSDF);
+	SDFManager::exportSampledSDFAsMesh("SphereGeometry", octreeSDF);
 }
 
 void testCubeSplit()
 {
-	AABBSDF sdf(Ogre::Vector3(-0.5f, -0.5f, -0.5f), Ogre::Vector3(0.5f, 0.5f, 0.5f));
+	AABBGeometry sdf(Ogre::Vector3(-0.5f, -0.5f, -0.5f), Ogre::Vector3(0.5f, 0.5f, 0.5f));
 	auto timestamp = Profiler::timestamp();
 	auto octreeSDF = OctreeSDF::sampleSDF(&sdf, 8);
 	Profiler::printJobDuration("Cube creation", timestamp);

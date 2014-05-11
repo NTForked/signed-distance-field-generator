@@ -241,6 +241,7 @@ protected:
 
         void computeSigns(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF);
         void computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF);
+        void computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, bool ignoreEdges[3][LEAF_SIZE_3D]);
 
         void cacheNeighbor(const Vector3i& offset, GridNode* other);
 

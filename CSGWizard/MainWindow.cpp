@@ -42,9 +42,10 @@ MainWindow::MainWindow(QWidget *parent) :
 void MainWindow::openLoadMeshDialog()
 {
     QString fileName = QFileDialog::getOpenFileName(this, "Open File",
-                                                     "",
-                                                     "Meshes (*.obj)");
-    m_MainGLWidget->loadMesh(fileName);
+                                                    "",
+                                                    "Meshes (*.obj)");
+    if (fileName != "")
+        m_MainGLWidget->loadMesh(fileName);
 
 }
 

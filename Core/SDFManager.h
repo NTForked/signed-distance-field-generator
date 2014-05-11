@@ -22,8 +22,19 @@ public:
 		std::cout << "Loading mesh " + filename + "..." << std::endl;
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
 		std::ifstream file(filename, std::ifstream::in);
+        if (!file)
+        {
+            std::cout << "Could not find file." << std::endl;
+            return mesh;
+        }
 		std::vector<Ogre::Vector3> vertexPositions, vertexNormals;
-		OBJReader::readObjFile(file, vertexPositions, vertexNormals, mesh->indexBuffer);
+        if (filename.find(".obj") == filename.size() - 4)
+            OBJReader::readObjFile(file, vertexPositions, vertexNormals, mesh->indexBuffer);
+        else
+        {
+            std::cout << "Unkown file format." << std::endl;
+            return mesh;
+        }
 		std::cout << filename << " has " << vertexPositions.size() << " vertices and " << mesh->indexBuffer.size() / 3 << " triangles." << std::endl;
 		if (vertexPositions.size() == vertexNormals.size())
 		{

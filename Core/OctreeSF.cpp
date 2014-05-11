@@ -235,6 +235,42 @@ void OctreeSF::GridNode::computeSigns(OctreeSF* tree, const Area& area, const So
     }
 }
 
+void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF, bool ignoreEdges[3][LEAF_SIZE_3D])
+{
+    float stepSize = tree->m_CellSize;
+    int index = 0;
+    m_SurfaceEdges.reserve(LEAF_SIZE_2D);
+    for (int x = 0; x < LEAF_SIZE_1D; x++)
+    {
+        for (int y = 0; y < LEAF_SIZE_1D; y++)
+        {
+            for (int z = 0; z < LEAF_SIZE_1D; z++)
+            {
+                Vector3i iPos(x, y, z);
+                if (x < LEAF_SIZE_1D_INNER && !ignoreEdges[0][index] && m_Signs[index] != m_Signs[index + LEAF_SIZE_2D])
+                {
+                    Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + iPos);
+                    m_SurfaceEdges.emplace_back();
+                    m_SurfaceEdges.back().init(iPos, 0, currentPos, stepSize, implicitSDF);
+                }
+                if (y < LEAF_SIZE_1D_INNER && !ignoreEdges[1][index] && m_Signs[index] != m_Signs[index + LEAF_SIZE_1D])
+                {
+                    Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + iPos);
+                    m_SurfaceEdges.emplace_back();
+                    m_SurfaceEdges.back().init(iPos, 1, currentPos, stepSize, implicitSDF);
+                }
+                if (z < LEAF_SIZE_1D_INNER && !ignoreEdges[2][index] && m_Signs[index] != m_Signs[index + 1])
+                {
+                    Ogre::Vector3 currentPos = tree->getRealPos(area.m_MinPos + iPos);
+                    m_SurfaceEdges.emplace_back();
+                    m_SurfaceEdges.back().init(iPos, 2, currentPos, stepSize, implicitSDF);
+                }
+                index++;
+            }
+        }
+    }
+}
+
 void OctreeSF::GridNode::computeEdges(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF)
 {
     float stepSize = tree->m_CellSize;
@@ -442,7 +478,7 @@ unsigned char OctreeSF::GridNode::getCubeBitMask(int index, const bool* signsArr
 
 void OctreeSF::GridNode::merge(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF)
 {
-    /*float cellSize = tree->m_CellSize;
+    float cellSize = tree->m_CellSize;
     GridNode otherNode;
     otherNode.computeSigns(tree, area, implicitSDF);
     for (int i = 0; i < LEAF_SIZE_3D; i++)
@@ -473,26 +509,26 @@ void OctreeSF::GridNode::merge(OctreeSF* tree, const Area& area, const SolidGeom
                 Sample s;
                 implicitSDF.getSample(globalPos, s);
                 Ogre::Vector3 newDiff = s.closestSurfacePos - insidePos;
-                Ogre::Vector3 oldDiff = i->surfaceVertex->vertex.position - insidePos;
+                Ogre::Vector3 oldDiff = i->vertex.position - insidePos;
                 for (int j = 0; j < 3; j++)
                 {
                     if (newDiff[j] * newDiff[j] > oldDiff[j] * oldDiff[j])
                     {
-                        i->surfaceVertex->vertex.position[j] = s.closestSurfacePos[j];
-                        i->surfaceVertex->vertex.normal[j] = s.normal[j];
+                        i->vertex.position[j] = s.closestSurfacePos[j];
+                        i->vertex.normal[j] = s.normal[j];
                     }
                 }
-                i->surfaceVertex->vertex.normal.normalise();
+                i->vertex.normal.normalise();
             }
         }
     }
-    computeEdges(tree, area, implicitSDF, addedEdges);*/
+    computeEdges(tree, area, implicitSDF, addedEdges);
 }
 
 void OctreeSF::GridNode::intersect(OctreeSF* tree, const Area& area, const SolidGeometry& implicitSDF)
 {
     // auto ts = Profiler::timestamp();
-    /*float cellSize = tree->m_CellSize;
+    float cellSize = tree->m_CellSize;
     GridNode otherNode;
     otherNode.computeSigns(tree, area, implicitSDF);
     for (int i = 0; i < LEAF_SIZE_3D; i++)
@@ -526,20 +562,20 @@ void OctreeSF::GridNode::intersect(OctreeSF* tree, const Area& area, const Solid
                 globalPos[i->direction] += cellSize * 0.5f;
                 implicitSDF.getSample(globalPos, s);
                 Ogre::Vector3 newDiff = s.closestSurfacePos - insidePos;
-                Ogre::Vector3 oldDiff = i->surfaceVertex->vertex.position - insidePos;
+                Ogre::Vector3 oldDiff = i->vertex.position - insidePos;
                 for (int j = 0; j < 3; j++)
                 {
                     if (newDiff[j] * newDiff[j] < oldDiff[j] * oldDiff[j])
                     {
-                        i->surfaceVertex->vertex.position[j] = s.closestSurfacePos[j];
-                        i->surfaceVertex->vertex.normal[j] = s.normal[j];
+                        i->vertex.position[j] = s.closestSurfacePos[j];
+                        i->vertex.normal[j] = s.normal[j];
                     }
                 }
-                i->surfaceVertex->vertex.normal.normalise();
+                i->vertex.normal.normalise();
             }
         }
     }
-    computeEdges(tree, area, implicitSDF, addedEdges);*/
+    computeEdges(tree, area, implicitSDF, addedEdges);
     // Profiler::getSingleton().accumulateJobDuration("GridNode::intersect", ts);
 }
 
