@@ -406,18 +406,33 @@ void OctreeSF::GridNode::generateVerticesDC(vector<Vertex>& vertices)
                     const std::vector<TLT::DirectedEdge>& edges = TLT::getSingleton().cubeConfigToEdges[corners];
                     // todo: proper vertex placement using QEF
                     m_SurfaceCubes.emplace_back(index);
-                    m_SurfaceCubes.back().vertexIndex = vertices.size();
+                    m_SurfaceCubes.back().vertexIndex[0] = vertices.size();
                     vertices.emplace_back();
-                    vertices.back().position = Ogre::Vector3(0, 0, 0);
+                    Ogre::Vector3 centerOfMass = Ogre::Vector3(0, 0, 0);
                     for (auto i = edges.begin(); i != edges.end(); i++)
                     {
                         const SurfaceEdge* edge = surfaceEdgeMaps[i->direction][index
                                 + (i->minCornerIndex & 1)
                                 + ((i->minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
                                 + ((i->minCornerIndex & 4) >> 2) * LEAF_SIZE_2D];
-                        vertices.back().position += edge->vertex.position;
+                        centerOfMass += edge->vertex.position;
                     }
-                    vertices.back().position /= (float)edges.size();
+                    centerOfMass /= (float)edges.size();
+                    vertices.back().position = centerOfMass;
+
+                    const static int numIterations = 2;
+                    for (int i = 0; i < numIterations; i++)
+                    {
+                        for (auto i = edges.begin(); i != edges.end(); i++)
+                        {
+                            const SurfaceEdge* edge = surfaceEdgeMaps[i->direction][index
+                                    + (i->minCornerIndex & 1)
+                                    + ((i->minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
+                                    + ((i->minCornerIndex & 4) >> 2) * LEAF_SIZE_2D];
+                            float dist = edge->vertex.normal.dotProduct(edge->vertex.position - vertices.back().position);
+                            vertices.back().position += dist * 0.5f * edge->vertex.normal;
+                        }
+                    }
                 }
             }
         }
@@ -449,12 +464,11 @@ bool OctreeSF::GridNode::rayIntersectUpdate(const Area& area, const Ray& ray, Ra
 #include "TriangleLookupTable.h"
 void OctreeSF::GridNode::generateIndicesDC(const Area& area, vector<unsigned int>& indices, vector<Vertex>&) const
 {
-    unsigned int vertexIndices[LEAF_SIZE_3D];
-    unsigned int undefined = std::numeric_limits<unsigned int>::max();
-    memset(vertexIndices, undefined, LEAF_SIZE_3D * sizeof(unsigned int));
+    const SurfaceCube* cubes[LEAF_SIZE_3D];
+    memset((void*)cubes, 0, LEAF_SIZE_3D * sizeof(SurfaceCube*));
     for (auto i = m_SurfaceCubes.begin(); i != m_SurfaceCubes.end(); ++i)
     {
-        vertexIndices[i->cubeIndex] = i->vertexIndex;
+        cubes[i->cubeIndex] = &(*i);
     }
 
     for (auto i = m_CachedNeighbors.begin(); i != m_CachedNeighbors.end(); ++i)
@@ -467,11 +481,10 @@ void OctreeSF::GridNode::generateIndicesDC(const Area& area, vector<unsigned int
             {
                 int index = indexOf(iPos);
                 // std::cout << "Adding " << iPos << std::endl;
-                vertexIndices[index] = i2->vertexIndex;
+                cubes[index] = &(*i2);
             }
         }
     }
-
     for (auto i = m_SurfaceEdges.begin(); i != m_SurfaceEdges.end(); ++i)
     {
         int dir1 = (i->direction + 1) % 3;
@@ -479,11 +492,11 @@ void OctreeSF::GridNode::generateIndicesDC(const Area& area, vector<unsigned int
         Vector3i minPos = fromIndex(i->edgeIndex1);
         if (minPos[dir1] > 0 && minPos[dir2] > 0)
         {
-            int v0 = vertexIndices[i->getNeighborCube(0)];
-            int v1 = vertexIndices[i->getNeighborCube(1)];
-            int v2 = vertexIndices[i->getNeighborCube(2)];
-            int v3 = vertexIndices[i->getNeighborCube(3)];
-            if (v0 == undefined || v1 == undefined || v2 == undefined || v3 == undefined)
+            const SurfaceCube* v0 = cubes[i->getNeighborCube(0)];
+            const SurfaceCube* v1 = cubes[i->getNeighborCube(1)];
+            const SurfaceCube* v2 = cubes[i->getNeighborCube(2)];
+            const SurfaceCube* v3 = cubes[i->getNeighborCube(3)];
+            if (v0 == nullptr || v1 == nullptr || v2 == nullptr || v3 == nullptr)
             {
                 std::cout << "[OctreeSF::generateIndices] Could not find required neighbor!" << std::endl;
                 continue;
@@ -491,21 +504,21 @@ void OctreeSF::GridNode::generateIndicesDC(const Area& area, vector<unsigned int
             vAssert(m_Signs[i->edgeIndex1] != m_Signs[i->edgeIndex2]);
             if (m_Signs[i->edgeIndex1])
             {
-                indices.push_back(v0);
-                indices.push_back(v1);
-                indices.push_back(v3);
-                indices.push_back(v3);
-                indices.push_back(v2);
-                indices.push_back(v0);
+                indices.push_back(v0->vertexIndex[0]);
+                indices.push_back(v1->vertexIndex[0]);
+                indices.push_back(v3->vertexIndex[0]);
+                indices.push_back(v3->vertexIndex[0]);
+                indices.push_back(v2->vertexIndex[0]);
+                indices.push_back(v0->vertexIndex[0]);
             }
             else
             {
-                indices.push_back(v0);
-                indices.push_back(v2);
-                indices.push_back(v3);
-                indices.push_back(v3);
-                indices.push_back(v1);
-                indices.push_back(v0);
+                indices.push_back(v0->vertexIndex[0]);
+                indices.push_back(v2->vertexIndex[0]);
+                indices.push_back(v3->vertexIndex[0]);
+                indices.push_back(v3->vertexIndex[0]);
+                indices.push_back(v1->vertexIndex[0]);
+                indices.push_back(v0->vertexIndex[0]);
             }
         }
     }
@@ -566,7 +579,12 @@ void OctreeSF::GridNode::merge(OctreeSF* tree, const Area& area, const SolidGeom
                 implicitSDF.getSample(globalPos, s);
                 Ogre::Vector3 newDiff = s.closestSurfacePos - insidePos;
                 Ogre::Vector3 oldDiff = i->vertex.position - insidePos;
-                for (int j = 0; j < 3; j++)
+                if (newDiff.squaredLength() > oldDiff.squaredLength())
+                {
+                    i->vertex.position = s.closestSurfacePos;
+                    i->vertex.normal = s.normal;
+                }
+                /*for (int j = 0; j < 3; j++)
                 {
                     if (newDiff[j] * newDiff[j] > oldDiff[j] * oldDiff[j])
                     {
@@ -574,7 +592,7 @@ void OctreeSF::GridNode::merge(OctreeSF* tree, const Area& area, const SolidGeom
                         i->vertex.normal[j] = s.normal[j];
                     }
                 }
-                i->vertex.normal.normalise();
+                i->vertex.normal.normalise();*/
             }
         }
     }
@@ -619,7 +637,12 @@ void OctreeSF::GridNode::intersect(OctreeSF* tree, const Area& area, const Solid
                 implicitSDF.getSample(globalPos, s);
                 Ogre::Vector3 newDiff = s.closestSurfacePos - insidePos;
                 Ogre::Vector3 oldDiff = i->vertex.position - insidePos;
-                for (int j = 0; j < 3; j++)
+                if (newDiff.squaredLength() < oldDiff.squaredLength())
+                {
+                    i->vertex.position = s.closestSurfacePos;
+                    i->vertex.normal = s.normal;
+                }
+                /*for (int j = 0; j < 3; j++)
                 {
                     if (newDiff[j] * newDiff[j] < oldDiff[j] * oldDiff[j])
                     {
@@ -627,7 +650,7 @@ void OctreeSF::GridNode::intersect(OctreeSF* tree, const Area& area, const Solid
                         i->vertex.normal[j] = s.normal[j];
                     }
                 }
-                i->vertex.normal.normalise();
+                i->vertex.normal.normalise();*/
             }
         }
     }

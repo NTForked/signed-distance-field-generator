@@ -199,7 +199,7 @@ protected:
         unsigned short edgeIndex2;
         unsigned char direction;
 
-        unsigned short getNeighborCube(unsigned char neighborIndex) const
+        inline unsigned short getNeighborCube(unsigned char neighborIndex) const
         {
             static const int EDGE_OFFSETS[] = { LEAF_SIZE_2D, LEAF_SIZE_1D, 1 };
             unsigned short cubeIndex = edgeIndex1;
@@ -215,7 +215,7 @@ protected:
         SurfaceCube(unsigned short cubeIndex) : cubeIndex(cubeIndex) {}// memset(edgeSamples, 0, sizeof(Vertex*) * 3); }
         // SurfaceVertex surfaceVertex;
         unsigned short cubeIndex;
-        unsigned int vertexIndex;
+        unsigned int vertexIndex[4];
     };
 
     class GridNode : public Node
