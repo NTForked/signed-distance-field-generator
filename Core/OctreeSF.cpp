@@ -385,6 +385,7 @@ void OctreeSF::GridNode::generateIndicesMC(const Area& area, vector<unsigned int
 
 void OctreeSF::GridNode::generateVerticesDC(vector<Vertex>& vertices)
 {
+    // float cubeSize = m_Area.m_RealSize / LEAF_SIZE_1D_INNER;
     m_CachedNeighbors.clear();
     m_SurfaceCubes.clear();
     m_SurfaceCubes.reserve(LEAF_SIZE_2D);
@@ -409,6 +410,7 @@ void OctreeSF::GridNode::generateVerticesDC(vector<Vertex>& vertices)
                     m_SurfaceCubes.back().vertexIndex[0] = vertices.size();
                     vertices.emplace_back();
                     Ogre::Vector3 centerOfMass = Ogre::Vector3(0, 0, 0);
+                    vertices.back().normal = Ogre::Vector3(0, 0, 0);
                     for (auto i = edges.begin(); i != edges.end(); i++)
                     {
                         const SurfaceEdge* edge = surfaceEdgeMaps[i->direction][index
@@ -416,13 +418,16 @@ void OctreeSF::GridNode::generateVerticesDC(vector<Vertex>& vertices)
                                 + ((i->minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
                                 + ((i->minCornerIndex & 4) >> 2) * LEAF_SIZE_2D];
                         centerOfMass += edge->vertex.position;
+                        vertices.back().normal += edge->vertex.normal;
                     }
+                    vertices.back().normal.normalise();
                     centerOfMass /= (float)edges.size();
                     vertices.back().position = centerOfMass;
 
-                    const static int numIterations = 2;
+                    const static int numIterations = 1;
                     for (int i = 0; i < numIterations; i++)
                     {
+                        // vertices.back().position = (vertices.back().position + centerOfMass) * 0.5f;
                         for (auto i = edges.begin(); i != edges.end(); i++)
                         {
                             const SurfaceEdge* edge = surfaceEdgeMaps[i->direction][index
@@ -981,6 +986,7 @@ void OctreeSF::generateVerticesAndIndices(vector<Vertex>& vertices, vector<unsig
     m_RootNode->forEachSurfaceNode(m_RootArea,
                                    [&indices, &vertices](GridNode* node, const Area& area) { node->generateIndicesDC(area, indices, vertices); });
     // Profiler::printJobDuration("generateIndices", tsIndices);
+    std::cout << "Generated " << indices.size() << " indices." << std::endl;
     Profiler::printJobDuration("generateVerticesAndIndices", tsTotal);
 }
 
@@ -989,8 +995,8 @@ std::shared_ptr<Mesh> OctreeSF::generateMesh()
     auto ts = Profiler::timestamp();
     std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
     generateVerticesAndIndices(mesh->vertexBuffer, mesh->indexBuffer);
-    mesh->computeTriangleNormals();
-    mesh->computeVertexNormals();
+    // mesh->computeTriangleNormals();
+    // mesh->computeVertexNormals();
     Profiler::printJobDuration("generateMesh", ts);
     return mesh;
 }
