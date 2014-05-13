@@ -150,26 +150,6 @@ public:
 		return (tMax > 0.0f);
 	}
 
-	/// Tests the ray against intersection with a triangle given by three points.
-    inline bool intersectTriangleLame(Intersection &intersection, const TriangleCached& triData) const
-	{
-		if (triData.normal.dotProduct(this->direction) >= 0)
-			return false;
-		Ogre::Matrix3 system(	triData.p2.x-triData.p1.x, triData.p3.x-triData.p1.x, -this->direction.x,
-								triData.p2.y-triData.p1.y, triData.p3.y-triData.p1.y, -this->direction.y,
-								triData.p2.z-triData.p1.z, triData.p3.z-triData.p1.z, -this->direction.z);
-		Ogre::Matrix3 inverse;
-		if (!system.Inverse(inverse, 0)) return false;
-		Ogre::Vector3 &barycentricCoords = intersection.userData[0];
-        Ogre::Vector3 solution = inverse*(this->origin-triData.p1);
-		if (solution.z <= 0.0f) return false;
-		barycentricCoords.x = solution.x;
-		barycentricCoords.y = solution.y;
-		barycentricCoords.z = 1.0f-barycentricCoords.x-barycentricCoords.y;
-		intersection.t = solution.z;
-		return (barycentricCoords.x >= 0) && (barycentricCoords.y >= 0) && (barycentricCoords.z >= 0);
-    }
-
 	/// Tests the ray against intersection with a triangle.
     inline bool intersectTriangle(Intersection &intersection, const TriangleCached& triData) const
 	{

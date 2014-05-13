@@ -92,6 +92,24 @@ struct MathMisc
 		return squaredDist;
     }
 
+    inline static void projectPointOnAABB(const Ogre::Vector3& aabbMin, const Ogre::Vector3& aabbMax, Ogre::Vector3& point)
+    {
+        if (point.x < aabbMin.x)
+            point.x = aabbMin.x;
+        else if (point.x > aabbMax.x)
+            point.x = aabbMax.x;
+
+        if (point.y < aabbMin.y)
+            point.y = aabbMin.y;
+        else if (point.y > aabbMax.y)
+            point.y = aabbMax.y;
+
+        if (point.z < aabbMin.z)
+            point.z = aabbMin.z;
+        else if (point.z > aabbMax.z)
+            point.z = aabbMax.z;
+    }
+
 	template<class T>
 	static __forceinline T square(const T& val)
 	{

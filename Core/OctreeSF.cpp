@@ -385,7 +385,7 @@ void OctreeSF::GridNode::generateIndicesMC(const Area& area, vector<unsigned int
 
 void OctreeSF::GridNode::generateVerticesDC(vector<Vertex>& vertices)
 {
-    // float cubeSize = m_Area.m_RealSize / LEAF_SIZE_1D_INNER;
+    float cubeSize = m_Area.m_RealSize / LEAF_SIZE_1D_INNER;
     m_CachedNeighbors.clear();
     m_SurfaceCubes.clear();
     m_SurfaceCubes.reserve(LEAF_SIZE_2D);
@@ -409,6 +409,8 @@ void OctreeSF::GridNode::generateVerticesDC(vector<Vertex>& vertices)
                     m_SurfaceCubes.emplace_back(index);
                     m_SurfaceCubes.back().vertexIndex[0] = vertices.size();
                     vertices.emplace_back();
+                    Ogre::Vector3 cellMin = m_Area.m_MinRealPos + Ogre::Vector3(x, y, z) * cubeSize;
+                    Ogre::Vector3 cellMax = cellMin + Ogre::Vector3(cubeSize, cubeSize, cubeSize);
                     Ogre::Vector3 centerOfMass = Ogre::Vector3(0, 0, 0);
                     vertices.back().normal = Ogre::Vector3(0, 0, 0);
                     for (auto i = edges.begin(); i != edges.end(); i++)
@@ -424,7 +426,7 @@ void OctreeSF::GridNode::generateVerticesDC(vector<Vertex>& vertices)
                     centerOfMass /= (float)edges.size();
                     vertices.back().position = centerOfMass;
 
-                    const static int numIterations = 1;
+                    const static int numIterations = 2;
                     for (int i = 0; i < numIterations; i++)
                     {
                         // vertices.back().position = (vertices.back().position + centerOfMass) * 0.5f;
@@ -435,9 +437,10 @@ void OctreeSF::GridNode::generateVerticesDC(vector<Vertex>& vertices)
                                     + ((i->minCornerIndex & 2) >> 1) * LEAF_SIZE_1D
                                     + ((i->minCornerIndex & 4) >> 2) * LEAF_SIZE_2D];
                             float dist = edge->vertex.normal.dotProduct(edge->vertex.position - vertices.back().position);
-                            vertices.back().position += dist * 0.5f * edge->vertex.normal;
+                            vertices.back().position += dist * 0.6f * edge->vertex.normal;
                         }
                     }
+                    // MathMisc::projectPointOnAABB(cellMin, cellMax, vertices.back().position);
                 }
             }
         }
